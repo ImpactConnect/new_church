@@ -1,0 +1,728 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
+import '../models/bible_reading_plan.dart';
+import '../widgets/bottom_nav_bar.dart';
+
+class BibleReadingPlanScreen extends StatefulWidget {
+  const BibleReadingPlanScreen({Key? key}) : super(key: key);
+
+  @override
+  State<BibleReadingPlanScreen> createState() => _BibleReadingPlanScreenState();
+}
+
+class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
+  List<BibleReading>? _readingPlan;
+  BibleReading? _todaysReading;
+  late DateTime _selectedDate;
+  late int _selectedMonth;
+  late int _selectedYear;
+  bool _isLoading = true;
+  int _completedDays = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedDate = now;
+    _selectedMonth = now.month;
+    _selectedYear = now.year;
+    _loadReadingPlan();
+  }
+
+  bool _isSameDay(DateTime? date1, DateTime? date2) {
+    if (date1 == null || date2 == null) return false;
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  Future<void> _loadReadingPlan() async {
+    try {
+      _readingPlan = await BibleReadingPlan.generateYearlyPlan();
+      _todaysReading = _getReadingForDate(DateTime.now());
+      _updateCompletedDays();
+    } catch (e) {
+      print('Error loading Bible reading plan: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateCompletedDays() {
+    if (_readingPlan == null) return;
+    _completedDays = _readingPlan!.where((reading) => reading.isCompleted).length;
+    setState(() {});
+  }
+
+  BibleReading? _getReadingForDate(DateTime date) {
+    if (_readingPlan == null) return null;
+    try {
+      return _readingPlan!.firstWhere(
+        (reading) => _isSameDay(reading.date, date),
+      );
+    } catch (e) {
+      return BibleReading(
+        date: date,
+        passages: ['No reading scheduled for this date'],
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : NestedScrollView(
+              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+                return [
+                  SliverAppBar(
+                    expandedHeight: 200.0,
+                    floating: false,
+                    pinned: true,
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    flexibleSpace: FlexibleSpaceBar(
+                      title: const Text('Bible Reading Plan'),
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            'assets/images/bible_reading_plan.jpg',
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.7),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ];
+              },
+              body: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Progress Tracker
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          LinearProgressIndicator(
+                            value: _readingPlan != null ? _completedDays / 365 : 0,
+                            backgroundColor: Colors.grey[200],
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$_completedDays/365 days completed',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Today's Reading Card
+                    if (_todaysReading != null)
+                      Card(
+                        margin: const EdgeInsets.all(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Today\'s Reading',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  if (_todaysReading!.isCompleted)
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ...(_todaysReading!.passages.map(
+                                (passage) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  child: Text(passage),
+                                ),
+                              )).toList(),
+                              const SizedBox(height: 16),
+                              if (!_todaysReading!.isCompleted)
+                                ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _todaysReading!.isCompleted = true;
+                                      _updateCompletedDays();
+                                    });
+                                  },
+                                  child: const Text('Mark as Completed'),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // Month Navigation
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: () {
+                              setState(() {
+                                if (_selectedMonth == 1) {
+                                  _selectedMonth = 12;
+                                  _selectedYear--;
+                                } else {
+                                  _selectedMonth--;
+                                }
+                              });
+                            },
+                          ),
+                          Text(
+                            DateFormat('MMMM yyyy')
+                                .format(DateTime(_selectedYear, _selectedMonth)),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: () {
+                              setState(() {
+                                if (_selectedMonth == 12) {
+                                  _selectedMonth = 1;
+                                  _selectedYear++;
+                                } else {
+                                  _selectedMonth++;
+                                }
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Calendar Grid
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 4,
+                          crossAxisSpacing: 4,
+                          mainAxisExtent: 35,
+                        ),
+                        itemCount: 7 + DateTime(_selectedYear, _selectedMonth + 1, 0).day,
+                        itemBuilder: (context, index) {
+                          if (index < 7) {
+                            // Weekday headers
+                            final weekday = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index];
+                            return Container(
+                              alignment: Alignment.center,
+                              child: Text(
+                                weekday,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          }
+
+                          final day = index - 7 + 1;
+                          final date = DateTime(_selectedYear, _selectedMonth, day);
+                          final isToday = _isSameDay(date, DateTime.now());
+                          final isSelected = _isSameDay(date, _selectedDate);
+                          final reading = _getReadingForDate(date);
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedDate = date;
+                                _todaysReading = reading;
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(context).primaryColor
+                                    : null,
+                                border: Border.all(
+                                  color: isToday
+                                      ? Theme.of(context).primaryColor
+                                      : Colors.transparent,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      day.toString(),
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : isToday
+                                                ? Theme.of(context).primaryColor
+                                                : null,
+                                        fontWeight: isToday || isSelected
+                                            ? FontWeight.bold
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  if (reading?.isCompleted ?? false)
+                                    const Positioned(
+                                      right: 2,
+                                      top: 2,
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        size: 12,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
+    );
+  }
+}
+
+class BibleReadingPlanScreen extends StatefulWidget {
+  const BibleReadingPlanScreen({Key? key}) : super(key: key);
+
+  @override
+  State<BibleReadingPlanScreen> createState() => _BibleReadingPlanScreenState();
+}
+
+class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
+  List<BibleReading>? _readingPlan;
+  BibleReading? _todaysReading;
+  late DateTime _selectedDate;
+  late int _selectedMonth;
+  late int _selectedYear;
+  bool _isLoading = true;
+  int _completedDays = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedDate = now;
+    _selectedMonth = now.month;
+    _selectedYear = now.year;
+    _loadReadingPlan();
+  }
+
+  bool _isSameDay(DateTime? date1, DateTime? date2) {
+    if (date1 == null || date2 == null) return false;
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  Future<void> _loadReadingPlan() async {
+    try {
+      _readingPlan = await BibleReadingPlan.generateYearlyPlan();
+      _todaysReading = _getReadingForDate(DateTime.now());
+      _updateCompletedDays();
+    } catch (e) {
+      print('Error loading Bible reading plan: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateCompletedDays() {
+    if (_readingPlan == null) return;
+    _completedDays = _readingPlan!.where((reading) => reading.isCompleted).length;
+    setState(() {});
+  }
+
+  BibleReading? _getReadingForDate(DateTime date) {
+    if (_readingPlan == null) return null;
+    try {
+      return _readingPlan!.firstWhere(
+        (reading) => _isSameDay(reading.date, date),
+      );
+    } catch (e) {
+      return BibleReading(
+        date: date,
+        passages: ['No reading scheduled for this date'],
+      );
+    }
+  }
+
+  void _showReadingDialog(BibleReading reading) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Reading for ${DateFormat('MMMM d, yyyy').format(reading.date)}',
+          style: const TextStyle(fontSize: 18),
+        ),
+        content: Container(
+          width: double.maxFinite,
+          constraints: const BoxConstraints(maxHeight: 300),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const Text(
+                'Today\'s Passages:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              ...reading.passages.map(
+                (passage) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.book, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          passage,
+                          style: const TextStyle(fontSize: 15),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                reading.isCompleted = !reading.isCompleted;
+              });
+              Navigator.pop(context);
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  reading.isCompleted
+                      ? Icons.check_box_outlined
+                      : Icons.check_box_outline_blank,
+                  size: 18,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  reading.isCompleted ? 'Mark as Unread' : 'Mark as Read',
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.close, size: 18),
+                SizedBox(width: 4),
+                Text('Close'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : NestedScrollView(
+              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+                return [
+                  SliverAppBar(
+                    expandedHeight: 200.0,
+                    floating: false,
+                    pinned: true,
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    flexibleSpace: FlexibleSpaceBar(
+                      title: const Text('Bible Reading Plan'),
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            'assets/images/bible_reading_plan.jpg',
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.7),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ];
+              },
+              body: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Progress Tracker
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: _readingPlan != null ? _completedDays / 365 : 0,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$_completedDays/365 days completed',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              // Today's Reading Card
+              if (_todaysReading != null)
+                Card(
+                  margin: const EdgeInsets.all(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.menu_book, size: 24),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Today\'s Reading',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: Icon(
+                                _todaysReading!.isCompleted
+                                    ? Icons.check_circle
+                                    : Icons.check_circle_outline,
+                                color: _todaysReading!.isCompleted
+                                    ? Colors.green
+                                    : Colors.grey,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _todaysReading!.isCompleted =
+                                      !_todaysReading!.isCompleted;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        ..._todaysReading!.passages.map(
+                          (passage) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.bookmark, size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  passage,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _todaysReading!.isCompleted = !_todaysReading!.isCompleted;
+                      _updateCompletedDays();
+                    });
+                  },
+                  child: const Text('Mark as Completed'),
+                ),
+              // Month selector
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () {
+                        setState(() {
+                          if (_selectedMonth == 1) {
+                            _selectedMonth = 12;
+                            _selectedYear--;
+                          } else {
+                            _selectedMonth--;
+                          }
+                        });
+                      },
+                    ),
+                    Text(
+                      DateFormat('MMMM yyyy').format(
+                        DateTime(_selectedYear, _selectedMonth),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () {
+                        setState(() {
+                          if (_selectedMonth == 12) {
+                            _selectedMonth = 1;
+                            _selectedYear++;
+                          } else {
+                            _selectedMonth++;
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Calendar grid
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    mainAxisSpacing: 4,
+                    crossAxisSpacing: 4,
+                    mainAxisExtent: 35,
+                  ),
+                  itemCount: 7 + DateTime(_selectedYear, _selectedMonth + 1, 0).day,
+                  itemBuilder: (context, index) {
+                    if (index < 7) {
+                      // Weekday headers
+                      final weekday = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index];
+                      return Container(
+                        alignment: Alignment.center,
+                        child: Text(
+                          weekday,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }
+
+                    final day = index - 7 + 1;
+                    final date = DateTime(_selectedYear, _selectedMonth, day);
+                    final isToday = _isSameDay(date, DateTime.now());
+                    final isSelected = _isSameDay(date, _selectedDate);
+                    final reading = _getReadingForDate(date);
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedDate = date;
+                          _todaysReading = reading;
+                        });
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : null,
+                          border: Border.all(
+                            color: isToday
+                                ? Theme.of(context).primaryColor
+                                : Colors.transparent,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: Text(
+                                day.toString(),
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : isToday
+                                          ? Theme.of(context).primaryColor
+                                          : null,
+                                  fontWeight:
+                                      isToday || isSelected ? FontWeight.bold : null,
+                                ),
+                              ),
+                            ),
+                            if (reading?.isCompleted ?? false)
+                              const Positioned(
+                                right: 2,
+                                top: 2,
+                                child: Icon(
+                                  Icons.check_circle,
+                                  size: 12,
+                                  color: Colors.green,
+            );
+          },
+        ),
+      ),
+    );

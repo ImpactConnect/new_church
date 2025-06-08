@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
+    }
+
+    // Ministers Content Collection
+    match /ministers_content/{document} {
+      // Anyone can read the content
+      allow read: if true;
+      
+      // Only admins can create, update, or delete content
+      allow create, update, delete: if isAdmin();
+
+      // Validate the data structure
+      function isValidContent() {
+        let data = request.resource.data;
+        return 
+          data.keys().hasAll(['imageUrl', 'content', 'title', 'createdAt']) &&
+          data.imageUrl is string &&
+          data.content is string &&
+          data.title is string &&
+          data.createdAt is timestamp;
+      }
+
+      // Additional validation for create and update
+      allow create: if isAdmin() && isValidContent();
+      allow update: if isAdmin() && isValidContent();
+    }
+
+    // Default rule - deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Add other collection rules here...
+  }
+}
