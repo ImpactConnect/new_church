@@ -24,6 +24,23 @@ class _DevotionalDetailScreenState extends State<DevotionalDetailScreen> {
     _isBookmarked = _devotionalService.isBookmarked(widget.devotional);
   }
 
+  String get _displayReference {
+    if (widget.devotional.bibleVerse.contains('-') && widget.devotional.bibleVerseText.isEmpty) {
+      return widget.devotional.bibleVerse.split('-')[0].trim();
+    }
+    return widget.devotional.bibleVerse;
+  }
+
+  String get _displayText {
+    if (widget.devotional.bibleVerseText.isNotEmpty) {
+      return widget.devotional.bibleVerseText;
+    }
+    if (widget.devotional.bibleVerse.contains('-')) {
+      return widget.devotional.bibleVerse.split('-').sublist(1).join('-').trim();
+    }
+    return widget.devotional.bibleVerse;
+  }
+
   void _toggleBookmark() {
     setState(() {
       _isBookmarked = !_isBookmarked;
@@ -40,7 +57,8 @@ class _DevotionalDetailScreenState extends State<DevotionalDetailScreen> {
 ${widget.devotional.topic}
 
 Bible Verse:
-${widget.devotional.bibleVerse}
+$_displayReference
+$_displayText
 
 Message:
 ${widget.devotional.content}
@@ -108,7 +126,23 @@ Date: ${widget.devotional.date.toString().split(' ')[0]}
                 color: Theme.of(context).primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(widget.devotional.bibleVerse),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _displayText,
+                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16, height: 1.5),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '- $_displayReference',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24),
             Text(

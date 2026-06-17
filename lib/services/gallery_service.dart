@@ -93,6 +93,19 @@ class GalleryService {
     }
   }
 
+  // Increment download count
+  Future<bool> incrementDownloadCount(String imageId) async {
+    try {
+      await _firestore.collection('gallery').doc(imageId).update({
+        'downloads': FieldValue.increment(1)
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Gallery Download Update Error: $e');
+      return false;
+    }
+  }
+
   // Stream of gallery images
   Stream<QuerySnapshot> getGalleryImages() {
     return _firestore

@@ -2,46 +2,127 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Helper function to check if user is an admin
     function isAdmin() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
         exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
     }
 
-    // Ministers Content Collection
-    match /ministers_content/{document} {
-      // Anyone can read the content
+    // ── Public read collections (app fetches these) ───────────────────────────
+
+    // Sermons: anyone can read, only admins can write
+    match /sermons/{doc} {
       allow read: if true;
-      
-      // Only admins can create, update, or delete content
-      allow create, update, delete: if isAdmin();
-
-      // Validate the data structure
-      function isValidContent() {
-        let data = request.resource.data;
-        return 
-          data.keys().hasAll(['imageUrl', 'content', 'title', 'createdAt']) &&
-          data.imageUrl is string &&
-          data.content is string &&
-          data.title is string &&
-          data.createdAt is timestamp;
-      }
-
-      // Additional validation for create and update
-      allow create: if isAdmin() && isValidContent();
-      allow update: if isAdmin() && isValidContent();
+      allow write: if isAdmin();
     }
 
-    // Default rule - deny all other access
+    // Videos: anyone can read; admins write; authenticated users can increment views/likes
+    match /videos/{doc} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || isAuthenticated(); // allow view/like increments
+    }
+
+    // Gallery images: publicly readable
+    match /gallery/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Live streams: anyone can read
+    match /live_streams/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Events: anyone can read
+    match /events/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Devotionals: anyone can read
+    match /devotionals/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Carousel / banners: anyone can read
+    match /carousel_items/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /carousel_config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /carousels/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Announcements: anyone can read
+    match /announcements/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Push notifications: only admins write; authenticated app reads its own
+    match /push_notifications/{doc} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Members: authenticated users can read; admins manage
+    match /members/{doc} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Admin users list: only admins can read (security)
+    match /admin_users/{doc} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Ministers content
+    match /ministers_content/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Blog posts: anyone can read
+    match /blog_posts/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Community posts: authenticated users read; moderation by admins
+    match /community_posts/{doc} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+    match /community_posts/{postId}/comments/{commentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    // Bible reading plan progress: per-user private data
+    match /bible_reading_progress/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Default: deny everything else
     match /{document=**} {
       allow read, write: if false;
     }
-
-    // Add other collection rules here...
   }
 }

@@ -10,6 +10,9 @@ class Sermon {
     required this.thumbnailUrl,
     required this.audioUrl,
     required this.dateCreated,
+    this.duration,
+    this.description,
+    this.scriptureReference,
     this.isBookmarked = false,
     this.isDownloaded = false,
     this.localAudioPath,
@@ -21,19 +24,25 @@ class Sermon {
   }
 
   factory Sermon.fromMap(Map<String, dynamic> data, String id) {
-    // Handle dateCreated field which might be null
     DateTime dateCreated;
     try {
       final timestamp = data['dateCreated'];
       if (timestamp is Timestamp) {
         dateCreated = timestamp.toDate();
       } else {
-        dateCreated =
-            DateTime.now(); // Fallback to current time if null or invalid
+        dateCreated = DateTime.now();
       }
     } catch (e) {
-      dateCreated = DateTime.now(); // Fallback to current time on error
+      dateCreated = DateTime.now();
     }
+
+    Duration? duration;
+    try {
+      final secs = data['durationSeconds'];
+      if (secs is int && secs > 0) {
+        duration = Duration(seconds: secs);
+      }
+    } catch (_) {}
 
     return Sermon(
       id: id,
@@ -44,6 +53,9 @@ class Sermon {
       thumbnailUrl: data['thumbnailUrl'] as String? ?? '',
       audioUrl: data['audioUrl'] as String? ?? '',
       dateCreated: dateCreated,
+      duration: duration,
+      description: data['description'] as String?,
+      scriptureReference: data['scriptureReference'] as String?,
       isBookmarked: data['isBookmarked'] as bool? ?? false,
       isDownloaded: data['isDownloaded'] as bool? ?? false,
       localAudioPath: data['localAudioPath'] as String?,
@@ -51,6 +63,10 @@ class Sermon {
   }
 
   factory Sermon.fromJson(Map<String, dynamic> json) {
+    Duration? duration;
+    final secs = json['durationSeconds'];
+    if (secs is int && secs > 0) duration = Duration(seconds: secs);
+
     return Sermon(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -60,11 +76,15 @@ class Sermon {
       thumbnailUrl: json['thumbnailUrl'] as String,
       audioUrl: json['audioUrl'] as String,
       dateCreated: DateTime.parse(json['dateCreated'] as String),
+      duration: duration,
+      description: json['description'] as String?,
+      scriptureReference: json['scriptureReference'] as String?,
       isBookmarked: json['isBookmarked'] as bool? ?? false,
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       localAudioPath: json['localAudioPath'] as String?,
     );
   }
+
   final String id;
   final String title;
   final String preacherName;
@@ -73,6 +93,9 @@ class Sermon {
   final String thumbnailUrl;
   final String audioUrl;
   final DateTime dateCreated;
+  final Duration? duration;
+  final String? description;
+  final String? scriptureReference;
   bool isBookmarked;
   bool isDownloaded;
   String? localAudioPath;
@@ -87,6 +110,9 @@ class Sermon {
       'thumbnailUrl': thumbnailUrl,
       'audioUrl': audioUrl,
       'dateCreated': dateCreated.toIso8601String(),
+      if (duration != null) 'durationSeconds': duration!.inSeconds,
+      if (description != null) 'description': description,
+      if (scriptureReference != null) 'scriptureReference': scriptureReference,
       'isBookmarked': isBookmarked,
       'isDownloaded': isDownloaded,
       'localAudioPath': localAudioPath,
@@ -102,6 +128,9 @@ class Sermon {
     String? thumbnailUrl,
     String? audioUrl,
     DateTime? dateCreated,
+    Duration? duration,
+    String? description,
+    String? scriptureReference,
     bool? isBookmarked,
     bool? isDownloaded,
     String? localAudioPath,
@@ -115,6 +144,9 @@ class Sermon {
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       audioUrl: audioUrl ?? this.audioUrl,
       dateCreated: dateCreated ?? this.dateCreated,
+      duration: duration ?? this.duration,
+      description: description ?? this.description,
+      scriptureReference: scriptureReference ?? this.scriptureReference,
       isBookmarked: isBookmarked ?? this.isBookmarked,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       localAudioPath: localAudioPath ?? this.localAudioPath,

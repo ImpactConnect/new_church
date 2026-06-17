@@ -29,7 +29,7 @@ import 'screens/sermon_screen.dart';
 import 'services/audio_player_service.dart';
 import 'services/bible_service.dart';
 import 'services/note_service.dart';
-import 'services/onesignal_service.dart'; // Add this import
+import 'services/fcm_service.dart'; // Replaced OneSignal
 import 'services/sermon_service.dart';
 import 'utils/data_migration.dart';
 import 'utils/toast_utils.dart';
@@ -51,11 +51,8 @@ Future<void> main() async {
     await LocalNotificationService().initialize();
     await LocalNotificationService().requestPermission();
 
-    // Check notification permissions
-    final hasPermission = await OneSignalService.checkNotificationPermissions();
-    if (!hasPermission) {
-      print('Notification permissions not granted');
-    }
+    // Initialize FCM and request permissions
+    await FcmService.initialize();
 
     // Test Firestore connection
     try {

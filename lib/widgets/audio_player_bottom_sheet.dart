@@ -1,7 +1,15 @@
-import 'package:flutter/material.dart';
-import '../models/sermon.dart';
-import '../services/audio_player_service.dart';
+import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+
+import '../models/sermon.dart';
+import '../screens/full_player_screen.dart';
+import '../services/audio_player_service.dart';
+import '../utils/media_utils.dart';
+
+/// Compact bottom-sheet audio player.
+/// All subscriptions are properly tracked and cancelled on dispose.
 class AudioPlayerBottomSheet extends StatefulWidget {
   const AudioPlayerBottomSheet({
     Key? key,
@@ -9,153 +17,224 @@ class AudioPlayerBottomSheet extends StatefulWidget {
     required this.audioPlayerService,
     required this.onClose,
   }) : super(key: key);
+
   final Sermon sermon;
   final AudioPlayerService audioPlayerService;
   final VoidCallback onClose;
 
   @override
-  State<AudioPlayerBottomSheet> createState() => _AudioPlayerBottomSheetState();
+  State<AudioPlayerBottomSheet> createState() =>
+      _AudioPlayerBottomSheetState();
 }
 
 class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
   bool _isPlaying = false;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
+  double _speed = 1.0;
+  final List<StreamSubscription> _subs = [];
 
   @override
   void initState() {
     super.initState();
-    _setupAudioPlayer();
+    _subs.add(widget.audioPlayerService.playingStream.listen((p) {
+      if (mounted) setState(() => _isPlaying = p);
+    }));
+    _subs.add(widget.audioPlayerService.positionStream.listen((p) {
+      if (mounted) setState(() => _position = p);
+    }));
+    _subs.add(widget.audioPlayerService.durationStream.listen((d) {
+      if (mounted) setState(() => _duration = d ?? Duration.zero);
+    }));
+    _subs.add(widget.audioPlayerService.speedStream.listen((s) {
+      if (mounted) setState(() => _speed = s);
+    }));
   }
 
-  void _setupAudioPlayer() {
-    widget.audioPlayerService.player.playingStream.listen((playing) {
-      if (mounted) {
-        setState(() => _isPlaying = playing);
-      }
-    });
-
-    widget.audioPlayerService.player.positionStream.listen((position) {
-      if (mounted) {
-        setState(() => _position = position);
-      }
-    });
-
-    widget.audioPlayerService.player.durationStream.listen((duration) {
-      if (mounted && duration != null) {
-        setState(() => _duration = duration);
-      }
-    });
+  @override
+  void dispose() {
+    for (final s in _subs) s.cancel();
+    super.dispose();
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return duration.inHours > 0
-        ? '$hours:$minutes:$seconds'
-        : '$minutes:$seconds';
+  void _expandToFullPlayer() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => FadeTransition(
+          opacity: animation,
+          child: FullPlayerScreen(
+            sermon: widget.sermon,
+            audioPlayerService: widget.audioPlayerService,
+          ),
+        ),
+        transitionDuration: const Duration(milliseconds: 350),
+        fullscreenDialog: true,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final maxVal =
+        _duration.inMilliseconds > 0 ? _duration.inMilliseconds.toDouble() : 1.0;
+
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 12,
+              offset: const Offset(0, -4)),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Sermon info
-          Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  widget.sermon.thumbnailUrl,
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.sermon.title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      widget.sermon.preacherName,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: widget.onClose,
-              ),
-            ],
+          // Drag handle
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const SizedBox(height: 16),
-          // Progress bar
-          Column(
-            children: [
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 4.0,
-                  thumbShape:
-                      const RoundSliderThumbShape(enabledThumbRadius: 8.0),
-                  overlayShape:
-                      const RoundSliderOverlayShape(overlayRadius: 16.0),
+          // Info row
+          GestureDetector(
+            onTap: _expandToFullPlayer,
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: widget.sermon.thumbnailUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: widget.sermon.thumbnailUrl,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                              width: 56,
+                              height: 56,
+                              color: colors.primary.withOpacity(0.1)),
+                          errorWidget: (_, __, ___) => Container(
+                              width: 56,
+                              height: 56,
+                              color: colors.primary.withOpacity(0.1),
+                              child: const Icon(Icons.church)),
+                        )
+                      : Container(
+                          width: 56,
+                          height: 56,
+                          color: colors.primary.withOpacity(0.1),
+                          child: const Icon(Icons.church)),
                 ),
-                child: Slider(
-                  value: _position.inMilliseconds.toDouble(),
-                  min: 0,
-                  max: _duration.inMilliseconds.toDouble(),
-                  onChanged: (value) {
-                    widget.audioPlayerService
-                        .seek(Duration(milliseconds: value.toInt()));
-                  },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.sermon.title,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        widget.sermon.preacherName,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_formatDuration(_position)),
-                    Text(_formatDuration(_duration)),
-                  ],
+                const Icon(Icons.keyboard_arrow_up_rounded,
+                    color: Colors.grey),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: widget.onClose,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          // Slider
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              thumbShape:
+                  const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape:
+                  const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: _position.inMilliseconds.toDouble().clamp(0, maxVal),
+              min: 0,
+              max: maxVal,
+              onChanged: (v) => widget.audioPlayerService
+                  .seek(Duration(milliseconds: v.toInt())),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(MediaUtils.formatDuration(_position),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                Text(MediaUtils.formatDuration(_duration),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           // Controls
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              IconButton(
-                icon: const Icon(Icons.replay_10),
-                onPressed: () {
-                  widget.audioPlayerService
-                      .seek(_position - const Duration(seconds: 10));
-                },
+              // Speed
+              GestureDetector(
+                onTap: () => widget.audioPlayerService.cycleSpeed(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    _speed == _speed.truncate()
+                        ? '${_speed.toInt()}x'
+                        : '${_speed}x',
+                    style: TextStyle(
+                        color: colors.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12),
+                  ),
+                ),
               ),
               IconButton(
-                icon: Icon(_isPlaying
-                    ? Icons.pause_circle_filled
-                    : Icons.play_circle_filled),
-                iconSize: 48,
+                icon: const Icon(Icons.replay_10_rounded),
+                onPressed: () => widget.audioPlayerService
+                    .seekBackward(const Duration(seconds: 10)),
+              ),
+              IconButton(
+                icon: Icon(
+                  _isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                  color: colors.primary,
+                ),
+                iconSize: 52,
                 onPressed: () {
                   if (_isPlaying) {
                     widget.audioPlayerService.pause();
@@ -165,11 +244,15 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.forward_30),
-                onPressed: () {
-                  widget.audioPlayerService
-                      .seek(_position + const Duration(seconds: 30));
-                },
+                icon: const Icon(Icons.forward_30_rounded),
+                onPressed: () => widget.audioPlayerService
+                    .seekForward(const Duration(seconds: 30)),
+              ),
+              // Expand icon
+              IconButton(
+                icon: const Icon(Icons.open_in_full_rounded, size: 20),
+                tooltip: 'Full Player',
+                onPressed: _expandToFullPlayer,
               ),
             ],
           ),

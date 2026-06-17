@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import '../../services/gallery_service.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({Key? key}) : super(key: key);
@@ -22,62 +24,25 @@ class _GalleryScreenState extends State<GalleryScreen> {
   // Download image to device
   Future<void> _downloadImage(String imageUrl, String fileName) async {
     try {
-      // Request storage permission
-      PermissionStatus status;
-      if (Platform.isAndroid) {
-        // For Android, request multiple storage-related permissions
-        status = await Permission.storage.request();
-        
-        // If storage permission is denied, try requesting individual permissions
-        if (!status.isGranted) {
-          status = await Permission.manageExternalStorage.request();
-        }
-      } else if (Platform.isIOS) {
-        // For iOS, request photo library permissions
-        status = await Permission.photos.request();
-      } else {
-        // Unsupported platform
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Download not supported on this platform')),
-        );
-        return;
-      }
+      final response = await http.get(Uri.parse(imageUrl));
+      final result = await ImageGallerySaverPlus.saveImage(
+        response.bodyBytes,
+        quality: 100,
+        name: fileName,
+      );
       
-      // Check permission status
-      if (status.isGranted) {
-        // Download image
-        final response = await http.get(Uri.parse(imageUrl));
-
-        // Get appropriate directory
-        final Directory? tempDir = Platform.isAndroid 
-          ? await getExternalStorageDirectory() 
-          : await getApplicationDocumentsDirectory();
-
-        if (tempDir == null) {
-          throw Exception('Could not access storage');
+      if (result['isSuccess'] == true) {
+        // Record download in Firebase
+        if (fileName.contains('|ID:')) {
+          final id = fileName.split('|ID:').last;
+          await GalleryService().incrementDownloadCount(id);
         }
 
-        // Create file path
-        final String filePath = '${tempDir.path}/$fileName.jpg';
-        final File file = File(filePath);
-
-        // Write file
-        await file.writeAsBytes(response.bodyBytes);
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image saved to $filePath')),
+          const SnackBar(content: Text('Image saved to gallery')),
         );
-      } else if (status.isDenied) {
-        // Show a snackbar if permission is denied
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Storage permission is required to download images'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      } else if (status.isPermanentlyDenied) {
-        // Redirect to app settings if permission is permanently denied
-        await openAppSettings();
+      } else {
+        throw Exception('Failed to save image');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,7 +73,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   // Show full image in a popup
-  void _showFullImagePopup(BuildContext context, Map<String, dynamic> imageData) {
+  void _showFullImagePopup(BuildContext context, String imageId, Map<String, dynamic> imageData) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -119,14 +84,46 @@ class _GalleryScreenState extends State<GalleryScreen> {
             children: [
               // Full Image
               InteractiveViewer(
-                child: CachedNetworkImage(
-                  imageUrl: imageData['imageUrl'],
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  placeholder: (context, url) =>
-                      const Center(child: CircularProgressIndicator()),
-                  errorWidget: (context, url, error) =>
-                      const Icon(Icons.error),
+                child: Hero(
+                  tag: imageData['imageUrl'],
+                  child: CachedNetworkImage(
+                    imageUrl: imageData['imageUrl'],
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    placeholder: (context, url) =>
+                        const Center(child: CircularProgressIndicator()),
+                    errorWidget: (context, url, error) =>
+                        const Icon(Icons.error),
+                  ),
+                ),
+              ),
+
+              // Like Icon (Bottom Left - Center)
+              Positioned(
+                bottom: 20,
+                left: 80,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.favorite_border, color: Colors.white),
+                        onPressed: () async {
+                          final success = await GalleryService().likeImage(imageId);
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Image liked!')),
+                            );
+                          }
+                        },
+                      ),
+                      Text('${imageData['likes'] ?? 0}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
                 ),
               ),
 
@@ -135,16 +132,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 bottom: 20,
                 left: 20,
                 child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black45,
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  child: IconButton(
-                    icon: const Icon(Icons.download, color: Colors.white),
-                    onPressed: () => _downloadImage(
-                      imageData['imageUrl'], 
-                      imageData['title'] ?? 'church_image'
-                    ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.download, color: Colors.white),
+                        onPressed: () => _downloadImage(
+                          imageData['imageUrl'], 
+                          '${imageData['title'] ?? 'church_image'}|ID:$imageId'
+                        ),
+                      ),
+                      Text('${imageData['downloads'] ?? 0}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ],
                   ),
                 ),
               ),
@@ -313,13 +316,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     (context, index) {
                       final imageData = filteredDocs[index].data() as Map<String, dynamic>;
 
+                      final imageId = filteredDocs[index].id;
+
                       return GestureDetector(
-                        onTap: () => _showFullImagePopup(context, imageData),
-                        child: CachedNetworkImage(
-                          imageUrl: imageData['imageUrl'],
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                          errorWidget: (context, url, error) => const Icon(Icons.error),
+                        onTap: () => _showFullImagePopup(context, imageId, imageData),
+                        child: Hero(
+                          tag: imageData['imageUrl'],
+                          child: CachedNetworkImage(
+                            imageUrl: imageData['imageUrl'],
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                            errorWidget: (context, url, error) => const Icon(Icons.error),
+                          ),
                         ),
                       );
                     },

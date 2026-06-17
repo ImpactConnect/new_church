@@ -1,0 +1,108 @@
+# Android Build Fix Guide for Flutter Projects
+
+This guide outlines the necessary configuration changes to fix common Android build issues in a Flutter project, specifically addressing out-of-date Gradle/Kotlin versions, SDK requirements for plugins, and CMake/NDK compilation failures.
+
+If you have another codebase or clone of this project, apply the following steps sequentially to ensure it builds correctly.
+
+---
+
+### Step 1: Update the Gradle Wrapper
+
+Flutter plugins often require newer Gradle versions than what might be bundled with older templates.
+
+1. Open `android/gradle/wrapper/gradle-wrapper.properties`.
+2. Locate the `distributionUrl` line.
+3. Update it to at least **Gradle 8.10.2** (or a version `8.9+`):
+   ```properties
+   distributionUrl=https\://downloads.gradle.org/distributions/gradle-8.10.2-all.zip
+   ```
+
+---
+
+### Step 2: Update the Kotlin Plugin Version
+
+Flutter has dropped support for Kotlin 1.8.x. You must upgrade to 2.1.0 to avoid deprecation warnings and potential build failures.
+
+1. Open `android/settings.gradle.kts` (or `android/build.gradle` if your project uses the older Groovy format).
+2. Find the Kotlin Android plugin declaration in the `plugins {}` block.
+3. Change the version to **`2.1.0`**:
+   ```kotlin
+   plugins {
+       id("dev.flutter.flutter-plugin-loader") version "1.0.0"
+       id("com.android.application") version "8.7.0" apply false
+       id("org.jetbrains.kotlin.android") version "2.1.0" apply false // <-- Update this line
+   }
+   ```
+
+---
+
+### Step 3: Update SDK Versions in App `build.gradle`
+
+Many modern Flutter plugins (like `url_launcher`, `shared_preferences`, and `path_provider`) require compiling against Android SDK 36.
+
+1. Open `android/app/build.gradle.kts` (or `android/app/build.gradle`).
+2. Inside the `android {}` block, update the `compileSdk` to **36**:
+   ```kotlin
+   android {
+       compileSdk = 36 // <-- Update this
+       // ...
+   }
+   ```
+3. Inside the `defaultConfig {}` block, update `targetSdk` to **36**:
+   ```kotlin
+       defaultConfig {
+           minSdk = flutter.minSdkVersion
+           targetSdk = 36 // <-- Update this
+           // ...
+       }
+   ```
+
+---
+
+### Step 4: Fix CMake/NDK Compatibility
+
+Using very new NDK versions (like 28.x) can break the CMake compilation process in Flutter. It is best to use a highly stable version.
+
+1. Still inside `android/app/build.gradle.kts`, look for the `ndk {}` block within `defaultConfig {}`.
+2. Downgrade the `ndkVersion` to **`26.1.10909125`**:
+   ```kotlin
+       defaultConfig {
+           // ...
+           ndk {
+               ndkVersion = "26.1.10909125" // <-- Downgrade to this stable version
+           }
+       }
+   ```
+   *(Note: If the `ndk {}` block doesn't exist, you usually don't need to add it, as the Android Gradle Plugin will use its default stable version.)*
+
+---
+
+### Step 5: Clean Up Old Dependencies
+
+Modern versions of the Kotlin Gradle Plugin automatically include the standard library. Explicitly declaring old versions can cause conflicts.
+
+1. Scroll down to the `dependencies {}` block in `android/app/build.gradle.kts`.
+2. Delete any hardcoded legacy Kotlin standard library references. 
+   **Remove this line if it exists:**
+   ```kotlin
+   // DELETE THIS LINE:
+   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.7.10") 
+   ```
+
+---
+
+### Step 6: Clean and Rebuild
+
+After making these changes, always clear the old build cache before running the app.
+
+1. Open your terminal in the root of your Flutter project.
+2. Run:
+   ```bash
+   flutter clean
+   ```
+3. Run your app:
+   ```bash
+   flutter run
+   ```
+
+> **Important Note:** If you still get a CMake error after applying these fixes, check the absolute path to your project folder. CMake will often fail if there is a **space** in any folder name in your project's path (e.g., `test_app 2` should be renamed to `test_app_2`).
