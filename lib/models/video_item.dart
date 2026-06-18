@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Enum representing the source type of a video.
+/// - [youtube]  : A YouTube link (played via youtube_player_iframe)
+/// - [facebook] : A Facebook video link (played in an in-app WebView)
+/// - [network]  : A direct MP4/hosted URL (played via Chewie + video_player)
+enum VideoType { youtube, facebook, network }
+
 class VideoItem {
   const VideoItem({
     required this.id,
@@ -11,10 +17,27 @@ class VideoItem {
     required this.postedDate,
     this.description,
     this.category,
+    this.preacher,
+    this.videoType = VideoType.youtube,
+    this.isRecommended = false,
   });
 
   factory VideoItem.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+
+    // Parse videoType string to enum
+    VideoType type;
+    switch ((data['videoType'] as String? ?? 'youtube').toLowerCase()) {
+      case 'facebook':
+        type = VideoType.facebook;
+        break;
+      case 'network':
+        type = VideoType.network;
+        break;
+      default:
+        type = VideoType.youtube;
+    }
+
     return VideoItem(
       id: doc.id,
       title: data['title'] ?? '',
@@ -27,6 +50,9 @@ class VideoItem {
           : DateTime.now(),
       description: data['description'] as String?,
       category: data['category'] as String?,
+      preacher: data['preacher'] as String?,
+      videoType: type,
+      isRecommended: data['isRecommended'] as bool? ?? false,
     );
   }
 
@@ -39,6 +65,18 @@ class VideoItem {
   final DateTime postedDate;
   final String? description;
   final String? category;
+  final String? preacher;
+  final VideoType videoType;
+  final bool isRecommended;
+
+  /// Returns true if this is a YouTube video.
+  bool get isYouTube => videoType == VideoType.youtube;
+
+  /// Returns true if this is a Facebook video.
+  bool get isFacebook => videoType == VideoType.facebook;
+
+  /// Returns true if this is a direct network/hosted video.
+  bool get isNetworkVideo => videoType == VideoType.network;
 
   VideoItem copyWith({
     String? id,
@@ -50,6 +88,9 @@ class VideoItem {
     DateTime? postedDate,
     String? description,
     String? category,
+    String? preacher,
+    VideoType? videoType,
+    bool? isRecommended,
   }) {
     return VideoItem(
       id: id ?? this.id,
@@ -61,6 +102,9 @@ class VideoItem {
       postedDate: postedDate ?? this.postedDate,
       description: description ?? this.description,
       category: category ?? this.category,
+      preacher: preacher ?? this.preacher,
+      videoType: videoType ?? this.videoType,
+      isRecommended: isRecommended ?? this.isRecommended,
     );
   }
 }

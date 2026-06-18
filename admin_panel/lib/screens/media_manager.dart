@@ -137,6 +137,7 @@ class _VideoManagerState extends State<VideoManager> {
     final titleCtrl = TextEditingController(text: video.title);
     final categoryCtrl = TextEditingController(text: video.category);
     final descCtrl = TextEditingController(text: video.description);
+    final preacherCtrl = TextEditingController(text: video.preacher);
     
     String videoType = video.videoType;
     bool isRecommended = video.isRecommended;
@@ -184,6 +185,8 @@ class _VideoManagerState extends State<VideoManager> {
                         return TextField(controller: ctrl, focusNode: focus, decoration: const InputDecoration(labelText: 'Category'));
                       },
                     ),
+                    const SizedBox(height: 8),
+                    TextField(controller: preacherCtrl, decoration: const InputDecoration(labelText: 'Preacher/Speaker')),
                     const SizedBox(height: 8),
                     TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Description'), maxLines: 2),
                     const SizedBox(height: 8),
@@ -309,6 +312,7 @@ class _VideoManagerState extends State<VideoManager> {
                       'title': titleCtrl.text.trim(),
                       'category': categoryCtrl.text.trim(),
                       'description': descCtrl.text.trim(),
+                      'preacher': preacherCtrl.text.trim(),
                       'videoType': videoType,
                       'videoUrl': finalVideoUrl,
                       'thumbnailUrl': finalThumbUrl,
@@ -418,11 +422,102 @@ class _VideoManagerState extends State<VideoManager> {
     if (mounted) setState(() => _isPerformingAction = false);
   }
 
+  void _showYouTubeSettingsDialog() async {
+    final apiKeyCtrl = TextEditingController();
+    final channelIdCtrl = TextEditingController();
+    bool isLoading = true;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          // Fetch existing settings once
+          if (isLoading) {
+            FirebaseFirestore.instance.collection('app_settings').doc('youtube').get().then((doc) {
+              if (doc.exists) {
+                apiKeyCtrl.text = doc.data()?['apiKey'] ?? '';
+                channelIdCtrl.text = doc.data()?['channelId'] ?? '';
+              }
+              if (mounted) setDialogState(() => isLoading = false);
+            }).catchError((e) {
+              if (mounted) setDialogState(() => isLoading = false);
+            });
+          }
+
+          return AlertDialog(
+            title: const Text('YouTube Auto-Fetch Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: SizedBox(
+              width: 400,
+              child: isLoading 
+                ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Configure your YouTube Data API v3 Key and Channel ID here to enable the mobile app to automatically pull recent videos from your channel.',
+                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: apiKeyCtrl,
+                        decoration: const InputDecoration(labelText: 'YouTube API Key', border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: channelIdCtrl,
+                        decoration: const InputDecoration(labelText: 'YouTube Channel ID', border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 8),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Example Channel ID: UCnQGkEdA2-pBfEicB3b7Fzw', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      ),
+                    ],
+                  ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSaving ? null : () => Navigator.pop(context), 
+                child: const Text('Cancel')
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white),
+                onPressed: isLoading || isSaving ? null : () async {
+                  setDialogState(() => isSaving = true);
+                  try {
+                    await FirebaseFirestore.instance.collection('app_settings').doc('youtube').set({
+                      'apiKey': apiKeyCtrl.text.trim(),
+                      'channelId': channelIdCtrl.text.trim(),
+                      'updatedAt': FieldValue.serverTimestamp(),
+                    }, SetOptions(merge: true));
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('YouTube settings updated successfully')));
+                    }
+                  } catch (e) {
+                    setDialogState(() => isSaving = false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e'), backgroundColor: Colors.red));
+                    }
+                  }
+                },
+                child: isSaving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Settings'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showUploadDialog() {
     final formKey = GlobalKey<FormState>();
     final titleCtrl = TextEditingController();
     final categoryCtrl = TextEditingController();
     final descCtrl = TextEditingController();
+    final preacherCtrl = TextEditingController();
     
     String videoType = 'youtube';
     bool isRecommended = false;
@@ -477,6 +572,11 @@ class _VideoManagerState extends State<VideoManager> {
                             validator: (v) => v!.isEmpty ? 'Required' : null,
                           );
                         },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: preacherCtrl,
+                        decoration: const InputDecoration(labelText: 'Preacher/Speaker (Optional)', border: OutlineInputBorder()),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -637,6 +737,7 @@ class _VideoManagerState extends State<VideoManager> {
                       'videoType': videoType,
                       'category': categoryCtrl.text.trim(),
                       'description': descCtrl.text.trim(),
+                      'preacher': preacherCtrl.text.trim(),
                       'thumbnailUrl': finalThumbUrl,
                       'isRecommended': isRecommended,
                       'views': 0,
@@ -723,15 +824,31 @@ class _VideoManagerState extends State<VideoManager> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Video Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Upload New Video'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    onPressed: _showUploadDialog,
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.settings, size: 18),
+                        label: const Text('YouTube Settings'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black87,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: _showYouTubeSettingsDialog,
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Upload New Video'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: _showUploadDialog,
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -22,11 +22,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // App Settings (like YouTube API keys)
+    match /app_settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Videos: anyone can read; admins write; authenticated users can increment views/likes
     match /videos/{doc} {
       allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || isAuthenticated(); // allow view/like increments
+    }
+
+    // Video comments: anyone can read, authenticated users can create
+    match /videos/{videoId}/comments/{commentId} {
+      allow read: if true;
+      allow create: if true; // Allow anonymous comments; tighten to isAuthenticated() if login is required
+      allow delete: if isAdmin();
     }
 
     // Gallery images: publicly readable

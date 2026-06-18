@@ -11,6 +11,7 @@ class VideoItem {
     this.thumbnailUrl = '',
     this.category = '',
     this.description = '',
+    this.preacher = '',
     this.videoType = 'youtube',
     this.isRecommended = false,
   });
@@ -26,6 +27,7 @@ class VideoItem {
       likes: data['likes'] ?? 0,
       category: data['category'] ?? '',
       description: data['description'] ?? '',
+      preacher: data['preacher'] ?? '',
       videoType: data['videoType'] ?? 'youtube',
       isRecommended: data['isRecommended'] ?? false,
       postedDate: data['createdAt'] != null
@@ -43,6 +45,7 @@ class VideoItem {
   final DateTime postedDate;
   final String category;
   final String description;
+  final String preacher;
   final String videoType;
   final bool isRecommended;
 }
