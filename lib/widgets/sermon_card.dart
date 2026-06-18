@@ -1,7 +1,10 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:just_audio/just_audio.dart';
+import 'package:marquee/marquee.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/sermon.dart';
@@ -30,26 +33,40 @@ class SermonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 1,
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            children: [
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor == Colors.white 
+            ? const Color(0xFFF9FAFB) 
+            : Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              children: [
               // ── Thumbnail ──────────────────────────────────────────
               Stack(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(14),
                     child: SizedBox(
-                      width: 80,
-                      height: 80,
+                      width: 75,
+                      height: 75,
                       child: CachedNetworkImage(
                         imageUrl: sermon.thumbnailUrl,
                         fit: BoxFit.cover,
@@ -66,31 +83,33 @@ class SermonCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Play/pause overlay
+                  // Play/pause overlay with glassmorphism
                   Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        color: Colors.black26,
-                        child: StreamBuilder<PlayerState>(
-                          stream: audioPlayerService.playerStateStream,
-                          builder: (context, snapshot) {
-                            final isThisSermon =
-                                audioPlayerService.currentSermon?.id ==
-                                    sermon.id;
-                            final isPlaying =
-                                snapshot.data?.playing ?? false;
-                            return Center(
-                              child: Icon(
-                                isThisSermon && isPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 28,
+                    child: Center(
+                      child: StreamBuilder<PlayerState>(
+                        stream: audioPlayerService.playerStateStream,
+                        builder: (context, snapshot) {
+                          final isThisSermon =
+                              audioPlayerService.currentSermon?.id == sermon.id;
+                          final isPlaying = snapshot.data?.playing ?? false;
+                          return ClipOval(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                color: Colors.black.withOpacity(0.35),
+                                child: Icon(
+                                  isThisSermon && isPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -103,36 +122,67 @@ class SermonCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 5, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.75),
-                          borderRadius: BorderRadius.circular(4),
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           MediaUtils.formatDuration(sermon.duration!),
                           style: const TextStyle(
-                              color: Colors.white, fontSize: 9),
+                              color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               // ── Info ───────────────────────────────────────────────
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      sermon.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    SizedBox(
+                      height: 20,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final span = TextSpan(
+                            text: sermon.title,
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.2),
+                          );
+                          final tp = TextPainter(text: span, maxLines: 1, textDirection: TextDirection.ltr);
+                          tp.layout(maxWidth: double.infinity);
+                          if (tp.size.width > constraints.maxWidth) {
+                            return Marquee(
+                              text: sermon.title,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.2),
+                              scrollAxis: Axis.horizontal,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              blankSpace: 30.0,
+                              velocity: 30.0,
+                              pauseAfterRound: const Duration(seconds: 2),
+                              startPadding: 0.0,
+                              accelerationDuration: const Duration(milliseconds: 500),
+                              accelerationCurve: Curves.linear,
+                              decelerationDuration: const Duration(milliseconds: 500),
+                              decelerationCurve: Curves.easeOut,
+                            );
+                          } else {
+                            return Text(
+                              sermon.title,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, height: 1.2),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          }
+                        },
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       sermon.preacherName,
                       style: TextStyle(
-                          color: Colors.grey[600], fontSize: 12),
+                          color: colors.primary.withOpacity(0.7),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -274,6 +324,7 @@ class SermonCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

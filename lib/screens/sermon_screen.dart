@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -294,15 +295,39 @@ class _SermonScreenState extends State<SermonScreen>
                   _buildSliverAppBar(),
                   SliverToBoxAdapter(child: _buildSearchAndFilters()),
                   SliverToBoxAdapter(
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: Theme.of(context).colorScheme.primary,
-                      unselectedLabelColor: Colors.grey,
-                      tabs: const [
-                        Tab(text: 'All'),
-                        Tab(text: 'Bookmarked'),
-                        Tab(text: 'Downloaded'),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TabBar(
+                          controller: _tabController,
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          dividerColor: Colors.transparent,
+                          indicator: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                          ),
+                          labelColor: Theme.of(context).colorScheme.primary,
+                          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                          unselectedLabelColor: Colors.grey.shade600,
+                          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                          tabs: const [
+                            Tab(text: 'All'),
+                            Tab(text: 'Bookmarked'),
+                            Tab(text: 'Downloaded'),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ];
@@ -340,31 +365,16 @@ class _SermonScreenState extends State<SermonScreen>
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 200,
+      expandedHeight: 220,
       floating: false,
       pinned: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.black),
       flexibleSpace: FlexibleSpaceBar(
-        title: const Text('Sermons'),
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              'assets/images/sermon_hero.jpg',
-              fit: BoxFit.cover,
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        background: Image.asset(
+          'assets/images/sermon_hero.jpg',
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -373,32 +383,48 @@ class _SermonScreenState extends State<SermonScreen>
   Widget _buildSearchAndFilters() {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search sermons…',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _hasActiveFilters
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: _clearFilters,
-                    )
-                  : null,
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: colors.surface,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            onChanged: (v) => setState(() => _searchQuery = v),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search sermons…',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                prefixIcon: Icon(Icons.search_rounded, color: colors.primary),
+                suffixIcon: _hasActiveFilters
+                    ? IconButton(
+                        icon: Icon(Icons.clear_rounded, color: colors.primary),
+                        onPressed: _clearFilters,
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.transparent,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              ),
+              onChanged: (v) => setState(() => _searchQuery = v),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           // Filter row
           Row(
             children: [
@@ -470,25 +496,32 @@ class _SermonScreenState extends State<SermonScreen>
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? colors.primary.withOpacity(0.15)
-              : colors.surface,
-          border: Border.all(
-            color: selected ? colors.primary : Colors.grey.withOpacity(0.4),
-            width: 1.2,
-          ),
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? colors.primary : const Color(0xFFF3F4F6),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: colors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  )
+                ],
+          borderRadius: BorderRadius.circular(30),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            fontWeight:
-                selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? colors.primary : null,
+            fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+            color: selected ? Colors.white : Colors.grey.shade700,
           ),
         ),
       ),
@@ -657,20 +690,20 @@ class _SermonScreenState extends State<SermonScreen>
     return GestureDetector(
       onTap: () => _playSermon(s),
       child: Container(
-        width: 155,
-        margin: const EdgeInsets.only(right: 12, bottom: 4),
+        width: 160,
+        margin: const EdgeInsets.only(right: 14, bottom: 4),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 8,
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -690,10 +723,10 @@ class _SermonScreenState extends State<SermonScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.transparent,
+                      Colors.black.withOpacity(0.1),
                       Colors.black.withOpacity(0.85),
                     ],
-                    stops: const [0.35, 1.0],
+                    stops: const [0.3, 1.0],
                   ),
                 ),
               ),
@@ -701,46 +734,51 @@ class _SermonScreenState extends State<SermonScreen>
               // ── Category pill (top-left) ──
               if (s.category.isNotEmpty)
                 Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: primary.withOpacity(0.85),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      s.category,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5),
+                  top: 10,
+                  left: 10,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        color: Colors.black.withOpacity(0.3),
+                        child: Text(
+                          s.category,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5),
+                        ),
+                      ),
                     ),
                   ),
                 ),
 
               // ── Play button (top-right) ──
               Positioned(
-                top: 6,
-                right: 6,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    shape: BoxShape.circle,
+                top: 8,
+                right: 8,
+                child: ClipOval(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      color: Colors.white.withOpacity(0.2),
+                      child: const Icon(Icons.play_arrow_rounded,
+                          size: 20, color: Colors.white),
+                    ),
                   ),
-                  child: Icon(Icons.play_arrow_rounded,
-                      size: 18, color: primary),
                 ),
               ),
 
               // ── Title + preacher (bottom) ──
               Positioned(
-                left: 8,
-                right: 8,
-                bottom: 8,
+                left: 12,
+                right: 12,
+                bottom: 12,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -751,12 +789,12 @@ class _SermonScreenState extends State<SermonScreen>
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        height: 1.3,
+                        height: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       s.preacherName,
                       maxLines: 1,
@@ -764,6 +802,7 @@ class _SermonScreenState extends State<SermonScreen>
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
                         fontSize: 10,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

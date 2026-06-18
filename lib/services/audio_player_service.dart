@@ -167,21 +167,24 @@ class AudioPlayerService {
       try {
         final videoId = VideoId.parseVideoId(sermon.audioUrl);
         if (videoId == null) throw Exception('Could not parse YouTube video ID');
-        final manifest = await yt.videos.streamsClient.getManifest(videoId);
+        final manifest = await yt.videos.streamsClient.getManifest(
+          videoId,
+          ytClients: [YoutubeApiClient.androidVr],
+        );
         final streams = manifest.audioOnly;
         if (streams.isEmpty) throw Exception('No audio-only streams available');
         final streamInfo = streams.withHighestBitrate();
         final streamUrl = streamInfo.url;
         yt.close();
         debugPrint('[AudioPlayerService] Extracted YouTube audio stream (${streamInfo.codec.mimeType}): $streamUrl');
-        // YouTube ANDROID-client signed URLs require the matching User-Agent.
-        // Without it the CDN returns 403. This UA must match the client used
-        // by youtube_explode_dart when fetching the manifest (ANDROID).
+        
+        // Use the Android VR client to completely bypass the POToken 403 blocks 
+        // that currently affect the standard Android client.
         return AudioSource.uri(
           streamUrl,
           tag: mediaItem,
           headers: const {
-            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 14) gzip',
+            'User-Agent': 'com.google.android.apps.youtube.vr/1.54.26 (Linux; U; Android 10) gzip',
           },
         );
       } catch (e) {

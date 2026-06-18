@@ -1,0 +1,9 @@
+name: test_yt
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+dependencies:
+  http: any
+  youtube_explode_dart:
+    git:
+      url: https://github.com/Hexer10/youtube_explode_dart.git
+      ref: master
