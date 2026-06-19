@@ -44,91 +44,111 @@ class MockData {
       'title': 'Walking in Faith',
       'preacherName': 'Pastor John Smith',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon1/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       'category': 'Sunday Service',
       'tags': ['faith', 'prayer', 'worship'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 1))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 1))),
     },
     {
       'title': 'The Power of Prayer',
       'preacherName': 'Rev. Sarah Johnson',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon2/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
       'category': 'Bible Study',
       'tags': ['prayer', 'holy spirit'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 2))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 2))),
     },
     {
       'title': 'Understanding God\'s Grace',
       'preacherName': 'Dr. Michael Brown',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon3/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
       'category': 'Sunday Service',
       'tags': ['grace', 'salvation'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 3))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 3))),
     },
     {
       'title': 'Youth Revival Night',
       'preacherName': 'Pastor Mary Anderson',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon4/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
       'category': 'Youth Service',
       'tags': ['youth', 'worship', 'holy spirit'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 4))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 4))),
     },
     {
       'title': 'Building Strong Families',
       'preacherName': 'Elder David Wilson',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon5/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
       'category': 'Workshop',
       'tags': ['family', 'marriage', 'love'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 5))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 5))),
     },
     {
       'title': 'Leadership in Ministry',
       'preacherName': 'Bishop James Williams',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon6/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
       'category': 'Conference',
       'tags': ['leadership', 'discipleship'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 6))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 6))),
     },
     {
       'title': 'Healing and Deliverance',
       'preacherName': 'Evangelist Grace Taylor',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon7/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
       'category': 'Special Service',
       'tags': ['healing', 'faith', 'prayer'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 7))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 7))),
     },
     {
       'title': 'The Great Commission',
       'preacherName': 'Pastor John Smith',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon8/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
       'category': 'Sunday Service',
       'tags': ['evangelism', 'missions'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 8))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 8))),
     },
     {
       'title': 'Living in God\'s Love',
       'preacherName': 'Rev. Sarah Johnson',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon9/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3',
       'category': 'Bible Study',
       'tags': ['love', 'grace', 'faith'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 9))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 9))),
     },
     {
       'title': 'Revival Fire',
       'preacherName': 'Dr. Michael Brown',
       'thumbnailUrl': 'https://picsum.photos/seed/sermon10/400/300',
-      'audioUrl': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
+      'audioUrl':
+          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
       'category': 'Revival',
       'tags': ['holy spirit', 'prayer', 'worship'],
-      'dateCreated': Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 10))),
+      'dateCreated':
+          Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 10))),
     },
   ];
 

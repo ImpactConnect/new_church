@@ -78,7 +78,7 @@ class _HomeCarouselState extends State<HomeCarousel> {
                           borderRadius: BorderRadius.circular(15.0),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withValues(alpha: 0.2),
                               spreadRadius: 1,
                               blurRadius: 5,
                               offset: const Offset(0, 3),
@@ -99,7 +99,7 @@ class _HomeCarouselState extends State<HomeCarousel> {
                                   return Container(
                                     color: Theme.of(context)
                                         .primaryColor
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     child: const Center(
                                       child: CircularProgressIndicator(),
                                     ),
@@ -109,7 +109,7 @@ class _HomeCarouselState extends State<HomeCarousel> {
                                   return Container(
                                     color: Theme.of(context)
                                         .primaryColor
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     child: const Icon(
                                       Icons.image_not_supported,
                                       size: 32,
@@ -125,7 +125,7 @@ class _HomeCarouselState extends State<HomeCarousel> {
                                     end: Alignment.bottomCenter,
                                     colors: [
                                       Colors.transparent,
-                                      Colors.black.withOpacity(0.7),
+                                      Colors.black.withValues(alpha: 0.7),
                                     ],
                                   ),
                                 ),
@@ -158,7 +158,8 @@ class _HomeCarouselState extends State<HomeCarousel> {
                                       Text(
                                         item.description!,
                                         style: TextStyle(
-                                          color: Colors.white.withOpacity(0.9),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.9),
                                           fontSize: 16.0,
                                           shadows: const [
                                             Shadow(

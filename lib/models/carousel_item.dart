@@ -111,7 +111,7 @@ class CarouselItem {
     } else {
       // Handle in-app navigation
       String route = linkUrl!;
-      
+
       // Check if we need to navigate to a specific item
       if (itemId != null && itemId!.isNotEmpty) {
         switch (itemType) {

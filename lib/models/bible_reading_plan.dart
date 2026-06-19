@@ -38,7 +38,8 @@ class BibleReadingPlan {
     final startDate = DateTime(now.year, 1, 1);
 
     // Load KJV Bible data
-    final String jsonString = await rootBundle.loadString('assets/docs/kjv.json');
+    final String jsonString =
+        await rootBundle.loadString('assets/docs/kjv.json');
     final List<dynamic> bibleData = json.decode(jsonString);
 
     // Group verses by book and chapter
@@ -60,9 +61,9 @@ class BibleReadingPlan {
 
     for (var book in groupedVerses.keys) {
       if (bookCategories['Gospels']!.contains(book)) continue;
-      if (book == 'Acts' || 
-          book == 'Romans' || 
-          book.contains('Corinthians') || 
+      if (book == 'Acts' ||
+          book == 'Romans' ||
+          book.contains('Corinthians') ||
           book.contains('Timothy') ||
           book.contains('Peter') ||
           book.contains('John') ||
@@ -105,7 +106,7 @@ class BibleReadingPlan {
       categoryChapters.forEach((category, chapters) {
         int chaptersNeeded = chaptersPerCategory[category] ?? 0;
         int startIndex = (day * chaptersNeeded) % chapters.length;
-        
+
         for (int i = 0; i < chaptersNeeded; i++) {
           int index = (startIndex + i) % chapters.length;
           var chapter = chapters[index];

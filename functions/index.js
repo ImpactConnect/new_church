@@ -48,6 +48,7 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
     
     let birthdayUsers = [];
     let anniversaryUsers = [];
+    let celebrantsCache = [];
 
     membersSnapshot.forEach(doc => {
       const data = doc.data();
@@ -58,6 +59,7 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
         const bDate = new Date(bDateStr);
         if (bDate.getMonth() + 1 === currentMonth && bDate.getDate() === currentDay) {
           birthdayUsers.push(data.name);
+          celebrantsCache.push({ id: doc.id, ...data, isBirthday: true });
         }
       }
 
@@ -67,8 +69,15 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
         const wDate = new Date(wDateStr);
         if (wDate.getMonth() + 1 === currentMonth && wDate.getDate() === currentDay) {
           anniversaryUsers.push(data.name);
+          celebrantsCache.push({ id: doc.id, ...data, isBirthday: false });
         }
       }
+    });
+
+    // Save to daily_cache
+    await admin.firestore().collection('daily_cache').doc('celebrants').set({
+      date: admin.firestore.FieldValue.serverTimestamp(),
+      celebrants: celebrantsCache
     });
 
     // Send Birthday Notification to all users

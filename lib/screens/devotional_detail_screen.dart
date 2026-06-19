@@ -25,7 +25,8 @@ class _DevotionalDetailScreenState extends State<DevotionalDetailScreen> {
   }
 
   String get _displayReference {
-    if (widget.devotional.bibleVerse.contains('-') && widget.devotional.bibleVerseText.isEmpty) {
+    if (widget.devotional.bibleVerse.contains('-') &&
+        widget.devotional.bibleVerseText.isEmpty) {
       return widget.devotional.bibleVerse.split('-')[0].trim();
     }
     return widget.devotional.bibleVerse;
@@ -36,7 +37,11 @@ class _DevotionalDetailScreenState extends State<DevotionalDetailScreen> {
       return widget.devotional.bibleVerseText;
     }
     if (widget.devotional.bibleVerse.contains('-')) {
-      return widget.devotional.bibleVerse.split('-').sublist(1).join('-').trim();
+      return widget.devotional.bibleVerse
+          .split('-')
+          .sublist(1)
+          .join('-')
+          .trim();
     }
     return widget.devotional.bibleVerse;
   }
@@ -123,7 +128,7 @@ Date: ${widget.devotional.date.toString().split(' ')[0]}
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -131,7 +136,8 @@ Date: ${widget.devotional.date.toString().split(' ')[0]}
                 children: [
                   Text(
                     _displayText,
-                    style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 16, height: 1.5),
+                    style: const TextStyle(
+                        fontStyle: FontStyle.italic, fontSize: 16, height: 1.5),
                   ),
                   const SizedBox(height: 12),
                   Align(

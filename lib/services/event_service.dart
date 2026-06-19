@@ -6,14 +6,18 @@ class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collection = 'events';
 
-  // Get upcoming events
+  // Get all events (limited to 3 months past and all future)
   Future<Map<String, List<Event>>> getAllEvents() async {
     try {
       print('Fetching all events...');
-      
+
+      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
+
       final querySnapshot = await _firestore
           .collection(_collection)
-          .orderBy('startDate', descending: true)
+          .where('endDate',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(threeMonthsAgo))
+          .orderBy('endDate', descending: true)
           .get();
 
       final now = DateTime.now();
@@ -22,7 +26,7 @@ class EventService {
 
       for (var doc in querySnapshot.docs) {
         final event = Event.fromFirestore(doc);
-        if (event.endDate.isAfter(now)) {
+        if (event.isUpcoming) {
           upcomingEvents.add(event);
         } else {
           pastEvents.add(event);
@@ -39,7 +43,7 @@ class EventService {
         'past': pastEvents,
       };
     } catch (e) {
-      print('Error getting upcoming events: $e');
+      print('Error getting events: $e');
       if (e is FirebaseException && e.code == 'permission-denied') {
         ToastUtils.showToast(
             'Please update Firestore rules to allow read access');
@@ -51,25 +55,44 @@ class EventService {
     }
   }
 
-  // Search events by title
+  // Get upcoming events stream
+  Stream<List<Event>> getUpcomingEventsStream({int limit = 3}) {
+    return _firestore
+        .collection(_collection)
+        .where('endDate',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime.now()))
+        .orderBy('endDate')
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList());
+  }
+
+  // Search events locally to avoid case sensitivity issues
   Future<Map<String, List<Event>>> searchEvents(String query) async {
     try {
+      final String lowerQuery = query.toLowerCase();
+      // Fetch events with time constraints to avoid pulling the whole DB
+      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
       final querySnapshot = await _firestore
           .collection(_collection)
-          .where('title', isGreaterThanOrEqualTo: query.toLowerCase())
-          .where('title', isLessThanOrEqualTo: '${query.toLowerCase()}\uf8ff')
+          .where('endDate',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(threeMonthsAgo))
           .get();
 
-      final now = DateTime.now();
       final List<Event> upcomingEvents = [];
       final List<Event> pastEvents = [];
 
       for (var doc in querySnapshot.docs) {
         final event = Event.fromFirestore(doc);
-        if (event.endDate.isAfter(now)) {
-          upcomingEvents.add(event);
-        } else {
-          pastEvents.add(event);
+        if (event.title.toLowerCase().contains(lowerQuery) ||
+            event.description.toLowerCase().contains(lowerQuery) ||
+            event.venue.toLowerCase().contains(lowerQuery)) {
+          if (event.isUpcoming) {
+            upcomingEvents.add(event);
+          } else {
+            pastEvents.add(event);
+          }
         }
       }
 
@@ -154,7 +177,8 @@ class EventService {
             DateTime.now().add(const Duration(days: 2, hours: 2))),
         'venue': 'Main Sanctuary',
         'programmeTime': '10:00 AM - 12:00 PM',
-        'isUpcoming': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       // Sample event 2
@@ -169,7 +193,8 @@ class EventService {
             DateTime.now().add(const Duration(days: 5, hours: 3))),
         'venue': 'Youth Center',
         'programmeTime': '6:00 PM - 9:00 PM',
-        'isUpcoming': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       // Sample event 3
@@ -184,7 +209,8 @@ class EventService {
             DateTime.now().add(const Duration(days: 7, hours: 1))),
         'venue': 'Prayer Room',
         'programmeTime': '7:00 PM - 8:00 PM',
-        'isUpcoming': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
       print('Created sample event data');

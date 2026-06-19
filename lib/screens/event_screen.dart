@@ -1,9 +1,9 @@
-import 'package:device_calendar/device_calendar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
 
+import 'event_details_screen.dart';
 import '../models/event.dart' as app_event;
 import '../services/event_service.dart';
 import '../utils/toast_utils.dart';
@@ -84,7 +84,7 @@ class _EventScreenState extends State<EventScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _EventDetailsSheet(event: event),
+      builder: (context) => EventDetailsScreen(event: event),
     );
   }
 
@@ -110,8 +110,8 @@ class _EventScreenState extends State<EventScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.4),
-                          Colors.black.withOpacity(0.6),
+                          Colors.black.withValues(alpha: 0.4),
+                          Colors.black.withValues(alpha: 0.6),
                         ],
                       ),
                     ),
@@ -157,9 +157,7 @@ class _EventScreenState extends State<EventScreen> {
             delegate: SliverChildListDelegate(
               [
                 if (_isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(),
-                  )
+                  const _ShimmerEventList()
                 else if (_upcomingEvents.isEmpty && _pastEvents.isEmpty)
                   const Center(
                     child: Text('No events found'),
@@ -174,10 +172,13 @@ class _EventScreenState extends State<EventScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Text(
                             'Upcoming Events',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).primaryColor,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).primaryColor,
+                                ),
                           ),
                         ),
                         ListView.builder(
@@ -203,10 +204,13 @@ class _EventScreenState extends State<EventScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Text(
                             'Past Events',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[600],
+                                ),
                           ),
                         ),
                         ListView.builder(
@@ -247,57 +251,202 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isPast) {
+      return Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey[200]!),
+        ),
+        color: Colors.white,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                ),
+                child: event.imageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: event.imageUrl,
+                        height: 90,
+                        width: 90,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Shimmer.fromColors(
+                          baseColor: Colors.grey[300]!,
+                          highlightColor: Colors.grey[100]!,
+                          child: Container(
+                            height: 90,
+                            width: 90,
+                            color: Colors.white,
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: 90,
+                          width: 90,
+                          color: Colors.grey[100],
+                          child: Icon(Icons.church,
+                              size: 24, color: Colors.grey[400]),
+                        ),
+                      )
+                    : Container(
+                        height: 90,
+                        width: 90,
+                        color: Colors.grey[100],
+                        child: Icon(Icons.church,
+                            size: 24, color: Colors.grey[400]),
+                      ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        event.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today,
+                              size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 6),
+                          Text(
+                            DateFormat('MMM d, y').format(event.startDate),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      elevation: isPast ? 1 : 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isPast ? Colors.grey[100] : Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      elevation: 4,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(4)),
-              child: Image.network(
-                event.imageUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error),
-                  );
-                },
-              ),
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+              child: event.imageUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: event.imageUrl,
+                      height: 220,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          height: 220,
+                          color: Colors.white,
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        height: 220,
+                        color: Colors.grey[200],
+                        child: Icon(Icons.church,
+                            size: 48, color: Colors.grey[400]),
+                      ),
+                    )
+                  : Container(
+                      height: 220,
+                      color: Colors.grey[200],
+                      child:
+                          Icon(Icons.church, size: 48, color: Colors.grey[400]),
+                    ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     event.title,
                     style: const TextStyle(
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        DateFormat('MMM d, y').format(event.startDate),
-                        style: TextStyle(
-                          color: Colors.grey[600],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .primaryColor
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month,
+                                size: 16,
+                                color: Theme.of(context).primaryColor),
+                            const SizedBox(width: 6),
+                            Text(
+                              DateFormat('MMM d, y').format(event.startDate),
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      if (event.venue.isNotEmpty) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on,
+                                  size: 16, color: Colors.grey[500]),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  event.venue,
+                                  style: TextStyle(
+                                      color: Colors.grey[600], fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]
                     ],
                   ),
                 ],
@@ -310,312 +459,66 @@ class _EventCard extends StatelessWidget {
   }
 }
 
-class _EventDetailsSheet extends StatefulWidget {
-  const _EventDetailsSheet({
-    Key? key,
-    required this.event,
-  }) : super(key: key);
-  final app_event.Event event;
-
-  @override
-  State<_EventDetailsSheet> createState() => _EventDetailsSheetState();
-}
-
-class _EventDetailsSheetState extends State<_EventDetailsSheet> {
-  late final DeviceCalendarPlugin _deviceCalendarPlugin;
-
-  @override
-  void initState() {
-    super.initState();
-    _deviceCalendarPlugin = DeviceCalendarPlugin();
-  }
-
-  Future<bool> _requestCalendarPermissions() async {
-    final status = await Permission.calendar.request();
-    if (status.isDenied) {
-      ToastUtils.showToast('Calendar permission is required to add events');
-      return false;
-    }
-    if (status.isPermanentlyDenied) {
-      ToastUtils.showToast('Please enable calendar permission in app settings');
-      await openAppSettings();
-      return false;
-    }
-    return status.isGranted;
-  }
-
-  Future<void> _addToCalendar() async {
-    try {
-      final hasPermission = await _requestCalendarPermissions();
-      if (!hasPermission) {
-        return;
-      }
-
-      var permissionsGranted = await _deviceCalendarPlugin.hasPermissions();
-      if (permissionsGranted.isSuccess && !permissionsGranted.data!) {
-        permissionsGranted = await _deviceCalendarPlugin.requestPermissions();
-        if (!permissionsGranted.isSuccess || !permissionsGranted.data!) {
-          ToastUtils.showToast('Calendar permission is required');
-          return;
-        }
-      }
-
-      final calendarsResult = await _deviceCalendarPlugin.retrieveCalendars();
-      if (!calendarsResult.isSuccess) {
-        ToastUtils.showToast('Failed to get calendars');
-        return;
-      }
-
-      final calendars = calendarsResult.data;
-      if (calendars == null || calendars.isEmpty) {
-        ToastUtils.showToast('No calendars found');
-        return;
-      }
-
-      // Use the first available calendar
-      final calendar = calendars.first;
-
-      final eventToCreate = Event(
-        calendar.id,
-        title: widget.event.title,
-        description: widget.event.description,
-        start: TZDateTime.from(widget.event.startDate, local),
-        end: TZDateTime.from(widget.event.endDate, local),
-        location: widget.event.venue,
-      );
-
-      final createEventResult =
-          await _deviceCalendarPlugin.createOrUpdateEvent(eventToCreate);
-      if (createEventResult?.isSuccess ?? false) {
-        ToastUtils.showToast(
-            '${widget.event.title} has been added to your calendar');
-      } else {
-        ToastUtils.showToast('Failed to add event to calendar');
-      }
-    } catch (e) {
-      print('Error adding event to calendar: $e');
-      ToastUtils.showToast('Failed to add event to calendar');
-    }
-  }
-
-  void _shareEvent() {
-    final String shareText = '''
-${widget.event.title}
-
-Date: ${DateFormat('MMM d, y').format(widget.event.startDate)}
-Time: ${widget.event.programmeTime}
-Venue: ${widget.event.venue}
-
-${widget.event.description}
-''';
-    Share.share(shareText);
-  }
+class _ShimmerEventList extends StatelessWidget {
+  const _ShimmerEventList({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Image.network(
-                    widget.event.imageUrl,
-                    height: 250,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 250,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.error),
-                      );
-                    },
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  height: 200,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(4)),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.event.title,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _DetailItem(
-                          icon: Icons.calendar_today,
-                          title: 'Start Date',
-                          content: DateFormat('MMM d, y')
-                              .format(widget.event.startDate),
-                        ),
-                        _DetailItem(
-                          icon: Icons.calendar_today,
-                          title: 'End Date',
-                          content: DateFormat('MMM d, y')
-                              .format(widget.event.endDate),
-                        ),
-                        _DetailItem(
-                          icon: Icons.access_time,
-                          title: 'Programme Time',
-                          content: widget.event.programmeTime,
-                        ),
-                        _DetailItem(
-                          icon: Icons.location_on,
-                          title: 'Venue',
-                          content: widget.event.venue,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.event.description,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _ActionButton(
-                              icon: Icons.share,
-                              label: 'Share',
-                              onTap: _shareEvent,
-                            ),
-                            _ActionButton(
-                              icon: Icons.calendar_today,
-                              label: 'Add to Calendar',
-                              onTap: _addToCalendar,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailItem extends StatelessWidget {
-  const _DetailItem({
-    Key? key,
-    required this.icon,
-    required this.title,
-    required this.content,
-  }) : super(key: key);
-  final IconData icon;
-  final String title;
-  final String content;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(
+                        height: 20,
+                        width: double.infinity,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(
+                        height: 16,
+                        width: 150,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  content,
-                  style: const TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    Key? key,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  }) : super(key: key);
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

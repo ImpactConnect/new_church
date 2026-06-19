@@ -72,8 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.black.withOpacity(0.7),
+                            Colors.black.withValues(alpha: 0.3),
+                            Colors.black.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
@@ -114,7 +114,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const BibleReadingPlanScreen(),
+                                    builder: (context) =>
+                                        const BibleReadingPlanScreen(),
                                   ),
                                 );
                               },
@@ -150,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(

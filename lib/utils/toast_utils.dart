@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ToastUtils {
-  static final GlobalKey<ScaffoldMessengerState> _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  static final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   static GlobalKey<ScaffoldMessengerState> get messengerKey => _messengerKey;
 

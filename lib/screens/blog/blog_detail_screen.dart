@@ -117,8 +117,9 @@ class BlogDetailScreen extends StatelessWidget {
                         children: post.tags.map((tag) {
                           return Chip(
                             label: Text(tag),
-                            backgroundColor:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
+                            backgroundColor: Theme.of(context)
+                                .primaryColor
+                                .withValues(alpha: 0.1),
                           );
                         }).toList(),
                       ),
@@ -136,7 +137,7 @@ class BlogDetailScreen extends StatelessWidget {
           color: Theme.of(context).scaffoldBackgroundColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, -2),
             ),

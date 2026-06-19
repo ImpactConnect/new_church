@@ -55,32 +55,33 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           },
         ),
       );
-    
+
     // Start with Google Docs viewer
     _loadWithGoogleDocsViewer();
   }
-  
+
   void _loadWithGoogleDocsViewer() {
     final encodedUrl = Uri.encodeComponent(widget.book.pdfUrl);
-    final googleDocsUrl = 'https://docs.google.com/viewer?url=$encodedUrl&embedded=true';
+    final googleDocsUrl =
+        'https://docs.google.com/viewer?url=$encodedUrl&embedded=true';
     _webViewController.loadRequest(Uri.parse(googleDocsUrl));
     setState(() {
       _viewMode = 0;
     });
   }
-  
+
   void _loadDirectPdf() {
     _webViewController.loadRequest(Uri.parse(widget.book.pdfUrl));
     setState(() {
       _viewMode = 1;
     });
   }
-  
+
   Future<void> _openExternalPdf() async {
     setState(() {
       _viewMode = 2;
     });
-    
+
     final Uri url = Uri.parse(widget.book.pdfUrl);
     try {
       if (await canLaunchUrl(url)) {
@@ -118,7 +119,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           IconButton(
             icon: const Icon(Icons.bookmark),
             onPressed: () {
-              _saveProgress(1); // Default to page 1 since we can't track pages reliably
+              _saveProgress(
+                  1); // Default to page 1 since we can't track pages reliably
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Reading progress saved'),
@@ -167,13 +169,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 WebViewWidget(controller: _webViewController),
                 if (_isLoading)
                   const Center(child: CircularProgressIndicator()),
-                if (_hasError)
-                  _buildErrorWidget(),
+                if (_hasError) _buildErrorWidget(),
               ],
             ),
     );
   }
-  
+
   Widget _buildErrorWidget() {
     return Center(
       child: Column(
@@ -199,7 +200,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       ),
     );
   }
-  
+
   Widget _buildExternalViewPlaceholder() {
     return Center(
       child: Column(

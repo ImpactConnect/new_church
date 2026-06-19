@@ -23,8 +23,7 @@ class AudioPlayerBottomSheet extends StatefulWidget {
   final VoidCallback onClose;
 
   @override
-  State<AudioPlayerBottomSheet> createState() =>
-      _AudioPlayerBottomSheetState();
+  State<AudioPlayerBottomSheet> createState() => _AudioPlayerBottomSheetState();
 }
 
 class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
@@ -76,8 +75,9 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final maxVal =
-        _duration.inMilliseconds > 0 ? _duration.inMilliseconds.toDouble() : 1.0;
+    final maxVal = _duration.inMilliseconds > 0
+        ? _duration.inMilliseconds.toDouble()
+        : 1.0;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -86,7 +86,7 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.12),
+              color: Colors.black.withValues(alpha: 0.12),
               blurRadius: 12,
               offset: const Offset(0, -4)),
         ],
@@ -120,17 +120,17 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
                           placeholder: (_, __) => Container(
                               width: 56,
                               height: 56,
-                              color: colors.primary.withOpacity(0.1)),
+                              color: colors.primary.withValues(alpha: 0.1)),
                           errorWidget: (_, __, ___) => Container(
                               width: 56,
                               height: 56,
-                              color: colors.primary.withOpacity(0.1),
+                              color: colors.primary.withValues(alpha: 0.1),
                               child: const Icon(Icons.church)),
                         )
                       : Container(
                           width: 56,
                           height: 56,
-                          color: colors.primary.withOpacity(0.1),
+                          color: colors.primary.withValues(alpha: 0.1),
                           child: const Icon(Icons.church)),
                 ),
                 const SizedBox(width: 12),
@@ -157,8 +157,7 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
                     ],
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_up_rounded,
-                    color: Colors.grey),
+                const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.grey),
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   onPressed: widget.onClose,
@@ -171,10 +170,8 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 3,
-              thumbShape:
-                  const RoundSliderThumbShape(enabledThumbRadius: 7),
-              overlayShape:
-                  const RoundSliderOverlayShape(overlayRadius: 14),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
             ),
             child: Slider(
               value: _position.inMilliseconds.toDouble().clamp(0, maxVal),
@@ -205,10 +202,10 @@ class _AudioPlayerBottomSheetState extends State<AudioPlayerBottomSheet> {
               GestureDetector(
                 onTap: () => widget.audioPlayerService.cycleSpeed(),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: colors.primary.withOpacity(0.1),
+                    color: colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(

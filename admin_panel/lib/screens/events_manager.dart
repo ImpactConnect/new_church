@@ -69,6 +69,8 @@ class _EventsManagerState extends State<EventsManager> {
                 _DetailRow('Time:', event.programmeTime),
                 _DetailRow('Start Date:', '${event.startDate.toLocal()}'.split(' ')[0]),
                 _DetailRow('End Date:', '${event.endDate.toLocal()}'.split(' ')[0]),
+                if (event.joinLink.isNotEmpty) _DetailRow('Join Link:', event.joinLink),
+                _DetailRow('Recurrence:', event.recurrence.toUpperCase()),
                 _DetailRow('Status:', event.isUpcoming ? 'Upcoming' : 'Past'),
               ],
             ),
@@ -130,10 +132,11 @@ class _EventsManagerState extends State<EventsManager> {
     final descCtrl = TextEditingController(text: event?.description ?? '');
     final venueCtrl = TextEditingController(text: event?.venue ?? '');
     final timeCtrl = TextEditingController(text: event?.programmeTime ?? '');
+    final joinLinkCtrl = TextEditingController(text: event?.joinLink ?? '');
     
     DateTime startDate = event?.startDate ?? DateTime.now();
     DateTime endDate = event?.endDate ?? DateTime.now().add(const Duration(days: 1));
-    bool isUpcoming = event?.isUpcoming ?? true;
+    String recurrence = event?.recurrence ?? 'none';
 
     String thumbMode = event != null && event.imageUrl.isNotEmpty ? 'url' : 'file';
     final thumbUrlCtrl = TextEditingController(text: event?.imageUrl ?? '');
@@ -199,7 +202,31 @@ class _EventsManagerState extends State<EventsManager> {
                           Expanded(
                             child: TextFormField(
                               controller: timeCtrl,
-                              decoration: const InputDecoration(labelText: 'Time (e.g. 10:00 AM)', border: OutlineInputBorder()),
+                              readOnly: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Time (e.g. 10:00 AM - 12:00 PM)',
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.access_time),
+                              ),
+                              onTap: () async {
+                                final startTime = await showTimePicker(
+                                  context: context,
+                                  initialTime: const TimeOfDay(hour: 10, minute: 0),
+                                  helpText: 'Select Start Time',
+                                );
+                                if (startTime != null && context.mounted) {
+                                  final endTime = await showTimePicker(
+                                    context: context,
+                                    initialTime: startTime,
+                                    helpText: 'Select End Time',
+                                  );
+                                  if (endTime != null && context.mounted) {
+                                    final startStr = startTime.format(context);
+                                    final endStr = endTime.format(context);
+                                    timeCtrl.text = '$startStr - $endStr';
+                                  }
+                                }
+                              },
                               validator: (v) => v!.isEmpty ? 'Required' : null,
                             ),
                           ),
@@ -222,11 +249,30 @@ class _EventsManagerState extends State<EventsManager> {
                           )),
                         ],
                       ),
-                      SwitchListTile(
-                        title: const Text('Is Upcoming Event?'),
-                        value: isUpcoming,
-                        onChanged: (val) => setDialogState(() => isUpcoming = val),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: joinLinkCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Join Link (Zoom, Meet, Telegram, etc.)',
+                          border: OutlineInputBorder(),
+                          hintText: 'https://...',
+                        ),
                       ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: recurrence,
+                        decoration: const InputDecoration(labelText: 'Recurrence', border: OutlineInputBorder()),
+                        items: const [
+                          DropdownMenuItem(value: 'none', child: Text('None (One-time event)')),
+                          DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                          DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                          DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setDialogState(() => recurrence = val);
+                        },
+                      ),
+
                       const SizedBox(height: 16),
                       
                       const Text('Event Flyer / Image', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -306,9 +352,11 @@ class _EventsManagerState extends State<EventsManager> {
                       'programmeTime': timeCtrl.text.trim(),
                       'startDate': Timestamp.fromDate(startDate),
                       'endDate': Timestamp.fromDate(endDate),
-                      'isUpcoming': isUpcoming,
+                      'joinLink': joinLinkCtrl.text.trim(),
+                      'recurrence': recurrence,
                       'imageUrl': finalThumbUrl,
-                      'createdAt': FieldValue.serverTimestamp(),
+                      'updatedAt': FieldValue.serverTimestamp(),
+                      if (event == null) 'createdAt': FieldValue.serverTimestamp(),
                     };
 
                     if (event == null) {
@@ -425,7 +473,7 @@ class _EventsManagerState extends State<EventsManager> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
                 child: Column(
                   children: [
@@ -487,7 +535,7 @@ class _EventsManagerState extends State<EventsManager> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -11,7 +11,10 @@ class YouTubeApiService {
     String? apiKey;
     String? channelId;
     try {
-      final doc = await FirebaseFirestore.instance.collection('app_settings').doc('youtube').get();
+      final doc = await FirebaseFirestore.instance
+          .collection('app_settings')
+          .doc('youtube')
+          .get();
       if (doc.exists) {
         apiKey = doc.data()?['apiKey'];
         channelId = doc.data()?['channelId'];
@@ -20,9 +23,14 @@ class YouTubeApiService {
       throw Exception('Error fetching YouTube settings from Firestore: $e');
     }
 
-    if (apiKey == null || apiKey.isEmpty || apiKey == 'YOUR_YOUTUBE_API_KEY' || 
-        channelId == null || channelId.isEmpty || channelId == 'YOUR_CHANNEL_ID') {
-      throw Exception('YouTube API Key or Channel ID not configured in admin settings.');
+    if (apiKey == null ||
+        apiKey.isEmpty ||
+        apiKey == 'YOUR_YOUTUBE_API_KEY' ||
+        channelId == null ||
+        channelId.isEmpty ||
+        channelId == 'YOUR_CHANNEL_ID') {
+      throw Exception(
+          'YouTube API Key or Channel ID not configured in admin settings.');
     }
 
     final url = Uri.parse(
@@ -43,19 +51,22 @@ class YouTubeApiService {
             id: videoId,
             title: snippet['title'] ?? 'Unknown Title',
             videoUrl: 'https://www.youtube.com/watch?v=$videoId',
-            thumbnailUrl: snippet['thumbnails']?['high']?['url'] ?? 
-                          snippet['thumbnails']?['default']?['url'] ?? '',
+            thumbnailUrl: snippet['thumbnails']?['high']?['url'] ??
+                snippet['thumbnails']?['default']?['url'] ??
+                '',
             description: snippet['description'] ?? '',
             category: 'YouTube Channel',
             videoType: VideoType.youtube,
             postedDate: DateTime.parse(snippet['publishedAt']),
-            views: 0, // Search API doesn't return views; requires a separate /videos call
+            views:
+                0, // Search API doesn't return views; requires a separate /videos call
             likes: 0,
             isRecommended: false,
           );
         }).toList();
       } else {
-        throw Exception('Failed to load YouTube videos: ${response.statusCode} - ${response.body}');
+        throw Exception(
+            'Failed to load YouTube videos: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Error fetching YouTube videos: $e');

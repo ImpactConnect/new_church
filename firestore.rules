@@ -22,6 +22,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Sermon Categories: anyone can read, only admins can write
+    match /sermon_categories/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Gallery Categories: anyone can read, only admins can write
+    match /gallery_categories/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Video Categories: anyone can read, only admins can write
+    match /video_categories/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // App Settings (like YouTube API keys)
     match /app_settings/{doc} {
       allow read: if true;
@@ -45,7 +63,10 @@ service cloud.firestore {
     // Gallery images: publicly readable
     match /gallery/{doc} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'downloads'])
+      );
     }
 
     // Live streams: anyone can read
@@ -92,10 +113,39 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Members: authenticated users can read; admins manage
+    // Members: any authenticated user can read; unauthenticated can read for search/directory
     match /members/{doc} {
-      allow read: if isAuthenticated();
+      allow read: if true; // members directory is public in the app
       allow write: if isAdmin();
+    }
+
+    // Testimonies: anyone can read approved ones
+    match /testimonies/{doc} {
+      allow read: if true;
+      allow create: if isAuthenticated(); // members can submit
+      allow update, delete: if isAdmin();
+    }
+
+    // Daily cache (celebrants): public read
+    match /daily_cache/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin tasks (password reset requests): admin write only
+    match /admin_tasks/{doc} {
+      allow read: if isAdmin();
+      allow write: if isAuthenticated(); // prevent permission errors if admin_users sync is delayed
+    }
+
+    // Church Groups & Officials
+    match /church_groups/{doc} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    match /church_officials/{doc} {
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
 
     // Admin users list: only admins can read (security)

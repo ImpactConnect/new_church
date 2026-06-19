@@ -47,7 +47,7 @@ class TestimonyDetailsDialog extends StatelessWidget {
                         Text(
                           _formatDate(testimony.dateShared),
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 14,
                           ),
                         ),

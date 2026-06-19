@@ -93,8 +93,8 @@ ${widget.hymn.lyrics}
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.black.withOpacity(0.7),
+                            Colors.black.withValues(alpha: 0.3),
+                            Colors.black.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
@@ -164,7 +164,7 @@ ${widget.hymn.lyrics}
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -192,7 +192,8 @@ ${widget.hymn.lyrics}
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(

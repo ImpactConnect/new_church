@@ -10,6 +10,8 @@ class Sermon {
     required this.thumbnailUrl,
     required this.audioUrl,
     required this.dateCreated,
+    this.likes = 0,
+    this.streams = 0,
     this.isBookmarked = false,
     this.isDownloaded = false,
     this.localAudioPath,
@@ -44,6 +46,8 @@ class Sermon {
       thumbnailUrl: data['thumbnailUrl'] as String? ?? '',
       audioUrl: data['audioUrl'] as String? ?? '',
       dateCreated: dateCreated,
+      likes: data['likes'] as int? ?? 0,
+      streams: data['streams'] as int? ?? 0,
       isBookmarked: data['isBookmarked'] as bool? ?? false,
       isDownloaded: data['isDownloaded'] as bool? ?? false,
       localAudioPath: data['localAudioPath'] as String?,
@@ -60,6 +64,8 @@ class Sermon {
       thumbnailUrl: json['thumbnailUrl'] as String,
       audioUrl: json['audioUrl'] as String,
       dateCreated: DateTime.parse(json['dateCreated'] as String),
+      likes: json['likes'] as int? ?? 0,
+      streams: json['streams'] as int? ?? 0,
       isBookmarked: json['isBookmarked'] as bool? ?? false,
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       localAudioPath: json['localAudioPath'] as String?,
@@ -73,6 +79,8 @@ class Sermon {
   final String thumbnailUrl;
   final String audioUrl;
   final DateTime dateCreated;
+  final int likes;
+  final int streams;
   bool isBookmarked;
   bool isDownloaded;
   String? localAudioPath;
@@ -87,6 +95,8 @@ class Sermon {
       'thumbnailUrl': thumbnailUrl,
       'audioUrl': audioUrl,
       'dateCreated': dateCreated.toIso8601String(),
+      'likes': likes,
+      'streams': streams,
       'isBookmarked': isBookmarked,
       'isDownloaded': isDownloaded,
       'localAudioPath': localAudioPath,
@@ -102,6 +112,8 @@ class Sermon {
     String? thumbnailUrl,
     String? audioUrl,
     DateTime? dateCreated,
+    int? likes,
+    int? streams,
     bool? isBookmarked,
     bool? isDownloaded,
     String? localAudioPath,
@@ -115,6 +127,8 @@ class Sermon {
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       audioUrl: audioUrl ?? this.audioUrl,
       dateCreated: dateCreated ?? this.dateCreated,
+      likes: likes ?? this.likes,
+      streams: streams ?? this.streams,
       isBookmarked: isBookmarked ?? this.isBookmarked,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       localAudioPath: localAudioPath ?? this.localAudioPath,

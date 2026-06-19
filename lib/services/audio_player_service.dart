@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -113,6 +114,14 @@ class AudioPlayerService {
         }
 
         await player.play();
+
+        // Increment stream count
+        try {
+          await FirebaseFirestore.instance
+              .collection('sermons')
+              .doc(sermon.id)
+              .update({'streams': FieldValue.increment(1)});
+        } catch (_) {}
       } catch (e) {
         debugPrint('[AudioPlayerService] Error playing sermon: $e');
         rethrow;
@@ -145,7 +154,8 @@ class AudioPlayerService {
   /// │ WMA         │   ✓     │   ✗   │
   /// │ ALAC        │   ✗     │   ✓   │
   /// └─────────────┴─────────┴───────┘
-  Future<AudioSource> _buildAudioSource(Sermon sermon, MediaItem mediaItem) async {
+  Future<AudioSource> _buildAudioSource(
+      Sermon sermon, MediaItem mediaItem) async {
     // Priority 1: Use local file if downloaded (offline playback, no network)
     if (sermon.isDownloaded &&
         sermon.localAudioPath != null &&
@@ -162,11 +172,13 @@ class AudioPlayerService {
       caseSensitive: false,
     );
     if (ytRegex.hasMatch(sermon.audioUrl)) {
-      debugPrint('[AudioPlayerService] Detected YouTube URL: ${sermon.audioUrl}');
+      debugPrint(
+          '[AudioPlayerService] Detected YouTube URL: ${sermon.audioUrl}');
       final yt = YoutubeExplode();
       try {
         final videoId = VideoId.parseVideoId(sermon.audioUrl);
-        if (videoId == null) throw Exception('Could not parse YouTube video ID');
+        if (videoId == null)
+          throw Exception('Could not parse YouTube video ID');
         final manifest = await yt.videos.streamsClient.getManifest(
           videoId,
           ytClients: [YoutubeApiClient.androidVr],
@@ -176,15 +188,17 @@ class AudioPlayerService {
         final streamInfo = streams.withHighestBitrate();
         final streamUrl = streamInfo.url;
         yt.close();
-        debugPrint('[AudioPlayerService] Extracted YouTube audio stream (${streamInfo.codec.mimeType}): $streamUrl');
-        
-        // Use the Android VR client to completely bypass the POToken 403 blocks 
+        debugPrint(
+            '[AudioPlayerService] Extracted YouTube audio stream (${streamInfo.codec.mimeType}): $streamUrl');
+
+        // Use the Android VR client to completely bypass the POToken 403 blocks
         // that currently affect the standard Android client.
         return AudioSource.uri(
           streamUrl,
           tag: mediaItem,
           headers: const {
-            'User-Agent': 'com.google.android.apps.youtube.vr/1.54.26 (Linux; U; Android 10) gzip',
+            'User-Agent':
+                'com.google.android.apps.youtube.vr/1.54.26 (Linux; U; Android 10) gzip',
           },
         );
       } catch (e) {

@@ -96,7 +96,7 @@ class _NotesScreenState extends State<NotesScreen> {
                   child: Icon(
                     Icons.note_alt,
                     size: 80,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Colors.white.withValues(alpha: 0.6),
                   ),
                 ),
               ),

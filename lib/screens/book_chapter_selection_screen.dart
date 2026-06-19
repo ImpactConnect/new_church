@@ -58,7 +58,8 @@ class _BookChapterSelectionScreenState
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    tileColor: isSelected ? Colors.blue.withOpacity(0.1) : null,
+                    tileColor:
+                        isSelected ? Colors.blue.withValues(alpha: 0.1) : null,
                     onTap: () {
                       setState(() {
                         selectedBook = book;

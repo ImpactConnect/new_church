@@ -40,7 +40,7 @@ class _ReminderSettingsDialogState extends State<ReminderSettingsDialog> {
 
   Future<void> _savePreferences() async {
     await ReminderPreferences.setRemindersEnabled(_remindersEnabled);
-    
+
     if (_remindersEnabled) {
       final now = DateTime.now();
       final dailyTime = DateTime(

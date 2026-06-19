@@ -119,7 +119,7 @@ class SermonService {
         r'(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?.*v=|shorts\/|embed\/)|youtu\.be\/)([\w\-]+)',
         caseSensitive: false,
       );
-      
+
       YoutubeExplode? yt;
       if (ytRegex.hasMatch(actualUrl)) {
         yt = YoutubeExplode();
@@ -128,9 +128,11 @@ class SermonService {
           final manifest = await yt.videos.streamsClient.getManifest(videoId);
           final streamInfo = manifest.audioOnly.withHighestBitrate();
           actualUrl = streamInfo.url.toString();
-          debugPrint('[SermonService] Extracted YouTube download URL: $actualUrl');
+          debugPrint(
+              '[SermonService] Extracted YouTube download URL: $actualUrl');
         } catch (e) {
-          debugPrint('[SermonService] Failed to extract YouTube stream for download: $e');
+          debugPrint(
+              '[SermonService] Failed to extract YouTube stream for download: $e');
         } finally {
           yt.close();
         }
@@ -267,6 +269,20 @@ class SermonService {
     } catch (e) {
       debugPrint('Error getting sermon by ID: $e');
       return null;
+    }
+  }
+
+  // ─── Liking ────────────────────────────────────────────────────────────────
+
+  Future<void> likeSermon(String sermonId) async {
+    try {
+      await _firestore
+          .collection('sermons')
+          .doc(sermonId)
+          .update({'likes': FieldValue.increment(1)});
+    } catch (e) {
+      debugPrint('Error liking sermon: $e');
+      // We don't throw here to avoid disrupting the UI if it fails
     }
   }
 }

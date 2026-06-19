@@ -11,8 +11,8 @@ class GalleryService {
 
   // Upload image to Firebase Storage and create Firestore document
   Future<bool> uploadImage({
-    required File imageFile, 
-    required String title, 
+    required File imageFile,
+    required String title,
     String description = '',
   }) async {
     try {
@@ -75,16 +75,13 @@ class GalleryService {
   // Like an image
   Future<bool> likeImage(String imageId) async {
     try {
-      // Check user authentication
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
+      // Allow unauthenticated users to like by device ID tracking (handled in UI)
 
       // Increment likes
-      await _firestore.collection('gallery').doc(imageId).update({
-        'likes': FieldValue.increment(1)
-      });
+      await _firestore
+          .collection('gallery')
+          .doc(imageId)
+          .update({'likes': FieldValue.increment(1)});
 
       return true;
     } catch (e) {
@@ -96,9 +93,10 @@ class GalleryService {
   // Increment download count
   Future<bool> incrementDownloadCount(String imageId) async {
     try {
-      await _firestore.collection('gallery').doc(imageId).update({
-        'downloads': FieldValue.increment(1)
-      });
+      await _firestore
+          .collection('gallery')
+          .doc(imageId)
+          .update({'downloads': FieldValue.increment(1)});
       return true;
     } catch (e) {
       debugPrint('Gallery Download Update Error: $e');

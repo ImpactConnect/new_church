@@ -3,14 +3,15 @@ class MediaUtils {
   MediaUtils._();
 
   /// Format a view count to a human-readable string (e.g. 1.2K, 3.5M).
-  static String formatViews(int views) {
+  static String formatViews(int views, {bool hideLabel = false}) {
+    final suffix = hideLabel ? '' : ' views';
     if (views >= 1000000) {
-      return '${(views / 1000000).toStringAsFixed(1)}M views';
+      return '${(views / 1000000).toStringAsFixed(1)}M$suffix';
     }
     if (views >= 1000) {
-      return '${(views / 1000).toStringAsFixed(1)}K views';
+      return '${(views / 1000).toStringAsFixed(1)}K$suffix';
     }
-    return '$views views';
+    return '$views$suffix';
   }
 
   /// Relative date string (e.g. "2d ago", "3mo ago").

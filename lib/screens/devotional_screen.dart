@@ -92,8 +92,8 @@ class _DevotionalScreenState extends State<DevotionalScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.7),
-                    Colors.black.withOpacity(0.3),
+                    Colors.black.withValues(alpha: 0.7),
+                    Colors.black.withValues(alpha: 0.3),
                   ],
                 ),
               ),
@@ -143,7 +143,7 @@ class _DevotionalScreenState extends State<DevotionalScreen>
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               spreadRadius: 2,
               blurRadius: 8,
               offset: const Offset(0, 2),
@@ -189,7 +189,7 @@ class _DevotionalScreenState extends State<DevotionalScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -210,7 +210,7 @@ class _DevotionalScreenState extends State<DevotionalScreen>
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.3),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -262,7 +262,7 @@ class _DevotionalScreenState extends State<DevotionalScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -419,7 +419,7 @@ class _DevotionalScreenState extends State<DevotionalScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),

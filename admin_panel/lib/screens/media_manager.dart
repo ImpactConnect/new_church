@@ -6,6 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import '../models/video_item.dart';
 import '../services/fcm_admin_service.dart';
 import '../utils/image_proxy.dart';
+import 'gallery_category_manager.dart';
+import 'video_category_manager.dart';
 
 // ─── Video Manager ────────────────────────────────────────────────────────
 
@@ -827,6 +829,21 @@ class _VideoManagerState extends State<VideoManager> {
                   Row(
                     children: [
                       ElevatedButton.icon(
+                        icon: const Icon(Icons.folder, size: 18),
+                        label: const Text('Manage Albums'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black87,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => const VideoCategoryManager(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
                         icon: const Icon(Icons.settings, size: 18),
                         label: const Text('YouTube Settings'),
                         style: ElevatedButton.styleFrom(
@@ -1163,8 +1180,11 @@ class _GalleryManagerState extends State<GalleryManager> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text(_toTitleCase(title)),
+        bool isFeatured = data['isFeatured'] ?? false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(_toTitleCase(title)),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1194,6 +1214,22 @@ class _GalleryManagerState extends State<GalleryManager> {
                 _DetailRow('Category:', category),
                 _DetailRow('Date:', '${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}'),
                 _DetailRow('Likes:', likes.toString()),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Featured Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Show in top carousel'),
+                  value: isFeatured,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) async {
+                    setDialogState(() => isFeatured = val);
+                    data['isFeatured'] = val; // update local cache
+                    try {
+                      await FirebaseFirestore.instance.collection('gallery').doc(id).update({'isFeatured': val});
+                    } catch (e) {
+                      print('[Debug] Failed to update featured status: $e');
+                    }
+                  },
+                ),
               ],
             ),
           ),
@@ -1220,7 +1256,9 @@ class _GalleryManagerState extends State<GalleryManager> {
         );
       },
     );
-  }
+  },
+);
+}
 
   void _editImage(String id, Map<String, dynamic> data) {
     final titleCtrl = TextEditingController(text: data['title']);
@@ -1234,6 +1272,7 @@ class _GalleryManagerState extends State<GalleryManager> {
 
     bool isSaving = false;
     double progress = 0;
+    bool isFeatured = data['isFeatured'] ?? false;
 
     showDialog(
       context: context,
@@ -1266,6 +1305,14 @@ class _GalleryManagerState extends State<GalleryManager> {
                     ),
                     const SizedBox(height: 8),
                     TextField(controller: tagsCtrl, decoration: const InputDecoration(labelText: 'Tags (comma separated)')),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      title: const Text('Featured Image'),
+                      subtitle: const Text('Show in the animated scroll at the top'),
+                      value: isFeatured,
+                      onChanged: (v) => setDialogState(() => isFeatured = v),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                     const Divider(height: 32),
 
                     const Text('Image Source', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1325,6 +1372,7 @@ class _GalleryManagerState extends State<GalleryManager> {
                       'category': categoryCtrl.text.trim(),
                       'tags': tagsCtrl.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
                       'imageUrl': finalThumbUrl,
+                      'isFeatured': isFeatured,
                     });
 
                     if (context.mounted) {
@@ -1439,6 +1487,7 @@ class _GalleryManagerState extends State<GalleryManager> {
     
     bool isUploading = false;
     double progress = 0;
+    bool isFeatured = false;
 
     showDialog(
       context: context,
@@ -1482,6 +1531,14 @@ class _GalleryManagerState extends State<GalleryManager> {
                       TextFormField(
                         controller: tagsCtrl,
                         decoration: const InputDecoration(labelText: 'Tags (comma separated)', border: OutlineInputBorder()),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        title: const Text('Featured Image'),
+                        subtitle: const Text('Show in the animated scroll at the top'),
+                        value: isFeatured,
+                        onChanged: (v) => setDialogState(() => isFeatured = v),
+                        contentPadding: EdgeInsets.zero,
                       ),
                       const SizedBox(height: 16),
 
@@ -1564,6 +1621,7 @@ class _GalleryManagerState extends State<GalleryManager> {
                       'imageUrl': finalThumbUrl,
                       'createdAt': FieldValue.serverTimestamp(),
                       'likes': 0,
+                      'isFeatured': isFeatured,
                     };
 
                     await FirebaseFirestore.instance.collection('gallery').add(data);
@@ -1590,7 +1648,7 @@ class _GalleryManagerState extends State<GalleryManager> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('gallery').orderBy('createdAt', descending: true).snapshots(),
+      stream: FirebaseFirestore.instance.collection('gallery').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
@@ -1603,7 +1661,18 @@ class _GalleryManagerState extends State<GalleryManager> {
           _allCategories.add(data['category']?.toString() ?? 'Unknown');
         }
 
-        var filteredDocs = allDocs.where((doc) {
+        var sortedDocs = allDocs.toList()..sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTs = aData['createdAt'] as Timestamp?;
+          final bTs = bData['createdAt'] as Timestamp?;
+          if (aTs == null && bTs == null) return 0;
+          if (aTs == null) return 1;
+          if (bTs == null) return -1;
+          return bTs.compareTo(aTs);
+        });
+
+        var filteredDocs = sortedDocs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final title = data['title']?.toString() ?? '';
           final category = data['category']?.toString() ?? '';
@@ -1637,15 +1706,35 @@ class _GalleryManagerState extends State<GalleryManager> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Gallery Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Upload New Image'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    onPressed: _showUploadDialog,
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.folder, size: 18),
+                        label: const Text('Manage Albums'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade200,
+                          foregroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => const GalleryCategoryManager(),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Upload New Image'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: _showUploadDialog,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1774,7 +1863,7 @@ class _GalleryManagerState extends State<GalleryManager> {
                             child: Container(
                               decoration: BoxDecoration(
                                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
-                                gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withOpacity(0.8), Colors.transparent]),
+                                gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent]),
                               ),
                               padding: const EdgeInsets.all(8),
                               child: Column(

@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import '../models/sermon.dart';
 import '../services/fcm_admin_service.dart';
 import '../utils/image_proxy.dart';
+import 'sermon_category_manager.dart';
 
 class SermonManager extends StatefulWidget {
   const SermonManager({super.key});
@@ -756,15 +757,35 @@ class _SermonManagerState extends State<SermonManager> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Sermons Management', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Upload New Sermon'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B82F6),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    onPressed: _showUploadDialog,
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.folder, size: 18),
+                        label: const Text('Manage Albums'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade200,
+                          foregroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => const SermonCategoryManager(),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Upload New Sermon'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF3B82F6),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: _showUploadDialog,
+                      ),
+                    ],
                   ),
                 ],
               ),

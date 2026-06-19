@@ -18,6 +18,7 @@ import 'screens/blog/blog_list_screen.dart';
 import 'screens/devotional_screen.dart';
 import 'screens/event_details_screen.dart';
 import 'screens/event_screen.dart';
+import 'models/event.dart' as app_event;
 import 'screens/hymn_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/live_stream_screen.dart';
@@ -31,6 +32,7 @@ import 'services/bible_service.dart';
 import 'services/note_service.dart';
 import 'services/fcm_service.dart'; // Replaced OneSignal
 import 'services/sermon_service.dart';
+import 'services/event_service.dart';
 import 'utils/data_migration.dart';
 import 'utils/toast_utils.dart';
 import 'widgets/bottom_nav_bar.dart';
@@ -173,9 +175,32 @@ class MyApp extends StatelessWidget {
                 final eventId = uri.queryParameters['id'];
                 if (eventId != null) {
                   return MaterialPageRoute(
-                    builder: (context) => EventDetailsScreen(
-                      eventId: eventId,
-                      title: 'Event Details',
+                    builder: (context) => FutureBuilder<app_event.Event?>(
+                      future: EventService().getEventById(eventId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Scaffold(
+                              body: Center(child: CircularProgressIndicator()));
+                        }
+                        if (snapshot.hasError ||
+                            !snapshot.hasData ||
+                            snapshot.data == null) {
+                          return Scaffold(
+                            appBar: AppBar(title: const Text('Event Details')),
+                            body: const Center(child: Text('Event not found')),
+                          );
+                        }
+                        return Scaffold(
+                          backgroundColor: Colors.black45,
+                          appBar: AppBar(
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            leading: const BackButton(color: Colors.white),
+                          ),
+                          body: EventDetailsScreen(event: snapshot.data!),
+                        );
+                      },
                     ),
                   );
                 }
@@ -501,7 +526,7 @@ class _HomePageState extends State<HomePage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: action['color'].withOpacity(0.1),
+                      color: action['color'].withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -560,7 +585,7 @@ class _HomePageState extends State<HomePage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (button['color'] as Color).withOpacity(0.1),
+                  color: (button['color'] as Color).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -713,43 +738,17 @@ class _HomePageState extends State<HomePage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 200.0,
-            floating: false,
+            toolbarHeight: MediaQuery.of(context).size.width * (178 / 1105),
+            collapsedHeight: MediaQuery.of(context).size.width * (178 / 1105),
+            expandedHeight: MediaQuery.of(context).size.width * (178 / 1105),
             pinned: true,
+            elevation: 4.0,
+            backgroundColor: const Color(0xFF0D1B2A),
             flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Church Mobile'),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.blue[800]!,
-                      Colors.blue[600]!,
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      'assets/images/home_hero.jpg',
-                      fit: BoxFit.cover,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              background: Image.asset(
+                'assets/images/home_hero.jpg',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
             ),
           ),

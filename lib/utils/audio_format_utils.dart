@@ -37,9 +37,9 @@ class AudioFormatUtils {
     'webm',
     '3gp',
     '3g2',
-    'wma',  // Windows Media Audio (Android only via MediaCodec)
+    'wma', // Windows Media Audio (Android only via MediaCodec)
     'alac', // Apple Lossless (iOS/macOS)
-    'caf',  // Core Audio Format (iOS/macOS)
+    'caf', // Core Audio Format (iOS/macOS)
   };
 
   // ─── Extension Detection ──────────────────────────────────────────────────

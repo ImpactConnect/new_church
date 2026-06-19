@@ -24,7 +24,9 @@ class Devotional {
       content: data['content'] ?? '',
       prayerPoints: List<String>.from(data['prayerPoints'] ?? []),
       author: data['author'] ?? '',
-      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : (data['date'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : (data['date'] as Timestamp).toDate(),
     );
   }
   final String id;

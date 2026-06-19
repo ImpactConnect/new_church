@@ -10,8 +10,9 @@ import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:shimmer/shimmer.dart';
-
 import '../../models/video_item.dart';
+import '../../models/video_category.dart';
+import 'video_album_screen.dart';
 import '../../services/video_service.dart';
 import '../../services/youtube_api_service.dart';
 import '../../utils/media_utils.dart';
@@ -34,6 +35,30 @@ class _VideoScreenState extends State<VideoScreen> {
   String _searchQuery = '';
   String? _selectedCategory;
   List<String> _allCategories = [];
+  List<VideoCategory> _fetchedCategories = [];
+  bool _isLoadingCategories = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final snap =
+          await FirebaseFirestore.instance.collection('video_categories').get();
+      if (mounted) {
+        setState(() {
+          _fetchedCategories =
+              snap.docs.map((d) => VideoCategory.fromFirestore(d)).toList();
+          _isLoadingCategories = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingCategories = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -124,212 +149,348 @@ class _VideoScreenState extends State<VideoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async => setState(() {}),
-        child: CustomScrollView(
-          slivers: [
-            // ── Hero header ──
-            SliverToBoxAdapter(child: _buildHeroSection()),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        body: RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
+            _loadCategories();
+          },
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('videos')
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            // ── Search bar ──
-            SliverToBoxAdapter(child: _buildSearchBar()),
+              final allDocs =
+                  snap.hasData ? snap.data!.docs : <DocumentSnapshot>[];
+              final allVideos =
+                  allDocs.map((doc) => VideoItem.fromFirestore(doc)).toList();
 
-            // ── Featured / Recommended ──
-            const SliverPadding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
-              sliver: SliverToBoxAdapter(
-                child: Text('Featured',
-                    style: TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('videos')
-                    .where('isRecommended', isEqualTo: true)
-                    .orderBy('createdAt', descending: true)
-                    .limit(10)
-                    .snapshots(),
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return _buildShimmerRow();
-                  }
-                  if (!snap.hasData || snap.data!.docs.isEmpty) {
-                    return const Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text('No featured videos yet.',
-                          style: TextStyle(color: Colors.grey)),
-                    );
-                  }
-                  final videos = snap.data!.docs
-                      .map((doc) => VideoItem.fromFirestore(doc))
-                      .toList();
-                  return SizedBox(
-                    height: 220,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16),
-                      children: videos
-                          .map((v) => _buildFeaturedCard(v))
-                          .toList(),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // ── Category filter ──
-            SliverToBoxAdapter(child: _buildCategoryFilter()),
-
-            // ── From Our YouTube Channel ──
-            if (_selectedCategory == null && _searchQuery.isEmpty) ...[
-              const SliverPadding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
-                sliver: SliverToBoxAdapter(
-                  child: Text('From Our YouTube Channel',
-                      style: TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: FutureBuilder<List<VideoItem>>(
-                  future: _ytApiService.fetchChannelVideos(),
-                  builder: (context, snap) {
-                    if (snap.connectionState == ConnectionState.waiting) {
-                      return _buildShimmerRow();
-                    }
-                    if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
-                      final error = snap.error.toString();
-                      if (error.contains('not configured')) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Text('YouTube Channel integration not configured. Update API Key in YouTubeApiService.',
-                              style: TextStyle(color: Colors.orange, fontSize: 12)),
-                        );
-                      }
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Text('Could not load channel videos.',
-                            style: TextStyle(color: Colors.grey)),
-                      );
-                    }
-                    final videos = snap.data!;
-                    return SizedBox(
-                      height: 220,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: videos.map((v) => _buildFeaturedCard(v)).toList(),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-
-            // ── All Videos ──
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  _selectedCategory != null
-                      ? _selectedCategory!
-                      : 'All Videos',
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('videos')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return SliverToBoxAdapter(
-                    child: Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: _buildShimmerList(),
-                    ),
-                  );
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final cats = allVideos
+                    .where((v) => v.category != null)
+                    .map((v) => v.category!)
+                    .toSet()
+                    .toList()
+                  ..sort();
+                if (mounted && cats.length != _allCategories.length) {
+                  setState(() => _allCategories = cats);
                 }
-                if (!snap.hasData || snap.data!.docs.isEmpty) {
-                  return const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(
-                          child: Text('No videos available yet.',
-                              style: TextStyle(color: Colors.grey))),
-                    ),
-                  );
-                }
+              });
 
-                // Build category list once
-                final allVideos = snap.data!.docs
-                    .map((doc) => VideoItem.fromFirestore(doc))
-                    .toList();
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  final cats = allVideos
-                      .where((v) => v.category != null)
-                      .map((v) => v.category!)
-                      .toSet()
-                      .toList()
-                    ..sort();
-                  if (mounted && cats.length != _allCategories.length) {
-                    setState(() => _allCategories = cats);
-                  }
-                });
+              final filtered = _applyFilters(allVideos);
 
-                final filtered = _applyFilters(allVideos);
-
-                if (filtered.isEmpty) {
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        children: [
-                          Icon(Icons.search_off,
-                              size: 48, color: Colors.grey[400]),
-                          const SizedBox(height: 8),
-                          const Text('No videos match your search',
-                              style: TextStyle(color: Colors.grey)),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _searchController.clear();
-                                _searchQuery = '';
-                                _selectedCategory = null;
-                              });
-                            },
-                            child: const Text('Clear filters'),
+              return NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                  SliverToBoxAdapter(child: _buildHeroSection()),
+                  SliverToBoxAdapter(child: _buildSearchBar()),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _SliverAppBarDelegate(
+                      child: Container(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(30)),
+                          child: TabBar(
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            dividerColor: Colors.transparent,
+                            indicator: BoxDecoration(
+                              borderRadius: BorderRadius.circular(30),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.15),
+                            ),
+                            labelColor: Theme.of(context).colorScheme.primary,
+                            labelStyle:
+                                const TextStyle(fontWeight: FontWeight.bold),
+                            unselectedLabelColor: Colors.grey.shade600,
+                            unselectedLabelStyle:
+                                const TextStyle(fontWeight: FontWeight.w600),
+                            tabs: const [
+                              Tab(text: 'All Videos'),
+                              Tab(text: 'Albums')
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
+                  ),
+                ],
+                body: TabBarView(
+                  children: [
+                    _buildAllVideosTab(filtered),
+                    _buildAlbumGrid(allVideos),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAllVideosTab(List<VideoItem> filtered) {
+    return CustomScrollView(
+      slivers: [
+        const SliverPadding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
+          sliver: SliverToBoxAdapter(
+            child: Text('Featured',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('videos')
+                .where('isRecommended', isEqualTo: true)
+                .orderBy('createdAt', descending: true)
+                .limit(10)
+                .snapshots(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return _buildShimmerRow();
+              }
+              if (!snap.hasData || snap.data!.docs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text('No featured videos yet.',
+                      style: TextStyle(color: Colors.grey)),
+                );
+              }
+              final videos = snap.data!.docs
+                  .map((doc) => VideoItem.fromFirestore(doc))
+                  .toList();
+              return SizedBox(
+                height: 220,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: videos.map((v) => _buildFeaturedCard(v)).toList(),
+                ),
+              );
+            },
+          ),
+        ),
+        SliverToBoxAdapter(child: _buildCategoryFilter()),
+        if (_selectedCategory == null && _searchQuery.isEmpty) ...[
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
+            sliver: SliverToBoxAdapter(
+              child: Text('From Our YouTube Channel',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: FutureBuilder<List<VideoItem>>(
+              future: _ytApiService.fetchChannelVideos(),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting)
+                  return _buildShimmerRow();
+                if (snap.hasError || !snap.hasData || snap.data!.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text('Could not load channel videos.',
+                        style: TextStyle(color: Colors.grey)),
                   );
                 }
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (_, i) => _buildVideoCard(filtered[i]),
-                    childCount: filtered.length,
+                return SizedBox(
+                  height: 220,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children:
+                        snap.data!.map((v) => _buildFeaturedCard(v)).toList(),
                   ),
                 );
               },
             ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
-          ],
+          ),
+        ],
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              _selectedCategory != null ? _selectedCategory! : 'All Videos',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
+          ),
         ),
+        if (filtered.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                children: [
+                  Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                  const SizedBox(height: 8),
+                  const Text('No videos match your search',
+                      style: TextStyle(color: Colors.grey)),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _searchController.clear();
+                        _searchQuery = '';
+                        _selectedCategory = null;
+                      });
+                    },
+                    child: const Text('Clear filters'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (_, i) => _buildVideoCard(filtered[i]),
+              childCount: filtered.length,
+            ),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+      ],
+    );
+  }
+
+  Widget _buildAlbumGrid(List<VideoItem> filteredVideos) {
+    if (_isLoadingCategories) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final existingCategoryNames =
+        _fetchedCategories.map((c) => c.name.toLowerCase()).toSet();
+    final combinedCategories = List<VideoCategory>.from(_fetchedCategories);
+
+    for (var v in filteredVideos) {
+      final cat = (v.category ?? '').trim();
+      if (cat.isNotEmpty &&
+          !existingCategoryNames.contains(cat.toLowerCase())) {
+        existingCategoryNames.add(cat.toLowerCase());
+        combinedCategories.add(VideoCategory(
+            id: 'virtual_$cat', name: cat, imageUrl: '', description: ''));
+      }
+    }
+
+    if (combinedCategories.isEmpty) {
+      return const Center(child: Text('No albums available'));
+    }
+
+    final sortedCategories = combinedCategories
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
       ),
+      itemCount: sortedCategories.length,
+      itemBuilder: (context, index) {
+        final category = sortedCategories[index];
+        final videosInAlbum = filteredVideos.where((v) {
+          final cat = (v.category ?? '').trim().toLowerCase();
+          return cat == category.name.toLowerCase();
+        }).toList();
+
+        final coverImageUrl = category.imageUrl;
+        final colors = Theme.of(context).colorScheme;
+
+        String displayImageUrl = coverImageUrl;
+        if (displayImageUrl.isEmpty && videosInAlbum.isNotEmpty) {
+          final firstVid = videosInAlbum.first;
+          displayImageUrl = _extractYouTubeId(firstVid.videoUrl) != null
+              ? _youtubeThumbnail(_extractYouTubeId(firstVid.videoUrl)!)
+              : firstVid.thumbnailUrl;
+        }
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VideoAlbumScreen(
+                  albumName: category.name,
+                  videos: videosInAlbum,
+                  onVideoTap: (video) => _playVideo(video),
+                  coverImageUrl: category.imageUrl,
+                  description: category.description,
+                ),
+              ),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: displayImageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: displayImageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) =>
+                                Container(color: Colors.grey.shade200),
+                            errorWidget: (context, url, error) => Container(
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.video_library,
+                                    color: Colors.grey)),
+                          )
+                        : Container(
+                            color: colors.primary,
+                            child: const Icon(Icons.folder,
+                                size: 48, color: Colors.white54)),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(category.name,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text('${videosInAlbum.length} Videos',
+                          style: TextStyle(
+                              color: Colors.grey.shade600, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -360,7 +521,8 @@ class _VideoScreenState extends State<VideoScreen> {
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           ),
           onChanged: (v) => setState(() => _searchQuery = v),
         ),
@@ -377,9 +539,7 @@ class _VideoScreenState extends State<VideoScreen> {
       child: Row(
         children: [
           _categoryChip('All', null, colors),
-          ..._allCategories
-              .map((c) => _categoryChip(c, c, colors))
-              .toList(),
+          ..._allCategories.map((c) => _categoryChip(c, c, colors)).toList(),
         ],
       ),
     );
@@ -463,7 +623,7 @@ class _VideoScreenState extends State<VideoScreen> {
               Text(
                 'Sermons, worship sessions & ministry highlights',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                   fontSize: 13,
                 ),
               ),
@@ -521,8 +681,7 @@ class _VideoScreenState extends State<VideoScreen> {
                   children: [
                     Container(height: 14, color: Colors.white),
                     const SizedBox(height: 8),
-                    Container(
-                        height: 12, width: 120, color: Colors.white),
+                    Container(height: 12, width: 120, color: Colors.white),
                   ],
                 ),
               ),
@@ -569,8 +728,7 @@ class _VideoScreenState extends State<VideoScreen> {
                   CachedNetworkImage(
                     imageUrl: thumb,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        Container(color: Colors.grey[200]),
+                    placeholder: (_, __) => Container(color: Colors.grey[200]),
                     errorWidget: (_, __, ___) => Container(
                       color: Colors.grey[200],
                       child: const Icon(Icons.video_library,
@@ -605,7 +763,9 @@ class _VideoScreenState extends State<VideoScreen> {
                         child: Text(
                           video.category!,
                           style: const TextStyle(
-                              color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -615,7 +775,8 @@ class _VideoScreenState extends State<VideoScreen> {
             // Info
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -647,22 +808,27 @@ class _VideoScreenState extends State<VideoScreen> {
                         final views = snap.data ?? video.views;
                         return Text(
                           '${MediaUtils.formatViews(views)} views • ${MediaUtils.formatRelativeDate(video.postedDate)}',
-                          style: TextStyle(
-                              color: Colors.grey[600], fontSize: 12),
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 12),
                         );
                       },
                     ),
-                    if (video.preacher != null && video.preacher!.isNotEmpty) ...[
+                    if (video.preacher != null &&
+                        video.preacher!.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.person, size: 14, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.person,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               video.preacher!,
                               style: const TextStyle(
-                                  color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 12),
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -767,20 +933,24 @@ class _VideoScreenState extends State<VideoScreen> {
                     const SizedBox(height: 6),
                     Text(
                       '${MediaUtils.formatViews(video.views)} views • ${MediaUtils.formatRelativeDate(video.postedDate)}',
-                      style: TextStyle(
-                          color: Colors.grey[600], fontSize: 12),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
-                    if (video.preacher != null && video.preacher!.isNotEmpty) ...[
+                    if (video.preacher != null &&
+                        video.preacher!.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.person, size: 14, color: Theme.of(context).colorScheme.primary),
+                          Icon(Icons.person,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               video.preacher!,
                               style: const TextStyle(
-                                  color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 12),
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -894,9 +1064,8 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
     await prefs.setStringList('liked_videos', liked);
 
     try {
-      final ref = FirebaseFirestore.instance
-          .collection('videos')
-          .doc(widget.video.id);
+      final ref =
+          FirebaseFirestore.instance.collection('videos').doc(widget.video.id);
       await ref.update({'likes': FieldValue.increment(1)});
       if (mounted) {
         setState(() => _hasLiked = true);
@@ -920,7 +1089,8 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
+                  const Icon(Icons.play_circle_outline,
+                      color: Colors.white54, size: 64),
                   const SizedBox(height: 16),
                   const Text(
                     'Embedding disabled by uploader.',
@@ -928,9 +1098,11 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
                     icon: const Icon(Icons.open_in_new, color: Colors.white),
-                    label: const Text('Open in YouTube', style: TextStyle(color: Colors.white)),
+                    label: const Text('Open in YouTube',
+                        style: TextStyle(color: Colors.white)),
                     onPressed: () async {
                       final uri = Uri.parse(widget.video.videoUrl);
                       if (await canLaunchUrl(uri)) {
@@ -968,7 +1140,8 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
       child: Container(
         color: Colors.black,
         child: const Center(
-          child: Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
+          child:
+              Icon(Icons.play_circle_outline, color: Colors.white54, size: 64),
         ),
       ),
     );
@@ -1001,8 +1174,7 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                   ),
                   const SizedBox(height: 8),
                   StreamBuilder<int>(
-                    stream: widget.videoService
-                        .getVideoViews(widget.video.id),
+                    stream: widget.videoService.getVideoViews(widget.video.id),
                     builder: (_, snap) {
                       final views = snap.data ?? widget.video.views;
                       return Text(
@@ -1011,7 +1183,8 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                       );
                     },
                   ),
-                  if (widget.video.preacher != null && widget.video.preacher!.isNotEmpty) ...[
+                  if (widget.video.preacher != null &&
+                      widget.video.preacher!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -1020,7 +1193,9 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                         Text(
                           widget.video.preacher!,
                           style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black87),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87),
                         ),
                       ],
                     ),
@@ -1034,14 +1209,13 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.1),
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         widget.video.category!,
                         style: TextStyle(
-                          color:
-                              Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1051,8 +1225,7 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                   const Divider(height: 24),
                   // Action row
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _ActionButton(
                         icon: _hasLiked
@@ -1071,7 +1244,8 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                         label: 'Share',
                         onTap: () => SharePlus.instance.share(
                           ShareParams(
-                            text: '🎬 "${widget.video.title}"\n${widget.video.videoUrl}',
+                            text:
+                                '🎬 "${widget.video.title}"\n${widget.video.videoUrl}',
                           ),
                         ),
                       ),
@@ -1079,8 +1253,7 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                         icon: Icons.open_in_new,
                         label: 'Open',
                         onTap: () async {
-                          final uri =
-                              Uri.parse(widget.video.videoUrl);
+                          final uri = Uri.parse(widget.video.videoUrl);
                           if (await canLaunchUrl(uri)) {
                             launchUrl(uri,
                                 mode: LaunchMode.externalApplication);
@@ -1100,24 +1273,22 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
                     Text(
                       widget.video.description!,
                       style: const TextStyle(
-                          fontSize: 13,
-                          height: 1.6,
-                          color: Colors.black87),
+                          fontSize: 13, height: 1.6, color: Colors.black87),
                     ),
                   ],
                   const Divider(height: 24),
-                  
+
                   // Comments Section
                   _VideoCommentsSection(videoId: widget.video.id),
-                  
+
                   const Divider(height: 24),
-                  
+
                   // Recommended Videos (Same Category)
                   _RecommendedVideosSection(
                     currentVideo: widget.video,
                     onPlay: widget.onPlayRelated,
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -1138,6 +1309,40 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
       );
     }
     return pageBody;
+  }
+
+  String? _extractYouTubeId(String url) {
+    if (url.isEmpty) return null;
+    final regex = RegExp(
+        r'(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})');
+    final match = regex.firstMatch(url);
+    return match?.group(1);
+  }
+
+  String _youtubeThumbnail(String videoId) {
+    return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _SliverAppBarDelegate({required this.child});
+
+  @override
+  double get minExtent => 64.0;
+  @override
+  double get maxExtent => 64.0;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return oldDelegate.child != child;
   }
 }
 
@@ -1160,14 +1365,12 @@ class _ActionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon,
-                size: 22,
-                color: color ?? (onTap == null ? Colors.grey : null)),
+                size: 22, color: color ?? (onTap == null ? Colors.grey : null)),
             const SizedBox(height: 4),
             Text(
               label,
@@ -1238,7 +1441,8 @@ class _VideoCommentsSectionState extends State<_VideoCommentsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text('Comments',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 12),
         // Input
         Row(
@@ -1256,7 +1460,8 @@ class _VideoCommentsSectionState extends State<_VideoCommentsSection> {
                   hintText: 'Add a comment...',
                   hintStyle: const TextStyle(fontSize: 13),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   filled: true,
                   fillColor: const Color(0xFFF9FAFB),
                   border: OutlineInputBorder(
@@ -1268,9 +1473,13 @@ class _VideoCommentsSectionState extends State<_VideoCommentsSection> {
             ),
             const SizedBox(width: 8),
             _isPosting
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(
-                    icon: Icon(Icons.send, color: Theme.of(context).colorScheme.primary),
+                    icon: Icon(Icons.send,
+                        color: Theme.of(context).colorScheme.primary),
                     onPressed: _postComment,
                   ),
           ],
@@ -1285,12 +1494,14 @@ class _VideoCommentsSectionState extends State<_VideoCommentsSection> {
               .orderBy('createdAt', descending: true)
               .snapshots(),
           builder: (context, snap) {
-            if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+            if (!snap.hasData)
+              return const Center(child: CircularProgressIndicator());
             final docs = snap.data!.docs;
             if (docs.isEmpty) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('No comments yet. Be the first to comment!', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                child: Text('No comments yet. Be the first to comment!',
+                    style: TextStyle(color: Colors.grey, fontSize: 13)),
               );
             }
             return ListView.builder(
@@ -1302,7 +1513,9 @@ class _VideoCommentsSectionState extends State<_VideoCommentsSection> {
                 final text = data['text'] ?? '';
                 final authorName = data['authorName'] ?? 'Anonymous';
                 final createdAt = data['createdAt'] as Timestamp?;
-                final dateStr = createdAt != null ? MediaUtils.formatRelativeDate(createdAt.toDate()) : 'Just now';
+                final dateStr = createdAt != null
+                    ? MediaUtils.formatRelativeDate(createdAt.toDate())
+                    : 'Just now';
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -1321,9 +1534,14 @@ class _VideoCommentsSectionState extends State<_VideoCommentsSection> {
                           children: [
                             Row(
                               children: [
-                                Text(authorName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text(authorName,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13)),
                                 const SizedBox(width: 8),
-                                Text(dateStr, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                Text(dateStr,
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 11)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -1349,7 +1567,8 @@ class _RecommendedVideosSection extends StatelessWidget {
   final VideoItem currentVideo;
   final Function(VideoItem) onPlay;
 
-  const _RecommendedVideosSection({required this.currentVideo, required this.onPlay});
+  const _RecommendedVideosSection(
+      {required this.currentVideo, required this.onPlay});
 
   @override
   Widget build(BuildContext context) {
@@ -1360,7 +1579,8 @@ class _RecommendedVideosSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('More Like This', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text('More Like This',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 12),
         SizedBox(
           height: 190,
@@ -1375,15 +1595,16 @@ class _RecommendedVideosSection extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
               if (!snap.hasData) return const SizedBox.shrink();
-              
+
               // Filter out current video
               final videos = snap.data!.docs
                   .map((doc) => VideoItem.fromFirestore(doc))
                   .where((v) => v.id != currentVideo.id)
                   .toList();
-              
+
               if (videos.isEmpty) {
-                return const Text('No other videos found in this category.', style: TextStyle(color: Colors.grey, fontSize: 13));
+                return const Text('No other videos found in this category.',
+                    style: TextStyle(color: Colors.grey, fontSize: 13));
               }
 
               return ListView.builder(
@@ -1392,7 +1613,9 @@ class _RecommendedVideosSection extends StatelessWidget {
                 itemBuilder: (context, i) {
                   final v = videos[i];
                   final videoId = _extractYouTubeId(v.videoUrl);
-                  final thumb = videoId != null ? _youtubeThumbnail(videoId) : v.thumbnailUrl;
+                  final thumb = videoId != null
+                      ? _youtubeThumbnail(videoId)
+                      : v.thumbnailUrl;
 
                   return GestureDetector(
                     onTap: () => onPlay(v),
@@ -1416,14 +1639,21 @@ class _RecommendedVideosSection extends StatelessWidget {
                                 CachedNetworkImage(
                                   imageUrl: thumb,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, __) => Container(color: Colors.grey[200]),
-                                  errorWidget: (_, __, ___) => const Icon(Icons.video_library, color: Colors.grey),
+                                  placeholder: (_, __) =>
+                                      Container(color: Colors.grey[200]),
+                                  errorWidget: (_, __, ___) => const Icon(
+                                      Icons.video_library,
+                                      color: Colors.grey),
                                 ),
                                 Center(
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
-                                    child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+                                    decoration: BoxDecoration(
+                                        color:
+                                            Colors.black.withValues(alpha: 0.4),
+                                        shape: BoxShape.circle),
+                                    child: const Icon(Icons.play_arrow_rounded,
+                                        color: Colors.white, size: 24),
                                   ),
                                 ),
                               ],
@@ -1434,12 +1664,14 @@ class _RecommendedVideosSection extends StatelessWidget {
                             v.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${MediaUtils.formatViews(v.views)} views',
-                            style: const TextStyle(color: Colors.grey, fontSize: 11),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 11),
                           ),
                         ],
                       ),
@@ -1454,4 +1686,3 @@ class _RecommendedVideosSection extends StatelessWidget {
     );
   }
 }
-

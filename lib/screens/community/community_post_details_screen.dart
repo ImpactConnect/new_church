@@ -134,8 +134,9 @@ class _CommunityPostDetailsScreenState
                         children: [
                           CircleAvatar(
                             radius: 20,
-                            backgroundColor:
-                                Theme.of(context).primaryColor.withOpacity(0.2),
+                            backgroundColor: Theme.of(context)
+                                .primaryColor
+                                .withValues(alpha: 0.2),
                             child: Text(
                               widget.post.authorName[0].toUpperCase(),
                               style: TextStyle(
@@ -211,7 +212,7 @@ class _CommunityPostDetailsScreenState
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, -2),
@@ -387,7 +388,7 @@ class _CommunityPostDetailsScreenState
               CircleAvatar(
                 radius: 16,
                 backgroundColor:
-                    Theme.of(context).primaryColor.withOpacity(0.2),
+                    Theme.of(context).primaryColor.withValues(alpha: 0.2),
                 child: Text(
                   comment.authorName[0].toUpperCase(),
                   style: TextStyle(

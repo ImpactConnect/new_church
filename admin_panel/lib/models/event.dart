@@ -10,8 +10,10 @@ class Event {
     required this.endDate,
     required this.venue,
     required this.programmeTime,
-    required this.isUpcoming,
+    this.joinLink = '',
+    this.recurrence = 'none',
     required this.createdAt,
+    this.updatedAt,
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -25,10 +27,17 @@ class Event {
       endDate: (data['endDate'] as Timestamp).toDate(),
       venue: data['venue'] ?? '',
       programmeTime: data['programmeTime'] ?? '',
-      isUpcoming: data['isUpcoming'] ?? false,
-      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : (data['startDate'] as Timestamp).toDate(),
+      joinLink: data['joinLink'] ?? '',
+      recurrence: data['recurrence'] ?? 'none',
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : (data['startDate'] as Timestamp).toDate(),
+      updatedAt: data['updatedAt'] != null
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : null,
     );
   }
+  
   final String id;
   final String title;
   final String description;
@@ -37,8 +46,12 @@ class Event {
   final DateTime endDate;
   final String venue;
   final String programmeTime;
-  final bool isUpcoming;
+  final String joinLink;
+  final String recurrence;
   final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  bool get isUpcoming => endDate.isAfter(DateTime.now());
 
   Map<String, dynamic> toMap() {
     return {
@@ -49,8 +62,10 @@ class Event {
       'endDate': Timestamp.fromDate(endDate),
       'venue': venue,
       'programmeTime': programmeTime,
-      'isUpcoming': isUpcoming,
+      'joinLink': joinLink,
+      'recurrence': recurrence,
       'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': FieldValue.serverTimestamp(),
     };
   }
 }

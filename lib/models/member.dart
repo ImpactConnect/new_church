@@ -24,12 +24,28 @@ class Member {
     this.phoneNumber,
     this.email,
     this.address,
+    this.churchGroup,
   });
 
   factory Member.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return Member.fromJson(data, doc.id);
+  }
+
+  factory Member.fromJson(Map<String, dynamic> data, String id) {
+    // Helper to handle both Timestamp and String dates that might come from JSON caches
+    DateTime? parseDate(dynamic dateData) {
+      if (dateData == null) return null;
+      if (dateData is Timestamp) return dateData.toDate();
+      if (dateData is String) return DateTime.tryParse(dateData);
+      if (dateData is Map && dateData['_seconds'] != null) {
+        return DateTime.fromMillisecondsSinceEpoch(dateData['_seconds'] * 1000);
+      }
+      return null;
+    }
+
     return Member(
-      id: doc.id,
+      id: id,
       name: data['name'] ?? '',
       imageUrl: data['photoUrl'] ?? data['imageUrl'],
       occupation: data['occupation'],
@@ -39,17 +55,12 @@ class Member {
               orElse: () => MaritalStatus.single)
           : null,
       spouseName: data['spouseName'],
-      birthDate: data['dateOfBirth'] != null
-          ? (data['dateOfBirth'] as Timestamp).toDate()
-          : (data['birthDate'] != null
-              ? (data['birthDate'] as Timestamp).toDate()
-              : null),
-      weddingDate: data['weddingDate'] != null
-          ? (data['weddingDate'] as Timestamp).toDate()
-          : null,
+      birthDate: parseDate(data['dateOfBirth']) ?? parseDate(data['birthDate']),
+      weddingDate: parseDate(data['weddingDate']),
       phoneNumber: data['phoneNumber'],
       email: data['email'],
       address: data['address'],
+      churchGroup: data['churchGroup'],
     );
   }
   final String id;
@@ -63,6 +74,7 @@ class Member {
   final String? phoneNumber;
   final String? email;
   final String? address;
+  final String? churchGroup;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -77,6 +89,7 @@ class Member {
       'phoneNumber': phoneNumber,
       'email': email,
       'address': address,
+      'churchGroup': churchGroup,
     };
   }
 }

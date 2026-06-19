@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/sermon.dart';
 import '../services/audio_player_service.dart';
@@ -34,6 +36,9 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
   late final AnimationController _albumArtController;
   late final Animation<double> _albumArtAnimation;
 
+  bool _hasLiked = false;
+  int _localLikeCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -41,8 +46,8 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
       vsync: this,
       duration: const Duration(seconds: 30),
     )..repeat();
-    _albumArtAnimation = Tween(begin: 0.0, end: 1.0)
-        .animate(_albumArtController);
+    _albumArtAnimation =
+        Tween(begin: 0.0, end: 1.0).animate(_albumArtController);
 
     _subs.add(widget.audioPlayerService.playingStream.listen((p) {
       if (!mounted) return;
@@ -65,6 +70,42 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
       if (!mounted) return;
       setState(() => _speed = s);
     }));
+
+    _checkIfLiked();
+  }
+
+  Future<void> _checkIfLiked() async {
+    final prefs = await SharedPreferences.getInstance();
+    final liked = prefs.getStringList('liked_sermons') ?? [];
+    if (mounted) {
+      setState(() {
+        _hasLiked = liked.contains(_currentSermon.id);
+      });
+    }
+  }
+
+  Future<void> _likeSermon() async {
+    if (_hasLiked) return;
+
+    final sermonId = _currentSermon.id;
+    final prefs = await SharedPreferences.getInstance();
+    final liked = prefs.getStringList('liked_sermons') ?? [];
+    liked.add(sermonId);
+    await prefs.setStringList('liked_sermons', liked);
+
+    if (mounted) {
+      setState(() {
+        _hasLiked = true;
+        _localLikeCount++;
+      });
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('sermons')
+          .doc(sermonId)
+          .update({'likes': FieldValue.increment(1)});
+    } catch (_) {}
   }
 
   @override
@@ -95,7 +136,8 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
           children: [
             _buildTopBar(context),
             Expanded(
-              child: _showQueue ? _buildQueuePanel() : _buildMainContent(colors),
+              child:
+                  _showQueue ? _buildQueuePanel() : _buildMainContent(colors),
             ),
           ],
         ),
@@ -165,17 +207,16 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
             _currentSermon.preacherName,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.65),
+              color: Colors.white.withValues(alpha: 0.65),
               fontSize: 15,
             ),
           ),
           if (_currentSermon.scriptureReference != null) ...[
             const SizedBox(height: 6),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: colors.primary.withOpacity(0.25),
+                color: colors.primary.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -193,7 +234,7 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
             Text(
               _currentSermon.category.toUpperCase(),
               style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
+                color: Colors.white.withValues(alpha: 0.4),
                 fontSize: 11,
                 letterSpacing: 1.4,
               ),
@@ -232,7 +273,8 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
               blurRadius: 40,
               spreadRadius: 5,
             ),
@@ -260,8 +302,9 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
   }
 
   Widget _buildProgressBar(ColorScheme colors) {
-    final maxVal =
-        _duration.inMilliseconds > 0 ? _duration.inMilliseconds.toDouble() : 1.0;
+    final maxVal = _duration.inMilliseconds > 0
+        ? _duration.inMilliseconds.toDouble()
+        : 1.0;
     return Column(
       children: [
         SliderTheme(
@@ -336,16 +379,14 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
               color: colors.primary,
               boxShadow: [
                 BoxShadow(
-                  color: colors.primary.withOpacity(0.45),
+                  color: colors.primary.withValues(alpha: 0.45),
                   blurRadius: 20,
                   offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: Icon(
-              _isPlaying
-                  ? Icons.pause_rounded
-                  : Icons.play_arrow_rounded,
+              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
               color: Colors.white,
               size: 38,
             ),
@@ -377,6 +418,39 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Like Button
+        GestureDetector(
+          onTap: _likeSermon,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white12,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _hasLiked
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_outline_rounded,
+                  color: _hasLiked ? Colors.redAccent : Colors.white70,
+                  size: 16,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${_currentSermon.likes + _localLikeCount}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
         // Speed toggle
         GestureDetector(
           onTap: () async {
@@ -416,7 +490,7 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -435,8 +509,8 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
 
     if (playlist.isEmpty) {
       return const Center(
-        child: Text('No queue available',
-            style: TextStyle(color: Colors.white54)),
+        child:
+            Text('No queue available', style: TextStyle(color: Colors.white54)),
       );
     }
 
@@ -454,8 +528,8 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
               width: 48,
               height: 48,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                  width: 48, height: 48, color: Colors.white10),
+              placeholder: (_, __) =>
+                  Container(width: 48, height: 48, color: Colors.white10),
               errorWidget: (_, __, ___) => Container(
                   width: 48,
                   height: 48,
@@ -470,8 +544,7 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
               color: isActive
                   ? Theme.of(context).colorScheme.primary
                   : Colors.white,
-              fontWeight:
-                  isActive ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               fontSize: 13,
             ),
             maxLines: 2,
@@ -479,15 +552,14 @@ class _FullPlayerScreenState extends State<FullPlayerScreen>
           ),
           subtitle: Text(
             s.preacherName,
-            style:
-                const TextStyle(color: Colors.white38, fontSize: 11),
+            style: const TextStyle(color: Colors.white38, fontSize: 11),
           ),
           trailing: isActive
               ? Icon(Icons.equalizer_rounded,
                   color: Theme.of(context).colorScheme.primary)
               : null,
-          onTap: () => widget.audioPlayerService.playSermonFromPlaylist(
-              s, playlist),
+          onTap: () =>
+              widget.audioPlayerService.playSermonFromPlaylist(s, playlist),
         );
       },
     );

@@ -13,6 +13,8 @@ class Sermon {
     this.duration,
     this.description,
     this.scriptureReference,
+    this.likes = 0,
+    this.streams = 0,
     this.isBookmarked = false,
     this.isDownloaded = false,
     this.localAudioPath,
@@ -56,6 +58,8 @@ class Sermon {
       duration: duration,
       description: data['description'] as String?,
       scriptureReference: data['scriptureReference'] as String?,
+      likes: data['likes'] as int? ?? 0,
+      streams: data['streams'] as int? ?? 0,
       isBookmarked: data['isBookmarked'] as bool? ?? false,
       isDownloaded: data['isDownloaded'] as bool? ?? false,
       localAudioPath: data['localAudioPath'] as String?,
@@ -79,6 +83,8 @@ class Sermon {
       duration: duration,
       description: json['description'] as String?,
       scriptureReference: json['scriptureReference'] as String?,
+      likes: json['likes'] as int? ?? 0,
+      streams: json['streams'] as int? ?? 0,
       isBookmarked: json['isBookmarked'] as bool? ?? false,
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       localAudioPath: json['localAudioPath'] as String?,
@@ -96,6 +102,8 @@ class Sermon {
   final Duration? duration;
   final String? description;
   final String? scriptureReference;
+  final int likes;
+  final int streams;
   bool isBookmarked;
   bool isDownloaded;
   String? localAudioPath;
@@ -113,6 +121,8 @@ class Sermon {
       if (duration != null) 'durationSeconds': duration!.inSeconds,
       if (description != null) 'description': description,
       if (scriptureReference != null) 'scriptureReference': scriptureReference,
+      'likes': likes,
+      'streams': streams,
       'isBookmarked': isBookmarked,
       'isDownloaded': isDownloaded,
       'localAudioPath': localAudioPath,
@@ -131,6 +141,8 @@ class Sermon {
     Duration? duration,
     String? description,
     String? scriptureReference,
+    int? likes,
+    int? streams,
     bool? isBookmarked,
     bool? isDownloaded,
     String? localAudioPath,
@@ -147,6 +159,8 @@ class Sermon {
       duration: duration ?? this.duration,
       description: description ?? this.description,
       scriptureReference: scriptureReference ?? this.scriptureReference,
+      likes: likes ?? this.likes,
+      streams: streams ?? this.streams,
       isBookmarked: isBookmarked ?? this.isBookmarked,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       localAudioPath: localAudioPath ?? this.localAudioPath,

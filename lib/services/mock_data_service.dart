@@ -25,7 +25,8 @@ Here are some practical steps to enhance your prayer life:
 6. Keep a prayer journal
 
 Remember, consistency is more important than length. A sincere five-minute prayer can be more meaningful than an hour of distracted devotion.''',
-        'thumbnailUrl': 'https://images.unsplash.com/photo-1544764200-d834fd210a23',
+        'thumbnailUrl':
+            'https://images.unsplash.com/photo-1544764200-d834fd210a23',
         'imageUrl': 'https://images.unsplash.com/photo-1544764200-d834fd210a23',
         'author': 'Pastor John Smith',
         'datePosted': Timestamp.now(),
@@ -33,7 +34,8 @@ Remember, consistency is more important than length. A sincere five-minute praye
         'tags': ['Prayer', 'Devotion', 'Spiritual Growth'],
       },
       {
-        'title': 'Understanding Modern Worship: Bridging Tradition and Innovation',
+        'title':
+            'Understanding Modern Worship: Bridging Tradition and Innovation',
         'content': '''
 The landscape of church worship has evolved significantly over the years, bringing both excitement and challenges to our faith communities. This post explores how we can embrace contemporary worship while honoring our rich spiritual heritage.
 
@@ -47,10 +49,13 @@ Here are some ways we're bridging the gap:
 4. Maintaining theological depth in modern expressions
 
 The goal is to create an authentic worship experience that connects people with God, regardless of the style or format.''',
-        'thumbnailUrl': 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3',
-        'imageUrl': 'https://images.unsplash.com/photo-1438232992991-995b7058bbb3',
+        'thumbnailUrl':
+            'https://images.unsplash.com/photo-1438232992991-995b7058bbb3',
+        'imageUrl':
+            'https://images.unsplash.com/photo-1438232992991-995b7058bbb3',
         'author': 'Sarah Johnson',
-        'datePosted': Timestamp.now().toDate().subtract(const Duration(days: 2)),
+        'datePosted':
+            Timestamp.now().toDate().subtract(const Duration(days: 2)),
         'likes': 38,
         'tags': ['Worship', 'Music', 'Church Life'],
       },
@@ -69,10 +74,13 @@ Current Community Initiatives:
 5. Environmental stewardship projects
 
 Each of these programs provides unique opportunities to show God's love in practical ways. Whether you have an hour or a day to give, there's a place for you to serve.''',
-        'thumbnailUrl': 'https://images.unsplash.com/photo-1593113598332-cd288d649433',
-        'imageUrl': 'https://images.unsplash.com/photo-1593113598332-cd288d649433',
+        'thumbnailUrl':
+            'https://images.unsplash.com/photo-1593113598332-cd288d649433',
+        'imageUrl':
+            'https://images.unsplash.com/photo-1593113598332-cd288d649433',
         'author': 'David Wilson',
-        'datePosted': Timestamp.now().toDate().subtract(const Duration(days: 5)),
+        'datePosted':
+            Timestamp.now().toDate().subtract(const Duration(days: 5)),
         'likes': 72,
         'tags': ['Community', 'Service', 'Outreach'],
       },

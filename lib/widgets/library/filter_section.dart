@@ -271,7 +271,7 @@ class FilterSection extends StatelessWidget {
               : Theme.of(context).dividerColor,
         ),
         backgroundColor: selectedValue != null
-            ? Theme.of(context).primaryColor.withOpacity(0.1)
+            ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
             : null,
       ),
       child: Row(

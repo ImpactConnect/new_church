@@ -10,13 +10,15 @@ class PushNotificationService {
     await OneSignal.shared.setAppId('YOUR_ONESIGNAL_APP_ID');
 
     // Called when the notification is received
-    OneSignal.shared.setNotificationWillShowInForegroundHandler((OSNotificationReceivedEvent event) {
+    OneSignal.shared.setNotificationWillShowInForegroundHandler(
+        (OSNotificationReceivedEvent event) {
       // Display the notification
       event.complete(event.notification);
     });
 
     // Called when a notification is tapped
-    OneSignal.shared.setNotificationOpenedHandler((OSNotificationOpenedResult result) {
+    OneSignal.shared
+        .setNotificationOpenedHandler((OSNotificationOpenedResult result) {
       // Handle notification tap
       debugPrint('Notification opened: ${result.notification.body}');
     });

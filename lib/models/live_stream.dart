@@ -74,8 +74,7 @@ class LiveStream {
   final String? thumbnailUrl;
   final String? description;
 
-  bool get hasEnded =>
-      endTime != null && endTime!.isBefore(DateTime.now());
+  bool get hasEnded => endTime != null && endTime!.isBefore(DateTime.now());
 
   Map<String, dynamic> toFirestore() {
     return {

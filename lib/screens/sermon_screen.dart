@@ -10,6 +10,10 @@ import '../services/sermon_service.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/sermon_card.dart';
 import '../widgets/bottom_nav_bar.dart';
+import 'album_detail_screen.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/sermon_category.dart';
 
 class SermonScreen extends StatefulWidget {
   const SermonScreen({
@@ -42,6 +46,7 @@ class _SermonScreenState extends State<SermonScreen>
   List<String> _categories = [];
   List<String> _preachers = [];
   List<String> _tags = [];
+  List<SermonCategory> _fetchedCategories = [];
 
   // Sermons the user has started but not finished — keyed by sermon id,
   // value is the saved playback position in seconds.
@@ -59,12 +64,11 @@ class _SermonScreenState extends State<SermonScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadSermons();
 
     // Track currently playing sermon to update mini player + refresh in-progress list
-    _playerSub =
-        widget.audioPlayerService.playerStateStream.listen((_) {
+    _playerSub = widget.audioPlayerService.playerStateStream.listen((_) {
       final current = widget.audioPlayerService.currentSermon;
       if (current != null && mounted) {
         setState(() {
@@ -101,13 +105,20 @@ class _SermonScreenState extends State<SermonScreen>
     try {
       final sermons = await widget.sermonService.getSermons();
       await _refreshInProgressSermons(sermons: sermons);
+      final snapshot = await FirebaseFirestore.instance
+          .collection('sermon_categories')
+          .get();
+      final fetchedCategories = snapshot.docs
+          .map((doc) => SermonCategory.fromFirestore(doc))
+          .toList();
+
       setState(() {
         _allSermons = sermons;
+        _fetchedCategories = fetchedCategories;
         _categories = sermons.map((s) => s.category).toSet().toList()..sort();
-        _preachers =
-            sermons.map((s) => s.preacherName).toSet().toList()..sort();
-        _tags =
-            sermons.expand((s) => s.tags).toSet().toList()..sort();
+        _preachers = sermons.map((s) => s.preacherName).toSet().toList()
+          ..sort();
+        _tags = sermons.expand((s) => s.tags).toSet().toList()..sort();
         _isLoading = false;
         _error = null;
       });
@@ -139,9 +150,7 @@ class _SermonScreenState extends State<SermonScreen>
 
     final source = sermons ?? _allSermons;
     // Keep only sermons present in the fetched list, sort by saved position descending
-    final inProgress = source
-        .where((s) => positions.containsKey(s.id))
-        .toList()
+    final inProgress = source.where((s) => positions.containsKey(s.id)).toList()
       ..sort((a, b) => (positions[b.id] ?? 0).compareTo(positions[a.id] ?? 0));
 
     if (mounted) {
@@ -174,8 +183,6 @@ class _SermonScreenState extends State<SermonScreen>
       return matchesSearch && matchesPreacher && matchesCategory && matchesTag;
     }).toList();
   }
-
-
 
   void _clearFilters() {
     setState(() {
@@ -226,8 +233,7 @@ class _SermonScreenState extends State<SermonScreen>
                       if (index == 0) {
                         return ListTile(
                           title: const Text('All',
-                              style:
-                                  TextStyle(fontWeight: FontWeight.bold)),
+                              style: TextStyle(fontWeight: FontWeight.bold)),
                           trailing: const Icon(Icons.clear, size: 16),
                           onTap: () => Navigator.pop(context, null),
                         );
@@ -253,8 +259,7 @@ class _SermonScreenState extends State<SermonScreen>
       _showMiniPlayer = true;
       _currentSermon = sermon;
     });
-    widget.audioPlayerService
-        .playSermonFromPlaylist(sermon, _filteredSermons);
+    widget.audioPlayerService.playSermonFromPlaylist(sermon, _filteredSermons);
   }
 
   void _closeMiniPlayer() {
@@ -267,8 +272,8 @@ class _SermonScreenState extends State<SermonScreen>
 
   Future<void> _playInitialSermon() async {
     try {
-      final sermon = await widget.sermonService
-          .getSermonById(widget.initialSermonId!);
+      final sermon =
+          await widget.sermonService.getSermonById(widget.initialSermonId!);
       if (sermon != null && mounted) {
         _playSermon(sermon);
       }
@@ -296,14 +301,15 @@ class _SermonScreenState extends State<SermonScreen>
                   SliverToBoxAdapter(child: _buildSearchAndFilters()),
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
+                              color: Colors.black.withValues(alpha: 0.03),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -315,14 +321,20 @@ class _SermonScreenState extends State<SermonScreen>
                           dividerColor: Colors.transparent,
                           indicator: BoxDecoration(
                             borderRadius: BorderRadius.circular(30),
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.15),
                           ),
                           labelColor: Theme.of(context).colorScheme.primary,
-                          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                          labelStyle:
+                              const TextStyle(fontWeight: FontWeight.bold),
                           unselectedLabelColor: Colors.grey.shade600,
-                          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                          unselectedLabelStyle:
+                              const TextStyle(fontWeight: FontWeight.w600),
                           tabs: const [
                             Tab(text: 'All'),
+                            Tab(text: 'Albums'),
                             Tab(text: 'Bookmarked'),
                             Tab(text: 'Downloaded'),
                           ],
@@ -340,6 +352,7 @@ class _SermonScreenState extends State<SermonScreen>
                           controller: _tabController,
                           children: [
                             _buildSermonList(null),
+                            _buildAlbumList(),
                             _buildSermonList('bookmarked'),
                             _buildSermonList('downloaded'),
                           ],
@@ -394,7 +407,7 @@ class _SermonScreenState extends State<SermonScreen>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -429,15 +442,14 @@ class _SermonScreenState extends State<SermonScreen>
           Row(
             children: [
               const Text('Filter By:',
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               const Spacer(),
               if (_hasActiveFilters)
                 TextButton.icon(
                   onPressed: _clearFilters,
                   icon: const Icon(Icons.clear_all, size: 16),
-                  label: const Text('Clear All',
-                      style: TextStyle(fontSize: 12)),
+                  label:
+                      const Text('Clear All', style: TextStyle(fontSize: 12)),
                   style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 0),
@@ -464,8 +476,8 @@ class _SermonScreenState extends State<SermonScreen>
                   label: 'Category: ${_selectedCategory ?? 'All'}',
                   selected: _selectedCategory != null,
                   onTap: () async {
-                    final val = await _showFilterSheet(
-                        'Select Category', _categories);
+                    final val =
+                        await _showFilterSheet('Select Category', _categories);
                     setState(() => _selectedCategory = val);
                   },
                 ),
@@ -474,8 +486,7 @@ class _SermonScreenState extends State<SermonScreen>
                   label: 'Tag: ${_selectedTag ?? 'All'}',
                   selected: _selectedTag != null,
                   onTap: () async {
-                    final val =
-                        await _showFilterSheet('Select Tag', _tags);
+                    final val = await _showFilterSheet('Select Tag', _tags);
                     setState(() => _selectedTag = val);
                   },
                 ),
@@ -502,14 +513,14 @@ class _SermonScreenState extends State<SermonScreen>
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: colors.primary.withOpacity(0.3),
+                    color: colors.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )
@@ -528,20 +539,247 @@ class _SermonScreenState extends State<SermonScreen>
     );
   }
 
+  String _getFriendlyErrorMessage(String rawError) {
+    final lower = rawError.toLowerCase();
+    if (lower.contains('permission-denied') ||
+        lower.contains('permission_denied')) {
+      return 'Unable to access this content. Please try again later.';
+    } else if (lower.contains('unavailable') ||
+        lower.contains('network') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('offline')) {
+      return 'Please check your internet connection and try again.';
+    } else if (lower.contains('not-found')) {
+      return 'The requested content could not be found.';
+    }
+    return 'An unexpected error occurred. Please try again.';
+  }
+
   Widget _buildError() {
+    final friendlyMessage = _error != null
+        ? _getFriendlyErrorMessage(_error!)
+        : 'An unexpected error occurred.';
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.red),
-          const SizedBox(height: 12),
-          Text(_error!),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadSermons,
-            child: const Text('Retry'),
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cloud_off_rounded,
+                  size: 48, color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Oops!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              friendlyMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadSermons,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlbumList() {
+    final Map<String, List<Sermon>> albums = {};
+    for (final s in _filteredSermons) {
+      final category = s.category.isEmpty ? 'Uncategorized' : s.category;
+      albums.putIfAbsent(category, () => []).add(s);
+    }
+    final sortedCategories = albums.keys.toList()..sort();
+
+    if (sortedCategories.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_off, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No albums found',
+              style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GridView.builder(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: _showMiniPlayer ? 110 : 16,
+      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: sortedCategories.length,
+      itemBuilder: (context, index) {
+        final category = sortedCategories[index];
+        final sermonsInAlbum = albums[category]!;
+        final firstSermon = sermonsInAlbum.first;
+
+        SermonCategory? metaCategory;
+        try {
+          metaCategory = _fetchedCategories.firstWhere(
+              (c) => c.name.toLowerCase() == category.toLowerCase());
+        } catch (_) {}
+
+        return _buildAlbumCard(
+            category, sermonsInAlbum, firstSermon, metaCategory);
+      },
+    );
+  }
+
+  Widget _buildAlbumCard(String albumName, List<Sermon> sermons,
+      Sermon firstSermon, SermonCategory? metaCategory) {
+    final colors = Theme.of(context).colorScheme;
+    final displayImageUrl =
+        metaCategory != null && metaCategory.imageUrl.isNotEmpty
+            ? metaCategory.imageUrl
+            : firstSermon.thumbnailUrl;
+    final displayDescription = metaCategory?.description;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AlbumDetailScreen(
+              albumName: albumName,
+              sermons: sermons,
+              audioPlayerService: widget.audioPlayerService,
+              sermonService: widget.sermonService,
+              coverImageUrl: displayImageUrl,
+              description: displayDescription,
+            ),
           ),
-        ],
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    displayImageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: displayImageUrl,
+                            fit: BoxFit.cover,
+                          )
+                        : Container(
+                            color: colors.primary.withValues(alpha: 0.1)),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.audiotrack,
+                              color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${sermons.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    albumName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  if (displayDescription != null &&
+                      displayDescription.isNotEmpty)
+                    Text(
+                      displayDescription,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    Text(
+                      'Album / Playlist',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -578,8 +816,7 @@ class _SermonScreenState extends State<SermonScreen>
                       : _hasActiveFilters
                           ? 'No sermons match your filters'
                           : 'No sermons found',
-              style:
-                  TextStyle(fontSize: 15, color: Colors.grey[600]),
+              style: TextStyle(fontSize: 15, color: Colors.grey[600]),
             ),
             if (_hasActiveFilters && filter == null) ...[
               const SizedBox(height: 12),
@@ -632,7 +869,7 @@ class _SermonScreenState extends State<SermonScreen>
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: primary.withOpacity(0.12),
+                  color: primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.history_rounded, size: 16, color: primary),
@@ -665,7 +902,8 @@ class _SermonScreenState extends State<SermonScreen>
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
           child: Row(
             children: [
-              Expanded(child: Divider(color: Colors.grey.withOpacity(0.3))),
+              Expanded(
+                  child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
@@ -678,7 +916,8 @@ class _SermonScreenState extends State<SermonScreen>
                   ),
                 ),
               ),
-              Expanded(child: Divider(color: Colors.grey.withOpacity(0.3))),
+              Expanded(
+                  child: Divider(color: Colors.grey.withValues(alpha: 0.3))),
             ],
           ),
         ),
@@ -696,7 +935,7 @@ class _SermonScreenState extends State<SermonScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -723,8 +962,8 @@ class _SermonScreenState extends State<SermonScreen>
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.1),
-                      Colors.black.withOpacity(0.85),
+                      Colors.black.withValues(alpha: 0.1),
+                      Colors.black.withValues(alpha: 0.85),
                     ],
                     stops: const [0.3, 1.0],
                   ),
@@ -741,8 +980,9 @@ class _SermonScreenState extends State<SermonScreen>
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        color: Colors.black.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        color: Colors.black.withValues(alpha: 0.3),
                         child: Text(
                           s.category,
                           style: const TextStyle(
@@ -766,7 +1006,7 @@ class _SermonScreenState extends State<SermonScreen>
                     child: Container(
                       width: 32,
                       height: 32,
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       child: const Icon(Icons.play_arrow_rounded,
                           size: 20, color: Colors.white),
                     ),
@@ -800,7 +1040,7 @@ class _SermonScreenState extends State<SermonScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),
@@ -817,8 +1057,9 @@ class _SermonScreenState extends State<SermonScreen>
 
   Widget _cardPlaceholder(Color primary) {
     return Container(
-      color: primary.withOpacity(0.15),
-      child: Icon(Icons.church_rounded, color: primary.withOpacity(0.4), size: 40),
+      color: primary.withValues(alpha: 0.15),
+      child: Icon(Icons.church_rounded,
+          color: primary.withValues(alpha: 0.4), size: 40),
     );
   }
 }

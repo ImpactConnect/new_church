@@ -402,7 +402,7 @@ class _BibleScreenState extends State<BibleScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   color: verse.isHighlighted
-                      ? verse.highlightColor?.withOpacity(0.3)
+                      ? verse.highlightColor?.withValues(alpha: 0.3)
                       : null,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,7 +445,7 @@ class _BibleScreenState extends State<BibleScreen>
             color: Theme.of(context).cardColor,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, -2),
               ),
@@ -654,7 +654,7 @@ class _BibleScreenState extends State<BibleScreen>
           onTap: () => _showVerseOptions(verse, '', 0),
           child: Container(
             padding: const EdgeInsets.all(16),
-            color: verse.highlightColor?.withOpacity(0.3),
+            color: verse.highlightColor?.withValues(alpha: 0.3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

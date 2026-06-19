@@ -3,13 +3,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FcmService {
-  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  static final FirebaseMessaging _firebaseMessaging =
+      FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
     try {
       // 1. Request Permission
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -23,7 +26,8 @@ class FcmService {
       }
 
       // 2. Initialize Local Notifications (For Foreground)
-      const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
       const initializationSettingsIOS = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -39,11 +43,14 @@ class FcmService {
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
         'high_importance_channel', // id
         'High Importance Notifications', // name
-        description: 'This channel is used for important notifications.', // description
+        description:
+            'This channel is used for important notifications.', // description
         importance: Importance.high,
       );
-      
-      final localNotifAndroid = _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      final localNotifAndroid =
+          _localNotifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       await localNotifAndroid?.createNotificationChannel(channel);
 
       // 4. Update iOS Foreground Notification Options
@@ -68,13 +75,13 @@ class FcmService {
       // 7. Get token
       String? token = await _firebaseMessaging.getToken();
       debugPrint('FCM Token: \$token');
-
     } catch (e) {
       debugPrint('Error initializing FCM: \$e');
     }
   }
 
-  static void _showLocalNotification(RemoteMessage message, AndroidNotificationChannel channel) {
+  static void _showLocalNotification(
+      RemoteMessage message, AndroidNotificationChannel channel) {
     _localNotifications.show(
       message.notification.hashCode,
       message.notification?.title,

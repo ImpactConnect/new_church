@@ -73,8 +73,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen>
 
   void _startListening() {
     _streamSubscription =
-        _service.watchCurrentLiveStream().listen(_onStreamUpdate,
-            onError: (_) {
+        _service.watchCurrentLiveStream().listen(_onStreamUpdate, onError: (_) {
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Unable to connect to live stream service.';
@@ -209,8 +208,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen>
     try {
       _videoPlayerController?.dispose();
       _chewieController?.dispose();
-      _videoPlayerController =
-          VideoPlayerController.networkUrl(Uri.parse(url));
+      _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(url));
       await _videoPlayerController!.initialize();
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController!,
@@ -219,8 +217,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen>
         allowFullScreen: false,
         aspectRatio: 16 / 9,
         errorBuilder: (context, message) => Center(
-          child: Text(message,
-              style: const TextStyle(color: Colors.white)),
+          child: Text(message, style: const TextStyle(color: Colors.white)),
         ),
       );
       if (mounted) setState(() => _isLoading = false);

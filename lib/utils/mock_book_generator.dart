@@ -18,7 +18,8 @@ class MockBookGenerator {
         topics: ['Grace', 'Salvation', 'Faith'],
         coverUrl: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f',
         pdfUrl: 'https://example.com/books/understanding-grace.pdf',
-        description: 'A comprehensive study on the doctrine of grace in Christianity.',
+        description:
+            'A comprehensive study on the doctrine of grace in Christianity.',
         publishedDate: DateTime(2024, 1, 15),
         totalPages: 250,
         isTrending: true,
@@ -30,7 +31,8 @@ class MockBookGenerator {
         author: 'Sarah Johnson',
         category: 'Christian Living',
         topics: ['Prayer', 'Spiritual Warfare', 'Faith'],
-        coverUrl: 'https://images.unsplash.com/photo-1532012197267-da84d127e765',
+        coverUrl:
+            'https://images.unsplash.com/photo-1532012197267-da84d127e765',
         pdfUrl: 'https://example.com/books/prayer-warriors.pdf',
         description: 'Learn the power of prayer and spiritual warfare.',
         publishedDate: DateTime(2024, 2, 1),
@@ -44,7 +46,8 @@ class MockBookGenerator {
         author: 'David Wilson',
         category: 'Christian Living',
         topics: ['Discipleship', 'Faith', 'Christian Life'],
-        coverUrl: 'https://images.unsplash.com/photo-1476275466078-4007374efbbe',
+        coverUrl:
+            'https://images.unsplash.com/photo-1476275466078-4007374efbbe',
         pdfUrl: 'https://example.com/books/walking-with-christ.pdf',
         description: 'A guide to daily Christian living and discipleship.',
         publishedDate: DateTime(2024, 1, 20),
@@ -58,7 +61,8 @@ class MockBookGenerator {
         author: 'Michael Brown',
         category: 'Bible Study',
         topics: ['Bible', 'Study', 'Methods'],
-        coverUrl: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493',
+        coverUrl:
+            'https://images.unsplash.com/photo-1519682577862-22b62b24e493',
         pdfUrl: 'https://example.com/books/bible-study-methods.pdf',
         description: 'Learn effective methods for studying the Bible.',
         publishedDate: DateTime(2024, 1, 25),
@@ -72,9 +76,11 @@ class MockBookGenerator {
         author: 'Emily Davis',
         category: 'Ministry',
         topics: ['Worship', 'Music', 'Church'],
-        coverUrl: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76',
+        coverUrl:
+            'https://images.unsplash.com/photo-1507838153414-b4b713384a76',
         pdfUrl: 'https://example.com/books/power-of-worship.pdf',
-        description: 'Understanding the importance of worship in Christian life.',
+        description:
+            'Understanding the importance of worship in Christian life.',
         publishedDate: DateTime(2024, 2, 5),
         totalPages: 160,
         isMostRead: true,

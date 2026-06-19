@@ -1,107 +1,167 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:church_mobile/models/announcement.dart';
 import 'package:church_mobile/models/member.dart';
 import 'package:church_mobile/models/testimony.dart';
+import 'package:church_mobile/providers/members_connect_provider.dart';
+import 'package:church_mobile/services/member_service.dart';
 import 'package:church_mobile/screens/members/members_directory_screen.dart';
 import 'package:church_mobile/widgets/members/member_details_dialog.dart';
-import 'package:church_mobile/widgets/testimony_details_dialog.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+import 'package:church_mobile/widgets/members/celebration_card.dart';
+import 'package:church_mobile/widgets/members/announcement_card.dart';
+import 'package:church_mobile/widgets/members/testimony_card.dart';
+import 'package:church_mobile/widgets/members/quick_action_button.dart';
 
 import '../../widgets/bottom_nav_bar.dart';
 import '../community/community_login_screen.dart';
 
-class MembersConnectScreen extends StatefulWidget {
+class MembersConnectScreen extends StatelessWidget {
   const MembersConnectScreen({Key? key}) : super(key: key);
 
   @override
-  State<MembersConnectScreen> createState() => _MembersConnectScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => MembersConnectProvider(),
+      child: const _MembersConnectView(),
+    );
+  }
 }
 
-class _MembersConnectScreenState extends State<MembersConnectScreen>
+class _MembersConnectView extends StatefulWidget {
+  const _MembersConnectView({Key? key}) : super(key: key);
+
+  @override
+  State<_MembersConnectView> createState() => _MembersConnectViewState();
+}
+
+class _MembersConnectViewState extends State<_MembersConnectView>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  late AnimationController _controller;
+  late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey =
+  final GlobalKey<RefreshIndicatorState> _refreshKey =
       GlobalKey<RefreshIndicatorState>();
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
+
+  // Inline search state
+  final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  final MemberService _memberService = MemberService();
+  List<Member> _searchResults = [];
+  bool _isSearching = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
-    _controller.forward();
+    _fadeController = AnimationController(
+        duration: const Duration(milliseconds: 900), vsync: this);
+    _fadeAnimation =
+        CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
+    _fadeController.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     _tabController.dispose();
-    _searchController.dispose();
+    _fadeController.dispose();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  Future<void> _handleRefresh() async {
-    setState(() {});
-    await Future.delayed(const Duration(seconds: 2));
+  Future<void> _handleRefresh() async =>
+      Future.delayed(const Duration(seconds: 1));
+
+  // ── Debounced inline search ──────────────────────────────────────────────
+  void _onSearchChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      return;
+    }
+    setState(() => _isSearching = true);
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      final results = await _memberService.searchMembers(q.trim());
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+        });
+      }
+    });
   }
 
-  Widget _buildCelebrationCard(Member member, bool isBirthday) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (context) => MemberDetailsDialog(member: member),
-          );
-        },
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundImage:
-                member.imageUrl != null ? NetworkImage(member.imageUrl!) : null,
-            child: member.imageUrl == null ? const Icon(Icons.person) : null,
-          ),
-          title: Text(member.name),
-          subtitle:
-              Text(isBirthday ? 'Birthday Today!' : 'Wedding Anniversary'),
-          trailing: Icon(
-            isBirthday ? Icons.cake : Icons.celebration,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-      ),
-    );
+  void _clearSearch() {
+    _searchCtrl.clear();
+    _searchFocus.unfocus();
+    setState(() {
+      _searchResults = [];
+      _isSearching = false;
+    });
   }
 
-  Widget _buildAnnouncementCard(Announcement announcement) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+  // ── Celebrants ────────────────────────────────────────────────────────────
+  Widget _buildCelebrantsSection() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              announcement.message,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _formatDateTime(announcement.timePosted),
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+            Text("Today's Celebrants",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColorDark)),
+            const SizedBox(height: 10),
+            Consumer<MembersConnectProvider>(
+              builder: (context, provider, _) {
+                if (provider.isLoadingCelebrants) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final celebrants = provider.todaysCelebrants;
+                if (celebrants.isEmpty) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 18, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(14),
+                      border:
+                          Border.all(color: Colors.grey.withOpacity(0.18)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.cake_outlined,
+                            size: 26, color: Colors.grey[400]),
+                        const SizedBox(width: 10),
+                        Text('No celebrants today',
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 14)),
+                      ],
+                    ),
+                  );
+                }
+                final now = DateTime.now();
+                return Column(
+                  children: celebrants.map((m) {
+                    final isBday = m.birthDate != null &&
+                        m.birthDate!.month == now.month &&
+                        m.birthDate!.day == now.day;
+                    return CelebrationCard(member: m, isBirthday: isBday);
+                  }).toList(),
+                );
+              },
             ),
           ],
         ),
@@ -109,160 +169,133 @@ class _MembersConnectScreenState extends State<MembersConnectScreen>
     );
   }
 
-  Widget _buildTestimonyCard(Testimony testimony) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: () {
-          showDialog(
-            context: context,
-            builder: (context) => TestimonyDetailsDialog(testimony: testimony),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  // ── Quick Actions — 2x2 grid ──────────────────────────────────────────────
+  Widget _buildQuickActionsSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Quick Actions',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColorDark)),
+          const SizedBox(height: 12),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 2.6,
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundImage: testimony.imageUrl != null
-                        ? NetworkImage(testimony.imageUrl!)
-                        : null,
-                    child: testimony.imageUrl == null
-                        ? const Icon(Icons.person)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          testimony.testifier,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          _formatDate(testimony.dateShared),
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                testimony.testimony,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
-              ),
+              QuickActionButton(
+                  icon: Icons.group_outlined,
+                  label: 'Community Forum',
+                  color: Colors.indigo,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(
+                          builder: (_) => const CommunityLoginScreen()))),
+              QuickActionButton(
+                  icon: Icons.people_alt_outlined,
+                  label: 'Members Directory',
+                  color: Colors.green,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(
+                          builder: (_) => const MembersDirectoryScreen()))),
+              QuickActionButton(
+                  icon: Icons.volunteer_activism_outlined,
+                  label: 'Prayer Request',
+                  color: Colors.deepOrange,
+                  onTap: () {}),
+              QuickActionButton(
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Church Calendar',
+                  color: Colors.teal,
+                  onTap: () {}),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${_formatDate(dateTime)} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
+  // ── Tab content ───────────────────────────────────────────────────────────
+  Widget _buildAnnouncementsTab() {
+    return Consumer<MembersConnectProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoadingAnnouncements) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = provider.announcements;
+        if (list.isEmpty) {
+          return const Center(child: Text('No announcements yet.'));
+        }
+        return ListView.builder(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color, color.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: Colors.white, size: 32),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+          itemCount: list.length,
+          itemBuilder: (_, i) => AnnouncementCard(announcement: list[i]),
+        );
+      },
     );
   }
 
-  void _navigateToCommunityLogin() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CommunityLoginScreen(),
-      ),
+  Widget _buildTestimoniesTab() {
+    return Consumer<MembersConnectProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoadingTestimonies) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final list = provider.testimonies;
+        if (list.isEmpty) {
+          return const Center(child: Text('No testimonies yet.'));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: list.length,
+          itemBuilder: (_, i) => TestimonyCard(testimony: list[i]),
+        );
+      },
     );
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final showDropdown =
+        _searchCtrl.text.trim().isNotEmpty || _isSearching;
+
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       body: RefreshIndicator(
-        key: _refreshIndicatorKey,
+        key: _refreshKey,
         onRefresh: _handleRefresh,
-        child: CustomScrollView(
+        child: NestedScrollView(
           physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 200.0,
-              floating: false,
-              pinned: true,
-              stretch: true,
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text('Members Connect',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      'assets/images/members_hero.jpg',
-                      fit: BoxFit.cover,
-                    ),
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              // ── Hero AppBar ───────────────────────────────────────────
+              SliverAppBar(
+                expandedHeight: 210.0,
+                floating: false,
+                pinned: true,
+                stretch: true,
+                elevation: innerBoxIsScrolled ? 4.0 : 0.0,
+                backgroundColor: theme.primaryColor,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: const Text('Members Connect',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          shadows: [
+                            Shadow(color: Colors.black54, blurRadius: 4)
+                          ])),
+                  background: Stack(fit: StackFit.expand, children: [
+                    Image.asset('assets/images/members_hero.jpg',
+                        fit: BoxFit.cover),
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -270,343 +303,209 @@ class _MembersConnectScreenState extends State<MembersConnectScreen>
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            Theme.of(context).primaryColor.withOpacity(0.8),
+                            theme.primaryColorDark.withOpacity(0.88),
                           ],
                         ),
                       ),
                     ),
-                  ],
+                  ]),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search members by name or occupation...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[100],
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value.toLowerCase();
-                        });
-                      },
-                    ),
-                    if (_searchQuery.isNotEmpty)
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('members')
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return const Text('Something went wrong');
-                          }
 
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-
-                          final members = snapshot.data!.docs
-                              .map((doc) => Member.fromFirestore(doc))
-                              .where((member) =>
-                                  member.name
-                                      .toLowerCase()
-                                      .contains(_searchQuery) ||
-                                  (member.occupation
-                                          ?.toLowerCase()
-                                          .contains(_searchQuery) ??
-                                      false))
-                              .toList();
-
-                          if (members.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text('No members found'),
-                            );
-                          }
-
-                          return Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.2),
-                                  spreadRadius: 2,
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            constraints: const BoxConstraints(maxHeight: 200),
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: members.length,
-                              itemBuilder: (context, index) {
-                                final member = members[index];
-                                return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundImage: member.imageUrl != null
-                                        ? NetworkImage(member.imageUrl!)
-                                        : null,
-                                    child: member.imageUrl == null
-                                        ? const Icon(Icons.person)
-                                        : null,
-                                  ),
-                                  title: Text(member.name),
-                                  subtitle: Text(member.occupation ?? ''),
-                                  onTap: () {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) =>
-                                          MemberDetailsDialog(member: member),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
+              // ── Inline search bar + dropdown ──────────────────────────
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Today\'s Celebrants',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      // Search bar
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                          border: Border.all(
+                              color: Colors.grey.withOpacity(0.22)),
+                        ),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 14),
+                            Icon(Icons.search,
+                                color: theme.primaryColor, size: 22),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchCtrl,
+                                focusNode: _searchFocus,
+                                onChanged: _onSearchChanged,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Search by name or profession...',
+                                  hintStyle: TextStyle(
+                                      color: Colors.grey[400],
+                                      fontSize: 14),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                            ),
+                            if (_searchCtrl.text.isNotEmpty)
+                              GestureDetector(
+                                onTap: _clearSearch,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Icon(Icons.close,
+                                      size: 18, color: Colors.grey[500]),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('members')
-                            .snapshots(),
-                        builder: (context, birthdaySnapshot) {
-                          if (birthdaySnapshot.hasError) {
-                            return const Text('Something went wrong');
-                          }
 
-                          if (birthdaySnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-
-                          final List<Widget> celebrationCards = [];
-                          final now = DateTime.now();
-
-                          // Check birthdays
-                          for (var doc in birthdaySnapshot.data!.docs) {
-                            final member = Member.fromFirestore(doc);
-                            if (member.birthDate != null) {
-                              final birthday = member.birthDate!;
-                              if (birthday.month == now.month &&
-                                  birthday.day == now.day) {
-                                celebrationCards
-                                    .add(_buildCelebrationCard(member, true));
-                              }
-                            }
-                            if (member.weddingDate != null) {
-                              final anniversary = member.weddingDate!;
-                              if (anniversary.month == now.month &&
-                                  anniversary.day == now.day) {
-                                celebrationCards
-                                    .add(_buildCelebrationCard(member, false));
-                              }
-                            }
-                          }
-
-                          if (celebrationCards.isEmpty) {
-                            return const Card(
-                              child: Padding(
-                                padding: EdgeInsets.all(16.0),
-                                child: Text('No celebrants today'),
-                              ),
-                            );
-                          }
-
-                          return Column(children: celebrationCards);
-                        },
-                      ),
+                      // Dropdown results
+                      if (showDropdown)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          constraints:
+                              const BoxConstraints(maxHeight: 240),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4))
+                            ],
+                          ),
+                          child: _isSearching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(
+                                      child:
+                                          CircularProgressIndicator()))
+                              : _searchResults.isEmpty
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: Text('No members found.',
+                                          textAlign: TextAlign.center))
+                                  : ListView.separated(
+                                      shrinkWrap: true,
+                                      itemCount: _searchResults.length,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, i) {
+                                        final m = _searchResults[i];
+                                        return ListTile(
+                                          dense: true,
+                                          leading: CircleAvatar(
+                                            radius: 18,
+                                            backgroundImage:
+                                                m.imageUrl != null
+                                                    ? NetworkImage(
+                                                        m.imageUrl!)
+                                                    : null,
+                                            child: m.imageUrl == null
+                                                ? Text(
+                                                    m.name.isNotEmpty
+                                                        ? m.name[0]
+                                                            .toUpperCase()
+                                                        : '?',
+                                                  )
+                                                : null,
+                                          ),
+                                          title: Text(m.name,
+                                              style: const TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.w600,
+                                                  fontSize: 13)),
+                                          subtitle: m.occupation != null
+                                              ? Text(m.occupation!,
+                                                  style: const TextStyle(
+                                                      fontSize: 12))
+                                              : null,
+                                          onTap: () {
+                                            _clearSearch();
+                                            showDialog(
+                                              context: context,
+                                              builder: (_) =>
+                                                  MemberDetailsDialog(
+                                                      member: m),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                        ),
                     ],
                   ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
+
+              // ── Celebrants ────────────────────────────────────────────
+              SliverToBoxAdapter(child: _buildCelebrantsSection()),
+
+              // ── Quick Actions ─────────────────────────────────────────
+              SliverToBoxAdapter(child: _buildQuickActionsSection()),
+
+              // ── Sticky Tab Bar ────────────────────────────────────────
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
+                    labelColor: theme.primaryColor,
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: theme.primaryColor,
+                    indicatorWeight: 3,
                     tabs: const [
                       Tab(text: 'Announcements'),
                       Tab(text: 'Testimonies'),
                     ],
                   ),
-                  SizedBox(
-                    height: 400,
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        // Announcements Tab
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('announcements')
-                              .orderBy('timePosted', descending: true)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasError) {
-                              return const Center(
-                                  child: Text('Something went wrong'));
-                            }
-
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                  child: CircularProgressIndicator());
-                            }
-
-                            final announcements = snapshot.data!.docs
-                                .map((doc) => Announcement.fromFirestore(doc))
-                                .toList();
-
-                            return ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: announcements.length,
-                              itemBuilder: (context, index) {
-                                return _buildAnnouncementCard(
-                                    announcements[index]);
-                              },
-                            );
-                          },
-                        ),
-                        // Testimonies Tab
-                        StreamBuilder<QuerySnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('testimonies')
-                              .orderBy('dateShared', descending: true)
-                              .snapshots(),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasError) {
-                              return const Center(
-                                  child: Text('Something went wrong'));
-                            }
-
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                  child: CircularProgressIndicator());
-                            }
-
-                            final testimonies = snapshot.data!.docs
-                                .map((doc) => Testimony.fromFirestore(doc))
-                                .toList();
-
-                            return ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: testimonies.length,
-                              itemBuilder: (context, index) {
-                                return _buildTestimonyCard(testimonies[index]);
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Quick Actions',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          children: [
-                            _buildActionButton(
-                              icon: Icons.group,
-                              label: 'Community Forum',
-                              color: Colors.blue,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const CommunityLoginScreen(),
-                                ),
-                              ),
-                            ),
-                            _buildActionButton(
-                              icon: Icons.people,
-                              label: 'Members Directory',
-                              color: Colors.green,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const MembersDirectoryScreen(),
-                                ),
-                              ),
-                            ),
-                            _buildActionButton(
-                              icon: Icons.chat,
-                              label: 'Prayer Request',
-                              color: Colors.red,
-                              onTap: () {},
-                            ),
-                            _buildActionButton(
-                              icon: Icons.calendar_today,
-                              label: 'Church Calendar',
-                              color: Colors.cyan,
-                              onTap: () {},
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  backgroundColor: Colors.white,
+                ),
               ),
-            ),
-          ],
+            ];
+          },
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildAnnouncementsTab(),
+              _buildTestimoniesTab(),
+            ],
+          ),
         ),
       ),
-      bottomNavigationBar:
-          const BottomNavBar(currentIndex: 2), // Set to Members index
+      bottomNavigationBar: const BottomNavBar(currentIndex: 2),
     );
   }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverTabBarDelegate(this._tabBar, {required this.backgroundColor});
+  final TabBar _tabBar;
+  final Color backgroundColor;
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      Container(color: backgroundColor, child: _tabBar);
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate old) => false;
 }

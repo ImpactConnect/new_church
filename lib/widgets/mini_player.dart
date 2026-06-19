@@ -54,8 +54,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
   }
 
   void _expandToFullPlayer() {
-    final current =
-        widget.audioPlayerService.currentSermon ?? widget.sermon;
+    final current = widget.audioPlayerService.currentSermon ?? widget.sermon;
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => FadeTransition(
@@ -71,16 +70,16 @@ class _MiniPlayerState extends State<MiniPlayer> {
     );
   }
 
-  String _speedLabel(double s) =>
-      s == s.truncate() ? '${s.toInt()}x' : '${s}x';
+  String _speedLabel(double s) => s == s.truncate() ? '${s.toInt()}x' : '${s}x';
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final sermon = widget.audioPlayerService.currentSermon ?? widget.sermon;
-    final maxVal =
-        _duration.inMilliseconds > 0 ? _duration.inMilliseconds.toDouble() : 1.0;
+    final maxVal = _duration.inMilliseconds > 0
+        ? _duration.inMilliseconds.toDouble()
+        : 1.0;
 
     return GestureDetector(
       onTap: _expandToFullPlayer,
@@ -89,7 +88,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
           color: theme.cardColor,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 12,
               offset: const Offset(0, -3),
             ),
@@ -107,9 +106,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
                         .clamp(0.0, 1.0)
                     : 0,
                 minHeight: 2,
-                backgroundColor: colors.primary.withOpacity(0.15),
-                valueColor:
-                    AlwaysStoppedAnimation<Color>(colors.primary),
+                backgroundColor: colors.primary.withValues(alpha: 0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
@@ -127,20 +125,20 @@ class _MiniPlayerState extends State<MiniPlayer> {
                               placeholder: (_, __) => Container(
                                   width: 46,
                                   height: 46,
-                                  color: colors.primary.withOpacity(0.12),
+                                  color: colors.primary.withValues(alpha: 0.12),
                                   child: const Icon(Icons.church,
                                       color: Colors.grey, size: 22)),
                               errorWidget: (_, __, ___) => Container(
                                   width: 46,
                                   height: 46,
-                                  color: colors.primary.withOpacity(0.12),
+                                  color: colors.primary.withValues(alpha: 0.12),
                                   child: const Icon(Icons.church,
                                       color: Colors.grey, size: 22)),
                             )
                           : Container(
                               width: 46,
                               height: 46,
-                              color: colors.primary.withOpacity(0.12),
+                              color: colors.primary.withValues(alpha: 0.12),
                               child: const Icon(Icons.church,
                                   color: Colors.grey, size: 22)),
                     ),
@@ -152,8 +150,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
                         children: [
                           Text(
                             sermon.title,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold),
+                            style: theme.textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -169,13 +167,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
                     ),
                     // ── Speed chip ──
                     GestureDetector(
-                      onTap: () =>
-                          widget.audioPlayerService.cycleSpeed(),
+                      onTap: () => widget.audioPlayerService.cycleSpeed(),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: colors.primary.withOpacity(0.12),
+                          color: colors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(

@@ -65,7 +65,8 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
 
   void _updateCompletedDays() {
     if (_readingPlan == null) return;
-    _completedDays = _readingPlan!.where((reading) => reading.isCompleted).length;
+    _completedDays =
+        _readingPlan!.where((reading) => reading.isCompleted).length;
     _saveProgress();
     setState(() {});
   }
@@ -85,7 +86,8 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
     final prefs = await SharedPreferences.getInstance();
     final completedDates = prefs.getStringList('completed_readings') ?? [];
     for (var reading in _readingPlan!) {
-      reading.isCompleted = completedDates.contains(reading.date.toIso8601String());
+      reading.isCompleted =
+          completedDates.contains(reading.date.toIso8601String());
     }
     _updateCompletedDays();
   }
@@ -110,7 +112,8 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : NestedScrollView(
-              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+              headerSliverBuilder:
+                  (BuildContext context, bool innerBoxIsScrolled) {
                 return [
                   SliverAppBar(
                     expandedHeight: 200.0,
@@ -136,7 +139,7 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                                 end: Alignment.bottomCenter,
                                 colors: [
                                   Colors.transparent,
-                                  Colors.black.withOpacity(0.7),
+                                  Colors.black.withValues(alpha: 0.7),
                                 ],
                               ),
                             ),
@@ -160,13 +163,18 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                           children: [
                             Text(
                               'Your Reading Progress',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             const SizedBox(height: 16),
                             LinearProgressIndicator(
-                              value: _readingPlan != null ? _completedDays / 365 : 0,
+                              value: _readingPlan != null
+                                  ? _completedDays / 365
+                                  : 0,
                               backgroundColor: Colors.grey[200],
                               valueColor: AlwaysStoppedAnimation<Color>(
                                   Theme.of(context).primaryColor),
@@ -191,11 +199,13 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Today\'s Reading',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                   if (_todaysReading!.isCompleted)
                                     const Icon(
@@ -207,7 +217,8 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                               const SizedBox(height: 8),
                               ...(_todaysReading!.passages.map(
                                 (passage) => Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                   child: Text(passage),
                                 ),
                               )).toList(),
@@ -247,8 +258,8 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                             },
                           ),
                           Text(
-                            DateFormat('MMMM yyyy')
-                                .format(DateTime(_selectedYear, _selectedMonth)),
+                            DateFormat('MMMM yyyy').format(
+                                DateTime(_selectedYear, _selectedMonth)),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           IconButton(
@@ -276,30 +287,37 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                           GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 7,
                               mainAxisSpacing: 4,
                               crossAxisSpacing: 4,
                               mainAxisExtent: 35,
                             ),
-                            itemCount: 7 + DateTime(_selectedYear, _selectedMonth + 1, 0).day,
+                            itemCount: 7 +
+                                DateTime(_selectedYear, _selectedMonth + 1, 0)
+                                    .day,
                             itemBuilder: (context, index) {
                               if (index < 7) {
                                 // Weekday headers
-                                final weekday = ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index];
+                                final weekday =
+                                    ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index];
                                 return Container(
                                   alignment: Alignment.center,
                                   child: Text(
                                     weekday,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 );
                               }
 
                               final day = index - 7 + 1;
-                              final date = DateTime(_selectedYear, _selectedMonth, day);
+                              final date =
+                                  DateTime(_selectedYear, _selectedMonth, day);
                               final isToday = _isSameDay(date, DateTime.now());
-                              final isSelected = _isSameDay(date, _selectedDate);
+                              final isSelected =
+                                  _isSameDay(date, _selectedDate);
                               final reading = _getReadingForDate(date);
 
                               return GestureDetector(
@@ -332,7 +350,8 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                                             color: isSelected
                                                 ? Colors.white
                                                 : isToday
-                                                    ? Theme.of(context).primaryColor
+                                                    ? Theme.of(context)
+                                                        .primaryColor
                                                     : null,
                                             fontWeight: isToday || isSelected
                                                 ? FontWeight.bold
@@ -365,13 +384,17 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         'Reading Reminders',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                       ),
                                       Switch(
                                         value: _remindersEnabled,
@@ -384,11 +407,13 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
                                       ),
                                     ],
                                   ),
-                                  if (_remindersEnabled) ...[                                    
+                                  if (_remindersEnabled) ...[
                                     ListTile(
                                       leading: const Icon(Icons.access_time),
                                       title: const Text('Reminder Time'),
-                                      subtitle: Text(_reminderTime?.format(context) ?? 'Not set'),
+                                      subtitle: Text(
+                                          _reminderTime?.format(context) ??
+                                              'Not set'),
                                       onTap: () => _selectReminderTime(context),
                                       contentPadding: EdgeInsets.zero,
                                     ),
@@ -435,7 +460,7 @@ class _BibleReadingPlanScreenState extends State<BibleReadingPlanScreen> {
 
   Future<void> _saveReminderPreferences() async {
     await ReminderPreferences.setRemindersEnabled(_remindersEnabled);
-    
+
     if (_remindersEnabled) {
       final now = DateTime.now();
       if (_reminderTime != null) {

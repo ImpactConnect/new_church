@@ -44,8 +44,6 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,7 +73,7 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                          Colors.black.withValues(alpha: 0.7),
                         ],
                       ),
                     ),
@@ -112,7 +110,8 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
                               children: [
                                 Text(
                                   _content?.title ?? '',
-                                  style: Theme.of(context).textTheme.headlineSmall,
+                                  style:
+                                      Theme.of(context).textTheme.headlineSmall,
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
@@ -127,7 +126,6 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
           ),
         ],
       ),
-
       bottomNavigationBar: const BottomNavBar(currentIndex: 3),
     );
   }

@@ -9,6 +9,7 @@ import 'carousel_manager.dart';
 import 'users_manager.dart';
 import 'notifications_manager.dart';
 import 'media_manager.dart';
+import 'members_connect_manager.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -31,6 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     (icon: Icons.menu_book_outlined, label: 'Devotionals'),
     (icon: Icons.view_carousel_outlined, label: 'Banners'),
     (icon: Icons.notifications_outlined, label: 'Alerts'),
+    (icon: Icons.connect_without_contact_outlined, label: 'Members Connect'),
   ];
 
   Widget _buildContent() {
@@ -55,6 +57,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return const CarouselManager();
       case 9:
         return const NotificationsManager();
+      case 10:
+        return const MembersConnectManager();
       default:
         return const Center(child: Text('Select an item'));
     }
@@ -75,7 +79,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Logo / Header
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 32),
+                    horizontal: 20,
+                    vertical: 32,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -85,8 +91,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.church,
-                            color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.church,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -109,7 +118,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     itemCount: _destinations.length,
                     itemBuilder: (context, index) {
                       final dest = _destinations[index];
@@ -118,8 +129,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: dest.icon,
                         label: dest.label,
                         isSelected: isSelected,
-                        onTap: () =>
-                            setState(() => _selectedIndex = index),
+                        onTap: () => setState(() => _selectedIndex = index),
                       );
                     },
                   ),
@@ -140,9 +150,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: Text(
                               (user?.email ?? 'A')[0].toUpperCase(),
                               style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -150,13 +161,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: Text(
                               user?.email ?? 'Admin',
                               style: const TextStyle(
-                                  color: Colors.white70, fontSize: 12),
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.logout,
-                                color: Colors.white54, size: 18),
+                            icon: const Icon(
+                              Icons.logout,
+                              color: Colors.white54,
+                              size: 18,
+                            ),
                             tooltip: 'Sign Out',
                             onPressed: () => _confirmLogout(context),
                           ),
@@ -179,19 +195,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border(
-                        bottom: BorderSide(color: Colors.grey[200]!)),
+                      bottom: BorderSide(color: Colors.grey[200]!),
+                    ),
                   ),
                   child: Row(
                     children: [
                       Text(
                         _destinations[_selectedIndex].label,
                         style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const Spacer(),
-                      const Text('Impact Connect Admin',
-                          style: TextStyle(
-                              color: Colors.grey, fontSize: 12)),
+                      const Text(
+                        'Impact Connect Admin',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -213,17 +233,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                FirebaseAuth.instance.signOut();
-              },
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Sign Out',
-                  style: TextStyle(color: Colors.white))),
+            onPressed: () {
+              Navigator.pop(ctx);
+              FirebaseAuth.instance.signOut();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ],
       ),
     );
@@ -255,22 +278,23 @@ class _SidebarItem extends StatelessWidget {
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected
-                  ? Colors.blue.withOpacity(0.2)
+                  ? Colors.blue.withValues(alpha: 0.2)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
               border: isSelected
-                  ? Border.all(color: Colors.blue.withOpacity(0.4))
+                  ? Border.all(color: Colors.blue.withValues(alpha: 0.4))
                   : null,
             ),
             child: Row(
               children: [
-                Icon(icon,
-                    color: isSelected ? Colors.blue[300] : Colors.white54,
-                    size: 20),
+                Icon(
+                  icon,
+                  color: isSelected ? Colors.blue[300] : Colors.white54,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   label,

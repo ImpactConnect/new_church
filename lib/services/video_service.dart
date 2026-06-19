@@ -6,7 +6,7 @@ class VideoService {
   Future<void> incrementVideoViews(String videoId) async {
     try {
       final videoRef = _firestore.collection('videos').doc(videoId);
-      
+
       await videoRef.set({
         'views': FieldValue.increment(1),
         'lastViewedAt': FieldValue.serverTimestamp(),
@@ -17,11 +17,7 @@ class VideoService {
   }
 
   Stream<int> getVideoViews(String videoId) {
-    return _firestore
-        .collection('videos')
-        .doc(videoId)
-        .snapshots()
-        .map((snapshot) => 
-            snapshot.exists ? (snapshot.data()?['views'] ?? 0) : 0);
+    return _firestore.collection('videos').doc(videoId).snapshots().map(
+        (snapshot) => snapshot.exists ? (snapshot.data()?['views'] ?? 0) : 0);
   }
 }
