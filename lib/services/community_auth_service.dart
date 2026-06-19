@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/community_user.dart';
 
 class CommunityAuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   static const String _userIdKey = 'community_user_id';
   static const String _usernameKey = 'community_username';
   static const String _displayNameKey = 'community_display_name';
@@ -12,9 +14,9 @@ class CommunityAuthService {
 
   Future<CommunityUser?> signIn(String username, String password) async {
     try {
-      // Query to find user with matching username
+      // 1. Find user by username in 'members' collection
       final querySnapshot = await _firestore
-          .collection('community_users')
+          .collection('members')
           .where('username', isEqualTo: username)
           .limit(1)
           .get();
@@ -26,22 +28,28 @@ class CommunityAuthService {
 
       final userDoc = querySnapshot.docs.first;
       final userData = userDoc.data();
+      final email = userData['email'] as String?;
 
-      // Simple password check (in real-world, use proper encryption)
-      if (userData['password'] != password) {
-        print('Invalid password for user: $username');
+      if (email == null || email.isEmpty) {
+        print('User has no email associated: $username');
         return null;
       }
 
-      // Create CommunityUser object
-      final CommunityUser user = CommunityUser.fromFirestore(userDoc);
+      // 2. Authenticate with FirebaseAuth
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+
+      // 3. Create CommunityUser object
+      final CommunityUser user = CommunityUser(
+        id: userDoc.id,
+        username: userData['username'] ?? '',
+        displayName: userData['name'] ?? '',
+        memberId: userDoc.id,
+        role: 'member', // Default role for standard members
+        accountStatus: 'active',
+      );
 
       // Save user details to SharedPreferences
       await _saveUserToDevice(user);
-
-      // Update last login
-      await userDoc.reference
-          .update({'last_login': FieldValue.serverTimestamp()});
 
       return user;
     } catch (e) {

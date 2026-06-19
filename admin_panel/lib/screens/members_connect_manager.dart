@@ -1174,6 +1174,39 @@ class _TestimoniesTabState extends State<_TestimoniesTab> {
 class _CommunityPostsTab extends StatelessWidget {
   const _CommunityPostsTab();
 
+  Future<void> _deletePost(String docId, Map<String, dynamic> data, BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Are you sure you want to delete this post? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // If it has images, we might want to delete them from storage too.
+      // But for now, we just delete the document to regulate.
+      await FirebaseFirestore.instance.collection('community_posts').doc(docId).delete();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post deleted successfully')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error deleting post: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1181,9 +1214,12 @@ class _CommunityPostsTab extends StatelessWidget {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('community_posts')
-            .orderBy('createdAt', descending: true)
+            .orderBy('created_at', descending: true)
             .snapshots(),
         builder: (context, snap) {
+          if (snap.hasError) {
+             return Center(child: Text('Error: ${snap.error}'));
+          }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -1195,26 +1231,32 @@ class _CommunityPostsTab extends StatelessWidget {
             itemCount: docs.length,
             itemBuilder: (_, i) {
               final d = docs[i].data() as Map<String, dynamic>;
+              final title = d['title'] ?? 'No Title';
+              final author = d['author_name'] ?? 'Unknown Author';
+              final type = d['post_type'] ?? 'post';
               final flagged = d['flagged'] == true;
+
+              IconData typeIcon = Icons.article_outlined;
+              Color typeColor = Colors.blueGrey;
+              if (type == 'question') {
+                typeIcon = Icons.help_outline;
+                typeColor = Colors.orange;
+              } else if (type == 'article') {
+                typeIcon = Icons.library_books;
+                typeColor = Colors.indigo;
+              }
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 color: flagged ? Colors.red[50] : null,
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor:
-                        flagged ? Colors.red[100] : Colors.blue[50],
-                    child: Icon(
-                      flagged ? Icons.flag : Icons.forum_outlined,
-                      color: flagged ? Colors.red : Colors.blue,
-                    ),
+                    backgroundColor: typeColor.withValues(alpha: 0.1),
+                    child: Icon(typeIcon, color: typeColor),
                   ),
-                  title: Text(d['authorName'] ?? 'Unknown',
-                      style:
-                          const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                    d['content'] ?? d['text'] ?? '',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    'By $author • ${d['likes_count'] ?? 0} likes • ${d['comments_count'] ?? 0} comments',
                   ),
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                     IconButton(
@@ -1229,12 +1271,9 @@ class _CommunityPostsTab extends StatelessWidget {
                           .update({'flagged': !flagged}),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.red),
-                      onPressed: () => FirebaseFirestore.instance
-                          .collection('community_posts')
-                          .doc(docs[i].id)
-                          .delete(),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: 'Delete Post',
+                      onPressed: () => _deletePost(docs[i].id, d, context),
                     ),
                   ]),
                 ),

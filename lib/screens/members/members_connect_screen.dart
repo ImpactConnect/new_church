@@ -16,6 +16,8 @@ import 'package:church_mobile/widgets/members/quick_action_button.dart';
 
 import '../../widgets/bottom_nav_bar.dart';
 import '../community/community_login_screen.dart';
+import '../../services/community_auth_service.dart';
+import 'prayer_testimony_screen.dart';
 
 class MembersConnectScreen extends StatelessWidget {
   const MembersConnectScreen({Key? key}) : super(key: key);
@@ -181,8 +183,9 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).primaryColorDark)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           GridView.count(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
@@ -201,14 +204,59 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                   icon: Icons.people_alt_outlined,
                   label: 'Members Directory',
                   color: Colors.green,
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(
-                          builder: (_) => const MembersDirectoryScreen()))),
+                  onTap: () async {
+                    final authService = CommunityAuthService();
+                    final currentUser = await authService.getCurrentUser();
+                    if (!mounted) return;
+                    
+                    if (currentUser != null) {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const MembersDirectoryScreen(),
+                      ));
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => CommunityLoginScreen(
+                          onLoginSuccess: (user) {
+                            Navigator.pushReplacement(context, MaterialPageRoute(
+                              builder: (_) => const MembersDirectoryScreen(),
+                            ));
+                          },
+                        ),
+                      ));
+                    }
+                  }),
               QuickActionButton(
                   icon: Icons.volunteer_activism_outlined,
-                  label: 'Prayer Request',
+                  label: 'Send Prayer/Testimony',
                   color: Colors.deepOrange,
-                  onTap: () {}),
+                  onTap: () async {
+                    final authService = CommunityAuthService();
+                    final currentUser = await authService.getCurrentUser();
+                    if (!mounted) return;
+                    
+                    if (currentUser != null) {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => PrayerTestimonyScreen(currentUser: currentUser),
+                      );
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => CommunityLoginScreen(
+                          onLoginSuccess: (user) {
+                            Navigator.pop(context); // Pop login screen
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => PrayerTestimonyScreen(currentUser: user),
+                            );
+                          },
+                        ),
+                      ));
+                    }
+                  }),
               QuickActionButton(
                   icon: Icons.calendar_month_outlined,
                   label: 'Church Calendar',

@@ -29,6 +29,14 @@ class _CommunityPostDetailsScreenState
 
   bool _isLiked = false;
   CommunityComment? _replyingTo;
+  late Stream<List<CommunityComment>> _commentsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLiked = widget.post.likedBy.contains(widget.currentUser.id);
+    _commentsStream = _commentService.getComments(widget.post.id);
+  }
 
   Future<void> _likePost() async {
     final bool success =
@@ -91,25 +99,54 @@ class _CommunityPostDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true, // Ensure scaffold resizes for keyboard
-      body: GestureDetector(
-        onTap: () {
-          // Dismiss keyboard when tapping outside
-          FocusScope.of(context).unfocus();
-        },
-        child: Column(
-          children: [
-            // App Bar
-            AppBar(
-              title: const Text('Discussion'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.share_outlined),
-                  onPressed: _sharePost,
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
+        body: GestureDetector(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+          },
+          child: Column(
+            children: [
+              // Custom Header for Bottom Sheet
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
                 ),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.keyboard_arrow_down, size: 28, color: Colors.black),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.post.type == PostType.post 
+                          ? 'Post' 
+                          : widget.post.type == PostType.question 
+                              ? 'Question Details' 
+                              : 'Article',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.share_outlined, color: Colors.black),
+                      onPressed: _sharePost,
+                    ),
+                  ],
+                ),
+              ),
 
             // Post Content
             Expanded(
@@ -120,14 +157,16 @@ class _CommunityPostDetailsScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Topic (Title)
-                      Text(
-                        widget.post.title,
-                        style:
-                            Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                      const SizedBox(height: 12),
+                      if (widget.post.type != PostType.post || widget.post.title.isNotEmpty) ...[
+                        Text(
+                          widget.post.title,
+                          style:
+                              Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
 
                       // Author Information
                       Row(
@@ -199,6 +238,7 @@ class _CommunityPostDetailsScreenState
             _buildCommentInputBar(),
           ],
         ),
+      ),
       ),
     );
   }
@@ -342,7 +382,7 @@ class _CommunityPostDetailsScreenState
         ),
         const SizedBox(height: 16),
         StreamBuilder<List<CommunityComment>>(
-          stream: _commentService.getComments(widget.post.id),
+          stream: _commentsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

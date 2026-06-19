@@ -12,6 +12,7 @@ class CommunityComment {
     required this.createdAt,
     this.likesCount = 0,
     this.parentCommentId,
+    this.likedBy = const [],
   });
 
   // Convert Firestore document to CommunityComment object
@@ -26,6 +27,7 @@ class CommunityComment {
       createdAt: data['created_at'] ?? Timestamp.now(),
       likesCount: data['likes_count'] ?? 0,
       parentCommentId: data['parent_comment_id'],
+      likedBy: List<String>.from(data['liked_by'] ?? []),
     );
   }
   final String id;
@@ -36,6 +38,7 @@ class CommunityComment {
   final Timestamp createdAt;
   final int likesCount;
   final String? parentCommentId;
+  final List<String> likedBy;
 
   // Convert CommunityComment to a map for Firestore
   Map<String, dynamic> toFirestore() {
@@ -47,6 +50,7 @@ class CommunityComment {
       'created_at': createdAt,
       'likes_count': likesCount,
       'parent_comment_id': parentCommentId,
+      'liked_by': likedBy,
     };
   }
 

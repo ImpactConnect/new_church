@@ -10,6 +10,9 @@ class CommunityPostService {
     required CommunityUser author,
     required String title,
     required String content,
+    PostType type = PostType.post,
+    List<String>? imageUrls,
+    String? bannerUrl,
   }) async {
     try {
       // Create post document
@@ -23,6 +26,9 @@ class CommunityPostService {
         authorId: author.id,
         authorName: author.displayName,
         createdAt: Timestamp.now(),
+        type: type,
+        imageUrls: imageUrls,
+        bannerUrl: bannerUrl,
       );
 
       // Save to Firestore
@@ -56,10 +62,9 @@ class CommunityPostService {
     });
   }
 
-  // Like a post
+  // Like / Unlike a post
   Future<bool> likePost(String postId, String userId) async {
     try {
-      // Implement like mechanism (could be a transaction)
       final DocumentReference postRef =
           _firestore.collection('community_posts').doc(postId);
 
@@ -70,13 +75,73 @@ class CommunityPostService {
           throw Exception('Post does not exist');
         }
 
+        final List<dynamic> likedByDynamic = postSnapshot.data() is Map 
+            ? (postSnapshot.data() as Map<String, dynamic>)['liked_by'] ?? []
+            : [];
+            
+        final List<String> likedBy = List<String>.from(likedByDynamic);
         final int currentLikes = postSnapshot['likes_count'] ?? 0;
-        transaction.update(postRef, {'likes_count': currentLikes + 1});
+
+        if (likedBy.contains(userId)) {
+          // Unlike
+          transaction.update(postRef, {
+            'liked_by': FieldValue.arrayRemove([userId]),
+            'likes_count': currentLikes > 0 ? currentLikes - 1 : 0,
+          });
+        } else {
+          // Like
+          transaction.update(postRef, {
+            'liked_by': FieldValue.arrayUnion([userId]),
+            'likes_count': currentLikes + 1,
+          });
+        }
       });
 
       return true;
     } catch (e) {
-      print('Error liking post: $e');
+      print('Error liking/unliking post: $e');
+      return false;
+    }
+  }
+
+  // Like / Unlike a comment
+  Future<bool> likeComment(String commentId, String userId) async {
+    try {
+      final DocumentReference commentRef =
+          _firestore.collection('community_comments').doc(commentId);
+
+      await _firestore.runTransaction((transaction) async {
+        final DocumentSnapshot commentSnapshot = await transaction.get(commentRef);
+
+        if (!commentSnapshot.exists) {
+          throw Exception('Comment does not exist');
+        }
+
+        final List<dynamic> likedByDynamic = commentSnapshot.data() is Map 
+            ? (commentSnapshot.data() as Map<String, dynamic>)['liked_by'] ?? []
+            : [];
+            
+        final List<String> likedBy = List<String>.from(likedByDynamic);
+        final int currentLikes = commentSnapshot['likes_count'] ?? 0;
+
+        if (likedBy.contains(userId)) {
+          // Unlike
+          transaction.update(commentRef, {
+            'liked_by': FieldValue.arrayRemove([userId]),
+            'likes_count': currentLikes > 0 ? currentLikes - 1 : 0,
+          });
+        } else {
+          // Like
+          transaction.update(commentRef, {
+            'liked_by': FieldValue.arrayUnion([userId]),
+            'likes_count': currentLikes + 1,
+          });
+        }
+      });
+
+      return true;
+    } catch (e) {
+      print('Error liking/unliking comment: $e');
       return false;
     }
   }

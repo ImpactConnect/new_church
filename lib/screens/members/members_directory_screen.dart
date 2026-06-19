@@ -71,6 +71,8 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
   void _applyFilter() {
     final q = _searchCtrl.text.trim().toLowerCase();
     _filtered = _allMembers.where((m) {
+      if (m.role?.toLowerCase() == 'admin') return false;
+      
       final matchesSearch = q.isEmpty ||
           m.name.toLowerCase().contains(q) ||
           (m.occupation?.toLowerCase().contains(q) ?? false);

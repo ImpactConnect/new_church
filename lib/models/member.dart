@@ -25,6 +25,7 @@ class Member {
     this.email,
     this.address,
     this.churchGroup,
+    this.role,
   });
 
   factory Member.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +62,7 @@ class Member {
       email: data['email'],
       address: data['address'],
       churchGroup: data['churchGroup'],
+      role: data['role'],
     );
   }
   final String id;
@@ -75,6 +77,7 @@ class Member {
   final String? email;
   final String? address;
   final String? churchGroup;
+  final String? role;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -90,6 +93,7 @@ class Member {
       'email': email,
       'address': address,
       'churchGroup': churchGroup,
+      'role': role,
     };
   }
 }

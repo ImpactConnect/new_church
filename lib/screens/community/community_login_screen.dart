@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/community_user.dart';
 import '../../services/community_auth_service.dart';
-import 'community_dashboard_screen.dart';
+import 'community_posts_screen.dart';
 
 class CommunityLoginScreen extends StatefulWidget {
-  const CommunityLoginScreen({Key? key}) : super(key: key);
+  final void Function(CommunityUser)? onLoginSuccess;
+  const CommunityLoginScreen({Key? key, this.onLoginSuccess}) : super(key: key);
 
   @override
   _CommunityLoginScreenState createState() => _CommunityLoginScreenState();
@@ -34,12 +35,16 @@ class _CommunityLoginScreenState extends State<CommunityLoginScreen> {
     try {
       final CommunityUser? existingUser = await _authService.getCurrentUser();
       if (existingUser != null) {
-        // Navigate to Community Dashboard if already logged in
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) =>
-                    CommunityDashboardScreen(user: existingUser)));
+        if (widget.onLoginSuccess != null) {
+          widget.onLoginSuccess!(existingUser);
+        } else {
+          // Navigate to Community Dashboard if already logged in
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      CommunityPostsScreen(currentUser: existingUser)));
+        }
       }
     } catch (e) {
       print('Error checking existing login: $e');
@@ -67,11 +72,15 @@ class _CommunityLoginScreenState extends State<CommunityLoginScreen> {
           _usernameController.text.trim(), _passwordController.text.trim());
 
       if (user != null) {
-        // Navigate to Community Dashboard
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) => CommunityDashboardScreen(user: user)));
+        if (widget.onLoginSuccess != null) {
+          widget.onLoginSuccess!(user);
+        } else {
+          // Navigate to Community Dashboard
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => CommunityPostsScreen(currentUser: user)));
+        }
       } else {
         setState(() {
           _errorMessage = 'Invalid username or password';
