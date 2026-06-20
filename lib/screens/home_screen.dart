@@ -13,37 +13,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<String> _carouselCollections = [];
-
   @override
   void initState() {
     super.initState();
-    _loadCarouselCollections();
-  }
-
-  Future<void> _loadCarouselCollections() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('carousel_config')
-          .doc('collections')
-          .get();
-
-      if (snapshot.exists) {
-        setState(() {
-          _carouselCollections =
-              List<String>.from(snapshot.data()?['paths'] ?? []);
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading carousel collections: $e');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _loadCarouselCollections,
+        onRefresh: () async {},
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -127,11 +106,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Carousel Collections
-                  for (final collection in _carouselCollections) ...[
-                    HomeCarousel(collectionPath: collection),
-                    const SizedBox(height: 24),
-                  ],
+                  // Main Carousel
+                  const HomeCarousel(collectionPath: 'carousel_items'),
+                  const SizedBox(height: 24),
                   // Add other home screen content below
                 ],
               ),

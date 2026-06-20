@@ -84,7 +84,7 @@ dependencies:
   # flutter_pdfview: ^1.3.2  # Alternative PDF viewer
   # native_pdf_view: ^6.0.0+1  # More reliable PDF viewer
   # pdf_render: ^1.4.2  # Simple PDF renderer
-  # syncfusion_flutter_pdfviewer: ^24.2.9  # Re-enabling syncfusion PDF viewer
+  syncfusion_flutter_pdfviewer: ^33.2.13  # Native PDF viewer
   
   # Network
   http: ^1.2.0

@@ -756,27 +756,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('carousel_config')
-                      .doc('collections')
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData && snapshot.data!.exists) {
-                      final paths =
-                          List<String>.from(snapshot.data!.get('paths') ?? []);
-                      return Column(
-                        children: [
-                          for (final path in paths) ...[
-                            HomeCarousel(collectionPath: '$path/items'),
-                            const SizedBox(height: 16),
-                          ],
-                        ],
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                const HomeCarousel(collectionPath: 'carousel_items'),
                 _buildSectionTitle('Quick Actions'),
                 _buildQuickActions(),
                 _buildVerseOfDayCard(),

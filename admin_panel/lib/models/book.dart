@@ -19,6 +19,8 @@ class Book {
     this.mostReadOrder = 0,
     this.recommendedOrder = 0,
     this.isActive = true,
+    this.readsCount = 0,
+    this.likesCount = 0,
   });
 
   factory Book.fromFirestore(DocumentSnapshot doc) {
@@ -41,6 +43,8 @@ class Book {
       mostReadOrder: data['mostReadOrder'] ?? 0,
       recommendedOrder: data['recommendedOrder'] ?? 0,
       isActive: data['isActive'] ?? true,
+      readsCount: data['readsCount'] ?? 0,
+      likesCount: data['likesCount'] ?? 0,
     );
   }
   final String id;
@@ -62,6 +66,8 @@ class Book {
   final int mostReadOrder;
   final int recommendedOrder;
   final bool isActive;
+  final int readsCount;
+  final int likesCount;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -81,6 +87,8 @@ class Book {
       'mostReadOrder': mostReadOrder,
       'recommendedOrder': recommendedOrder,
       'isActive': isActive,
+      'readsCount': readsCount,
+      'likesCount': likesCount,
     };
   }
 }

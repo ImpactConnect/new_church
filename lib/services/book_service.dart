@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import '../models/book.dart';
 import '../models/book.dart';
 
 class BookService {
@@ -86,8 +90,8 @@ class BookService {
       final querySnapshot = await _firestore
           .collection('books')
           .where('isActive', isEqualTo: true)
-          .where('isMostDownloaded', isEqualTo: true)
-          .orderBy('mostDownloadedOrder')
+          .where('isMostRead', isEqualTo: true)
+          .orderBy('mostReadOrder')
           .limit(10)
           .get();
 
@@ -173,7 +177,7 @@ class BookService {
     await prefs.setStringList(_bookmarksKey, bookmarks);
   }
 
-  // Mark book as downloaded
+  // Mark book as downloaded (store locally)
   Future<void> markAsDownloaded(String bookId) async {
     final prefs = await SharedPreferences.getInstance();
     final downloadedBooks = prefs.getStringList(_downloadedBooksKey) ?? [];
@@ -182,6 +186,46 @@ class BookService {
       downloadedBooks.add(bookId);
       await prefs.setStringList(_downloadedBooksKey, downloadedBooks);
     }
+  }
+
+  // Real file download
+  Future<String> downloadPdf(String bookId, String pdfUrl, void Function(double)? onProgress) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/books/$bookId.pdf');
+      
+      if (await file.exists()) {
+        return file.path;
+      }
+      
+      await file.parent.create(recursive: true);
+      
+      final dio = Dio();
+      await dio.download(
+        pdfUrl,
+        file.path,
+        onReceiveProgress: (received, total) {
+          if (total != -1 && onProgress != null) {
+            onProgress(received / total);
+          }
+        },
+      );
+      
+      await markAsDownloaded(bookId);
+      return file.path;
+    } catch (e) {
+      print('Download error: $e');
+      throw Exception('Failed to download PDF');
+    }
+  }
+
+  Future<String?> getLocalPdfPath(String bookId) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/books/$bookId.pdf');
+    if (await file.exists()) {
+      return file.path;
+    }
+    return null;
   }
 
   // Update reading progress

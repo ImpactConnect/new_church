@@ -22,6 +22,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Books/Library: anyone can read, only admins can write
+    match /books/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Sermon Categories: anyone can read, only admins can write
     match /sermon_categories/{doc} {
       allow read: if true;

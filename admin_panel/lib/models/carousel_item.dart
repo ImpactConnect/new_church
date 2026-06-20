@@ -6,9 +6,14 @@ enum CarouselLinkType {
 }
 
 enum CarouselItemType {
+  home,
   event,
   blog,
   sermon,
+  library,
+  donation,
+  liveStream,
+  video,
   other,
 }
 
@@ -25,6 +30,7 @@ class CarouselItem {
     required this.isActive,
     required this.order,
     this.itemId,
+    this.displayTitle = true,
   });
 
   factory CarouselItem.fromFirestore(Map<String, dynamic> data, String id) {
@@ -50,10 +56,11 @@ class CarouselItem {
       linkUrl: data['linkUrl'],
       linkType: parsedLinkType,
       itemType: determinedItemType,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
       isActive: data['isActive'] ?? true,
       order: data['order'] ?? 0,
       itemId: data['itemId'],
+      displayTitle: data['displayTitle'] ?? true,
     );
   }
 
@@ -68,6 +75,7 @@ class CarouselItem {
   final bool isActive;
   final int order;
   final String? itemId;
+  final bool displayTitle;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -81,6 +89,7 @@ class CarouselItem {
       'isActive': isActive,
       'order': order,
       'itemId': itemId,
+      'displayTitle': displayTitle,
     };
   }
 }

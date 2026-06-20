@@ -8,9 +8,14 @@ enum CarouselLinkType {
 }
 
 enum CarouselItemType {
+  home,
   event,
   blog,
   sermon,
+  library,
+  donation,
+  liveStream,
+  video,
   other,
 }
 
@@ -27,6 +32,7 @@ class CarouselItem {
     required this.isActive,
     required this.order,
     this.itemId,
+    this.displayTitle = true,
   });
 
   factory CarouselItem.fromFirestore(Map<String, dynamic> data, String id) {
@@ -61,10 +67,11 @@ class CarouselItem {
       linkUrl: data['linkUrl'],
       linkType: parsedLinkType,
       itemType: determinedItemType,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate() : DateTime.now(),
       isActive: data['isActive'] ?? true,
       order: data['order'] ?? 0,
       itemId: data['itemId'],
+      displayTitle: data['displayTitle'] ?? true,
     );
   }
   final String id;
@@ -78,6 +85,7 @@ class CarouselItem {
   final bool isActive;
   final int order;
   final String? itemId;
+  final bool displayTitle;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -91,6 +99,7 @@ class CarouselItem {
       'isActive': isActive,
       'order': order,
       'itemId': itemId,
+      'displayTitle': displayTitle,
     };
   }
 
@@ -127,6 +136,7 @@ class CarouselItem {
             // Use query parameter format for events
             route = '/event-details?id=$itemId';
             break;
+          // The others don't have detail pages in main.dart yet, so we just fall back
           default:
             // If no specific item type is matched but we have an itemId,
             // append it as a query parameter
@@ -139,13 +149,9 @@ class CarouselItem {
         }
       }
 
-      // Use pushNamed for standard routes, and push for generated routes
-      if (route.contains('?') || route.contains('/')) {
-        // This is likely a dynamic route that needs to be processed by onGenerateRoute
+      // Navigate to the route. Using pushNamed to preserve back-stack navigation.
+      if (route.isNotEmpty) {
         Navigator.of(context).pushNamed(route);
-      } else {
-        // This is a static route defined in the routes map
-        Navigator.of(context).pushReplacementNamed(route);
       }
     }
   }

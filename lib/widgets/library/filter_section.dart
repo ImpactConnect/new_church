@@ -91,7 +91,10 @@ class FilterSection extends StatelessWidget {
   Future<void> _showTopicsDialog(BuildContext context) async {
     final BookService bookService = BookService();
     final topics = await bookService.getTopics();
-    final selectedTopics = <String>{};
+    final selectedTopicsLocal = <String>{};
+    if (selectedTopics != null) {
+      selectedTopicsLocal.addAll(selectedTopics!);
+    }
 
     if (context.mounted) {
       final confirmed = await showDialog<bool>(
@@ -110,13 +113,13 @@ class FilterSection extends StatelessWidget {
                       final topic = topics[index];
                       return CheckboxListTile(
                         title: Text(topic),
-                        value: selectedTopics.contains(topic),
+                        value: selectedTopicsLocal.contains(topic),
                         onChanged: (bool? value) {
                           setState(() {
                             if (value == true) {
-                              selectedTopics.add(topic);
+                              selectedTopicsLocal.add(topic);
                             } else {
-                              selectedTopics.remove(topic);
+                              selectedTopicsLocal.remove(topic);
                             }
                           });
                         },
@@ -141,7 +144,7 @@ class FilterSection extends StatelessWidget {
       );
 
       if (confirmed == true) {
-        onTopicsSelected(selectedTopics.toList());
+        onTopicsSelected(selectedTopicsLocal.isEmpty ? null : selectedTopicsLocal.toList());
       }
     }
   }
@@ -150,144 +153,75 @@ class FilterSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 32, // Fixed height for filter buttons
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _buildFilterButton(
-                  context,
-                  'Category',
-                  selectedCategory,
-                  () => _showCategoryDialog(context),
-                ),
-                const SizedBox(width: 8),
-                _buildFilterButton(
-                  context,
-                  'Author',
-                  selectedAuthor,
-                  () => _showAuthorDialog(context),
-                ),
-                const SizedBox(width: 8),
-                _buildFilterButton(
-                  context,
-                  'Topics',
-                  selectedTopics?.isNotEmpty == true
-                      ? '${selectedTopics!.length} selected'
-                      : null,
-                  () => _showTopicsDialog(context),
-                ),
-                if (hasActiveFilters) ...[
-                  const SizedBox(width: 12),
-                  TextButton.icon(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: onClearFilters,
-                    icon: const Icon(Icons.clear_all, size: 18),
-                    label: const Text('Clear', style: TextStyle(fontSize: 12)),
-                  ),
-                ],
-              ],
-            ),
-          ),
+        _buildFilterRow(
+          context,
+          icon: Icons.category,
+          title: 'Category',
+          value: selectedCategory ?? 'All Categories',
+          onTap: () => _showCategoryDialog(context),
         ),
-        if (hasActiveFilters)
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  if (selectedCategory != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _buildSelectedChip(
-                          selectedCategory!, () => onCategorySelected(null)),
-                    ),
-                  if (selectedAuthor != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _buildSelectedChip(
-                          selectedAuthor!, () => onAuthorSelected(null)),
-                    ),
-                  if (selectedTopics != null)
-                    ...selectedTopics!.map((topic) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: _buildSelectedChip(
-                            topic,
-                            () {
-                              final newTopics =
-                                  List<String>.from(selectedTopics!)
-                                    ..remove(topic);
-                              onTopicsSelected(
-                                  newTopics.isEmpty ? null : newTopics);
-                            },
-                          ),
-                        )),
-                ],
-              ),
+        const Divider(height: 1),
+        _buildFilterRow(
+          context,
+          icon: Icons.person,
+          title: 'Author',
+          value: selectedAuthor ?? 'All Authors',
+          onTap: () => _showAuthorDialog(context),
+        ),
+        const Divider(height: 1),
+        _buildFilterRow(
+          context,
+          icon: Icons.tag,
+          title: 'Topics',
+          value: selectedTopics?.isNotEmpty == true
+              ? '${selectedTopics!.length} Selected'
+              : 'All Topics',
+          onTap: () => _showTopicsDialog(context),
+        ),
+        if (hasActiveFilters) ...[
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              onClearFilters();
+              Navigator.pop(context); // Optional: close bottom sheet on clear
+            },
+            icon: const Icon(Icons.clear_all),
+            label: const Text('Clear All Filters'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.red.shade50,
+              foregroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
+        ]
       ],
     );
   }
 
-  Widget _buildSelectedChip(String label, VoidCallback onDelete) {
-    return Chip(
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      labelStyle: const TextStyle(fontSize: 11),
-      label: Text(label),
-      deleteIcon: const Icon(Icons.close, size: 14),
-      onDeleted: onDelete,
-      visualDensity: VisualDensity.compact,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-    );
-  }
-
-  Widget _buildFilterButton(
-    BuildContext context,
-    String label,
-    String? selectedValue,
-    VoidCallback onTap,
-  ) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        side: BorderSide(
-          color: selectedValue != null
-              ? Theme.of(context).primaryColor
-              : Theme.of(context).dividerColor,
+  Widget _buildFilterRow(BuildContext context, {required IconData icon, required String title, required String value, required VoidCallback onTap}) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-        backgroundColor: selectedValue != null
-            ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
-            : null,
+        child: Icon(icon, color: Theme.of(context).primaryColor),
       ),
-      child: Row(
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 2),
-          Icon(
-            Icons.arrow_drop_down,
-            size: 18,
-            color: selectedValue != null
-                ? Theme.of(context).primaryColor
-                : Theme.of(context).iconTheme.color,
-          ),
+          Text(value, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_right, color: Colors.grey),
         ],
       ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(vertical: 8),
     );
   }
 }

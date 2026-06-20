@@ -10,6 +10,7 @@ import 'users_manager.dart';
 import 'notifications_manager.dart';
 import 'media_manager.dart';
 import 'members_connect_manager.dart';
+import 'library_manager.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -30,6 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     (icon: Icons.people_outline, label: 'Users'),
     (icon: Icons.event_outlined, label: 'Events'),
     (icon: Icons.menu_book_outlined, label: 'Devotionals'),
+    (icon: Icons.local_library_outlined, label: 'Library'),
     (icon: Icons.view_carousel_outlined, label: 'Banners'),
     (icon: Icons.notifications_outlined, label: 'Alerts'),
     (icon: Icons.connect_without_contact_outlined, label: 'Members Connect'),
@@ -54,10 +56,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 7:
         return const DevotionalsManager();
       case 8:
-        return const CarouselManager();
+        return const LibraryManager();
       case 9:
-        return const NotificationsManager();
+        return const CarouselManager();
       case 10:
+        return const NotificationsManager();
+      case 11:
         return const MembersConnectManager();
       default:
         return const Center(child: Text('Select an item'));
