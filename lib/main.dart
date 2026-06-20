@@ -138,7 +138,7 @@ class MyApp extends StatelessWidget {
           data: this,
           child: MaterialApp(
             scaffoldMessengerKey: ToastUtils.messengerKey,
-            title: 'Church Mobile',
+            title: 'GSWMI',
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
@@ -311,8 +311,9 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Image.asset(
               'assets/images/logo.png',
-              width: 150,
-              height: 150,
+              width: 250,
+              height: 250,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 20),
             CircularProgressIndicator(

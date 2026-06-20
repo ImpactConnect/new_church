@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/ministers_content.dart';
 import '../widgets/bottom_nav_bar.dart';
@@ -92,14 +93,26 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (_content?.imageUrl != null)
-                            Container(
-                              width: double.infinity,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                image: DecorationImage(
-                                  image: NetworkImage(_content!.imageUrl),
-                                  fit: BoxFit.cover,
+                          if (_content?.imageUrl != null && 
+                              _content!.imageUrl.isNotEmpty && 
+                              !_content!.imageUrl.contains('example.com'))
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
+                              child: Center(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: CachedNetworkImage(
+                                    imageUrl: _content!.imageUrl,
+                                    width: double.infinity,
+                                    height: 250,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      height: 250,
+                                      color: Colors.grey[200],
+                                      child: const Center(child: CircularProgressIndicator()),
+                                    ),
+                                    errorWidget: (context, url, error) => const SizedBox.shrink(),
+                                  ),
                                 ),
                               ),
                             ),

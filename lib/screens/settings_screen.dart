@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import '../providers/theme_provider.dart';
@@ -160,10 +161,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: const Text('Terms of Service'),
                     onTap: () => _launchURL('https://yourchurch.com/terms'),
                   ),
+                  _buildDivider(),
+
+                  // Account Section
+                  _buildSectionHeader('ACCOUNT'),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                    onTap: _showSignOutDialog,
+                  ),
                 ],
               ),
       ),
     );
+  }
+
+  Future<void> _showSignOutDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('SIGN OUT', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await FirebaseAuth.instance.signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      }
+    }
   }
 
   Widget _buildSectionHeader(String title) {

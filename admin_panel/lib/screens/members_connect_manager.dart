@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'member_widgets.dart';
+import '../utils/image_proxy.dart';
 
 class MembersConnectManager extends StatefulWidget {
   const MembersConnectManager({super.key});
@@ -17,7 +21,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -43,6 +47,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
               Tab(icon: Icon(Icons.campaign_outlined), text: 'Announcements'),
               Tab(icon: Icon(Icons.star_outline), text: 'Testimonies'),
               Tab(icon: Icon(Icons.forum_outlined), text: 'Community Posts'),
+              Tab(icon: Icon(Icons.person_pin), text: 'Pastor\'s Desk'),
             ],
           ),
         ),
@@ -54,6 +59,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
               _AnnouncementsTab(),
               _TestimoniesTab(),
               _CommunityPostsTab(),
+              _PastorsDeskTab(),
             ],
           ),
         ),
@@ -1281,6 +1287,194 @@ class _CommunityPostsTab extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+// ─── PASTOR'S DESK TAB ───────────────────────────────────────────────────────
+class _PastorsDeskTab extends StatefulWidget {
+  const _PastorsDeskTab();
+
+  @override
+  State<_PastorsDeskTab> createState() => _PastorsDeskTabState();
+}
+
+class _PastorsDeskTabState extends State<_PastorsDeskTab> {
+  final _titleCtrl = TextEditingController();
+  final _contentCtrl = TextEditingController();
+  final _imageUrlCtrl = TextEditingController();
+  
+  Uint8List? _imageBytes;
+  String? _imageFileName;
+  String? _existingImageUrl;
+  String? _docId;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContent();
+  }
+
+  Future<void> _loadContent() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('ministers_content')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+      if (snap.docs.isNotEmpty) {
+        final doc = snap.docs.first;
+        final data = doc.data();
+        setState(() {
+          _docId = doc.id;
+          _titleCtrl.text = data['title'] ?? '';
+          _contentCtrl.text = data['content'] ?? '';
+          _existingImageUrl = data['imageUrl'];
+          _imageUrlCtrl.text = _existingImageUrl ?? '';
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.image, withData: true);
+    if (result != null) {
+      setState(() {
+        _imageBytes = result.files.first.bytes;
+        _imageFileName = result.files.first.name;
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    if (_titleCtrl.text.trim().isEmpty || _contentCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      return;
+    }
+    setState(() => _isSaving = true);
+
+    try {
+      String? imageUrl = _imageUrlCtrl.text.trim();
+      if (_imageBytes != null) {
+        final imageRef = FirebaseStorage.instance.ref('pastors_desk/${DateTime.now().millisecondsSinceEpoch}_$_imageFileName');
+        await imageRef.putData(_imageBytes!);
+        imageUrl = await imageRef.getDownloadURL();
+      }
+
+      final data = {
+        'title': _titleCtrl.text.trim(),
+        'content': _contentCtrl.text.trim(),
+        'imageUrl': imageUrl.isEmpty ? null : imageUrl,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      if (_docId != null) {
+        await FirebaseFirestore.instance.collection('ministers_content').doc(_docId).update(data);
+      } else {
+        final docRef = await FirebaseFirestore.instance.collection('ministers_content').add(data);
+        _docId = docRef.id;
+      }
+      
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved successfully!')));
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Manage Pastor\'s Corner', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _titleCtrl,
+                    decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _contentCtrl,
+                    maxLines: 15,
+                    decoration: const InputDecoration(labelText: 'Content/Writeup', border: OutlineInputBorder(), alignLabelWithHint: true),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _imageUrlCtrl,
+                    decoration: const InputDecoration(labelText: 'Image URL (optional)', border: OutlineInputBorder()),
+                    onChanged: (val) {
+                      setState(() {
+                        _existingImageUrl = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _pickImage,
+                        icon: const Icon(Icons.image),
+                        label: const Text('Upload Pastor Image'),
+                      ),
+                      const SizedBox(width: 16),
+                      if (_imageBytes != null)
+                        Expanded(child: Image.memory(_imageBytes!, height: 100, fit: BoxFit.contain, alignment: Alignment.centerLeft))
+                      else if (_existingImageUrl != null && _existingImageUrl!.isNotEmpty)
+                        Expanded(
+                          child: Image.network(
+                            ImageProxy.proxy(_existingImageUrl!),
+                            height: 100,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerLeft,
+                            errorBuilder: (context, error, stackTrace) => const Text('Error loading image, or image not found.'),
+                          ),
+                        )
+                      else
+                        const Expanded(child: Text('No image selected')),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _save,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[800], foregroundColor: Colors.white),
+                      child: _isSaving
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
