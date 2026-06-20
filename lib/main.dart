@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -12,6 +14,7 @@ import 'firebase_options.dart';
 import 'providers/language_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/bible_screen.dart';
+import 'screens/bible_ai_entry_screen.dart';
 import 'screens/bible_reading_plan_screen.dart';
 import 'screens/blog/blog_detail_screen.dart';
 import 'screens/blog/blog_list_screen.dart';
@@ -83,6 +86,10 @@ Future<void> main() async {
     androidStopForegroundOnPause: true,
   );
 
+  // Initialize Hive for Bible AI offline config caching
+  await Hive.initFlutter();
+  await Hive.openBox<String>('bible_ai_cache');
+
   // Initialize shared preferences
   final prefs = await SharedPreferences.getInstance();
   final bibleService = BibleService(prefs);
@@ -93,17 +100,19 @@ Future<void> main() async {
   await bibleService.loadBible();
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
-        ChangeNotifierProvider(create: (_) => LanguageProvider(prefs)),
-      ],
-      child: MyApp(
-        prefs: prefs,
-        bibleService: bibleService,
-        sermonService: sermonService,
-        audioPlayerService: audioPlayerService,
-        noteService: noteService,
+    ProviderScope(
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
+          ChangeNotifierProvider(create: (_) => LanguageProvider(prefs)),
+        ],
+        child: MyApp(
+          prefs: prefs,
+          bibleService: bibleService,
+          sermonService: sermonService,
+          audioPlayerService: audioPlayerService,
+          noteService: noteService,
+        ),
       ),
     ),
   );
@@ -381,6 +390,12 @@ class _HomePageState extends State<HomePage> {
       'route': (BuildContext context) => BibleScreen(
             bibleService: MyApp.of(context).bibleService,
           ),
+    },
+    {
+      'icon': Icons.auto_awesome,
+      'label': 'Bible AI',
+      'color': Colors.indigo,
+      'route': (BuildContext context) => const BibleAiEntryScreen(),
     },
     {
       'icon': Icons.note_alt,
