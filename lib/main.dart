@@ -309,13 +309,10 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Church Mobile',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue[800],
-              ),
+            Image.asset(
+              'assets/images/logo.png',
+              width: 150,
+              height: 150,
             ),
             const SizedBox(height: 20),
             CircularProgressIndicator(
@@ -428,15 +425,15 @@ class _HomePageState extends State<HomePage> {
       'color': Colors.blue,
       'route': null,
     },
+    {
+      'icon': Icons.local_library,
+      'label': 'Library',
+      'color': Colors.brown,
+      'route': (BuildContext context) => const LibraryScreen(),
+    },
   ];
 
   final List<Map<String, dynamic>> engagementButtons = [
-    {
-      'icon': Icons.calendar_today,
-      'label': 'Bible Reading Plan',
-      'color': Colors.teal,
-      'route': (BuildContext context) => const BibleReadingPlanScreen(),
-    },
     {
       'icon': Icons.music_note,
       'label': 'Hymns',
@@ -464,23 +461,11 @@ class _HomePageState extends State<HomePage> {
       'route': (BuildContext context) => const EventScreen(),
     },
     {
-      'icon': Icons.local_library,
-      'label': 'Library',
-      'color': Colors.brown,
-      'route': (BuildContext context) => const LibraryScreen(),
-    },
-    {
       'icon': Icons.rss_feed,
       'label': 'Blog',
       'color': Colors.blue,
       'route': (BuildContext context) => const BlogListScreen(),
     },
-    {
-      'icon': Icons.people,
-      'label': 'Members Connect',
-      'color': Colors.purple,
-      'route': (BuildContext context) => const MembersConnectScreen(),
-    }
   ];
 
   Widget _buildSectionTitle(String title) {
@@ -496,76 +481,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildQuickActions() {
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        scrollDirection: Axis.horizontal,
-        itemCount: quickActions.length,
-        itemBuilder: (context, index) {
-          final action = quickActions[index];
-          return Container(
-            width: 72,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            child: InkWell(
-              onTap: () {
-                if (action['route'] != null) {
-                  final routeBuilder = action['route'] as Function;
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => routeBuilder(context),
-                    ),
-                  );
-                }
-              },
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: action['color'].withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      action['icon'] as IconData,
-                      color: action['color'] as Color,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Flexible(
-                    child: Text(
-                      action['label'] as String,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[800],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildButtonGrid(List<Map<String, dynamic>> buttons) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      crossAxisCount: 5,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 0.85,
+      crossAxisSpacing: 8,
+      childAspectRatio: 0.65,
       children: buttons.map((button) {
         return InkWell(
           onTap: () {
@@ -583,7 +507,7 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: (button['color'] as Color).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -600,8 +524,9 @@ class _HomePageState extends State<HomePage> {
                   button['label'] as String,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: Colors.grey[800],
+                    height: 1.1,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -626,93 +551,113 @@ class _HomePageState extends State<HomePage> {
         final reference =
             '${verseData['book']} ${verseData['chapter']}:${verseData['verse']}';
 
-        return Card(
+        return Container(
           margin: const EdgeInsets.all(16),
-          elevation: 4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColorDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(4),
-                    topRight: Radius.circular(4),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Verse of the Day',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.white),
-                      onPressed: () async {
-                        await MyApp.of(context).bibleService.clearVerseOfDay();
-                        setState(() {});
-                      },
-                    ),
-                  ],
+              Positioned(
+                right: -20,
+                top: -20,
+                child: Icon(
+                  Icons.format_quote_rounded,
+                  size: 140,
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.auto_awesome, color: Colors.white, size: 16),
+                              SizedBox(width: 6),
+                              Text('Verse of the Day', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                          onPressed: () async {
+                            await MyApp.of(context).bibleService.clearVerseOfDay();
+                            setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
                     Text(
-                      verseData['text'],
+                      '"${verseData['text']}"',
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         height: 1.5,
+                        color: Colors.white,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     Text(
-                      reference,
+                      '- $reference',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                        color: Colors.white70,
+                        fontSize: 14,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.bookmark_border),
-                      onPressed: () {
-                        final verse = MyApp.of(context).bibleService.findVerse(
-                              verseData['book'],
-                              verseData['chapter'],
-                              verseData['verse'],
-                            );
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.bookmark_border, color: Colors.white),
+                          onPressed: () {
+                            final verse = MyApp.of(context).bibleService.findVerse(
+                                  verseData['book'],
+                                  verseData['chapter'],
+                                  verseData['verse'],
+                                );
 
-                        if (verse != null) {
-                          setState(() {
-                            verse.toggleBookmark();
-                          });
-                          MyApp.of(context).bibleService.savePreferences();
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.share),
-                      onPressed: () {
-                        Share.share('${verseData['text']} - $reference');
-                      },
+                            if (verse != null) {
+                              setState(() {
+                                verse.toggleBookmark();
+                              });
+                              MyApp.of(context).bibleService.savePreferences();
+                            }
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.share, color: Colors.white),
+                          onPressed: () {
+                            Share.share('${verseData['text']} - $reference');
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -758,7 +703,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 const HomeCarousel(collectionPath: 'carousel_items'),
                 _buildSectionTitle('Quick Actions'),
-                _buildQuickActions(),
+                _buildButtonGrid(quickActions),
                 _buildVerseOfDayCard(),
                 _buildSectionTitle('Media'),
                 _buildButtonGrid(mediaButtons),
