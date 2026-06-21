@@ -46,8 +46,8 @@ class _BibleVersionSheetState extends ConsumerState<BibleVersionSheet> {
 
     try {
       final service = ref.read(bibleVersionServiceProvider);
-      final notifService = AppNotificationService();
-      final notificationId = version.index + 100; // Unique ID for each version
+      // final notifService = AppNotificationService();
+      // final notificationId = version.index + 100; // Unique ID for each version
 
       await service.downloadVersion(
         version,
@@ -58,12 +58,12 @@ class _BibleVersionSheetState extends ConsumerState<BibleVersionSheet> {
             });
 
             // Update system notification
-            notifService.showDownloadProgress(
-              id: notificationId,
-              title: 'Downloading ${version.abbreviation}',
-              body: '${(progress * 100).toInt()}% complete',
-              progress: (progress * 100).toInt(),
-            );
+            // notifService.showDownloadProgress(
+            //   id: notificationId,
+            //   title: 'Downloading ${version.abbreviation}',
+            //   body: '${(progress * 100).toInt()}% complete',
+            //   progress: (progress * 100).toInt(),
+            // );
           }
         },
       );
@@ -75,13 +75,13 @@ class _BibleVersionSheetState extends ConsumerState<BibleVersionSheet> {
         });
 
         // Show completion notification
-        await notifService.showDownloadProgress(
-          id: notificationId,
-          title: '${version.abbreviation} Downloaded',
-          body: 'The ${version.fullName} is ready to use.',
-          progress: 100,
-          isComplete: true,
-        );
+        // await notifService.showDownloadProgress(
+        //   id: notificationId,
+        //   title: '${version.abbreviation} Downloaded',
+        //   body: 'The ${version.fullName} is ready to use.',
+        //   progress: 100,
+        //   isComplete: true,
+        // );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -97,13 +97,13 @@ class _BibleVersionSheetState extends ConsumerState<BibleVersionSheet> {
         });
 
         // Cancel/notify error
-        AppNotificationService().showDownloadProgress(
-          id: version.index + 100,
-          title: 'Download Failed',
-          body: 'Failed to download ${version.abbreviation}',
-          progress: 0,
-          isComplete: true,
-        );
+        // AppNotificationService().showDownloadProgress(
+        //   id: version.index + 100,
+        //   title: 'Download Failed',
+        //   body: 'Failed to download ${version.abbreviation}',
+        //   progress: 0,
+        //   isComplete: true,
+        // );
 
         ScaffoldMessenger.of(
           context,

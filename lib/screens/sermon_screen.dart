@@ -287,7 +287,7 @@ class _SermonScreenState extends State<SermonScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: const BottomNavBar(currentIndex: 1),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 2),
       body: Stack(
         children: [
           RefreshIndicator(

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum LinkedContentType { verse, sermon, note, exegesis }
+enum LinkedContentType { verse, sermon, note, exegesis, chat }
 
 /// A reference to linked source content (e.g. a Bible verse) embedded in a note.
 class LinkedContentReference extends Equatable {

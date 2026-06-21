@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../exegesis/models/exegesis_final_model.dart';
+import '../../exegesis/models/exegesis_final_model.dart';
 
 /// Stub Deep Exegesis screen — navigated to from ChapterScreen's "Deep Exegesis" action.
 /// Pre-fills book, chapter, and verse from the selected verse reference.
@@ -19,10 +19,7 @@ class NewExegesisScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Deep Exegesis'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+        // using default back button
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

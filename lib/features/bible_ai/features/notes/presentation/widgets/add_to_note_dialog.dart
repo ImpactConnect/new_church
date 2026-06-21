@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/models/linked_content_reference.dart';
+import '../../data/models/linked_content_reference.dart';
 
 /// Dialog for adding formatted content (e.g., a Bible verse) to an existing standalone note.
 /// This is a stub implementation — shows a snackbar confirmation.

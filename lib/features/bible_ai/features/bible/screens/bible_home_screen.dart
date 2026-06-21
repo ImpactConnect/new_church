@@ -9,7 +9,9 @@ import '../../../data/repositories/user_settings_repository.dart';
 import '../../bookmarks/providers/bookmarks_providers.dart';
 import '../../bookmarks/providers/ai_content_bookmarks_providers.dart';
 import '../../notes/providers/notes_providers.dart';
+import '../../settings/providers/settings_providers.dart';
 import '../providers/bible_providers.dart';
+import '../../../data/models/ai/ai_models.dart';
 import '../widgets/bible_version_sheet.dart';
 import '../widgets/bible_selector_sheet.dart';
 import '../../../data/repositories/reading_plan_repository.dart';
@@ -32,7 +34,7 @@ class BibleHomeScreen extends ConsumerWidget {
             // ── App Bar ──
             SliverAppBar(
               floating: true,
-              title: const Text('Bible'),
+              title: const Text('AI Bible'),
               actions: [const _BibleVersionChip(), const SizedBox(width: 8)],
             ),
 
@@ -46,7 +48,7 @@ class BibleHomeScreen extends ConsumerWidget {
                   const SizedBox(height: 20),
 
                   // ── Continue Reading ──
-                  const _ContinueReadingCard(),
+                  const ContinueReadingCard(),
                   const SizedBox(height: 28),
 
                   // ── Reading Plan Section ──
@@ -136,8 +138,8 @@ class _SearchBar extends StatelessWidget {
 //  CONTINUE READING
 // ═══════════════════════════════════════════════════════════════════
 
-class _ContinueReadingCard extends ConsumerWidget {
-  const _ContinueReadingCard();
+class ContinueReadingCard extends ConsumerWidget {
+  const ContinueReadingCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -680,7 +682,10 @@ class _BookmarksSection extends ConsumerWidget {
                               chapterNumber: bm.chapterNumber,
                               verseNumber: bm.verseNumber,
                               verseText: bm.verseText,
-                              initialMode: bm.feature,
+                              initialMode: VerseFeature.values.firstWhere(
+                                (e) => e.name == bm.feature,
+                                orElse: () => VerseFeature.explain,
+                              ),
                               cachedAnalysis: analysisJson,
                             ),
                           ),

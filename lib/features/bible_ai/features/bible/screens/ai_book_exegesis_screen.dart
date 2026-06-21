@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:shimmer/shimmer.dart';
-import '../../../../data/models/ai/ai_models.dart';
+import '../../../data/models/ai/ai_models.dart';
 
 
 import '../providers/bible_providers.dart';
@@ -22,12 +22,11 @@ class AiBookExegesisScreen extends ConsumerStatefulWidget {
 
 class _AiBookExegesisScreenState extends ConsumerState<AiBookExegesisScreen> {
   late Future<BookExegesis> _analysisFuture;
-  bool _isRewardFlowInProgress = false;
 
   @override
   void initState() {
     super.initState();
-    _loadAnalysisWithMonetization();
+    _loadAnalysis();
   }
 
   void _loadAnalysis() {
@@ -43,84 +42,6 @@ class _AiBookExegesisScreenState extends ConsumerState<AiBookExegesisScreen> {
     });
   }
 
-  Future<void> _loadAnalysisWithMonetization() async {
-    if (_isRewardFlowInProgress) return;
-    final isPremiumUser = ref.read(isPremiumUserProvider);
-    final shouldShowAds = AdService.shouldShowAds(isPremiumUser: isPremiumUser);
-
-    if (!shouldShowAds) {
-      _loadAnalysis();
-      return;
-    }
-
-    setState(() => _isRewardFlowInProgress = true);
-    RewardedAd? rewardedAd;
-    try {
-      await AdService.loadRewarded(
-        onLoaded: (ad) => rewardedAd = ad,
-        onFailedToLoad: (_) => rewardedAd = null,
-      );
-
-      if (rewardedAd == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ad is unavailable right now. Continuing...'),
-            ),
-          );
-        }
-        _loadAnalysis();
-        return;
-      }
-
-      final adClosedCompleter = Completer<void>();
-      var didEarnReward = false;
-      var failedToShow = false;
-
-      rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          if (!adClosedCompleter.isCompleted) adClosedCompleter.complete();
-        },
-        onAdFailedToShowFullScreenContent: (ad, _) {
-          failedToShow = true;
-          ad.dispose();
-          if (!adClosedCompleter.isCompleted) adClosedCompleter.complete();
-        },
-      );
-
-      rewardedAd!.show(
-        onUserEarnedReward: (_, rewardItem) {
-          didEarnReward = true;
-        },
-      );
-
-      await adClosedCompleter.future;
-      if (!mounted) return;
-
-      if (failedToShow) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not show ad. Continuing...')),
-        );
-        _loadAnalysis();
-        return;
-      }
-
-      if (didEarnReward) {
-        _loadAnalysis();
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete the ad to continue.')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isRewardFlowInProgress = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final currentMode = ref.watch(aiModeNotifierProvider);
@@ -133,7 +54,7 @@ class _AiBookExegesisScreenState extends ConsumerState<AiBookExegesisScreen> {
             initialValue: currentMode,
             onSelected: (mode) {
               ref.read(aiModeNotifierProvider.notifier).setMode(mode);
-              _loadAnalysisWithMonetization();
+              _loadAnalysis();
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
@@ -207,7 +128,7 @@ class _AiBookExegesisScreenState extends ConsumerState<AiBookExegesisScreen> {
                     ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
-                      onPressed: _loadAnalysisWithMonetization,
+                      onPressed: _loadAnalysis,
                       icon: const Icon(Icons.refresh),
                       label: const Text('Retry'),
                     ),
@@ -410,7 +331,7 @@ class _AiBookExegesisScreenState extends ConsumerState<AiBookExegesisScreen> {
       child: ListView.builder(
         padding: const EdgeInsets.all(20),
         itemCount: 5,
-        itemBuilder: (_, _) => Padding(
+        itemBuilder: (context, index) => Padding(
           padding: const EdgeInsets.only(bottom: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../bookmarks/providers/bookmarks_providers.dart';
 import '../../highlights/providers/highlights_providers.dart';
 import '../../notes/providers/notes_providers.dart';
+import '../../settings/providers/settings_providers.dart';
 import '../../../data/models/ai/ai_models.dart';
 import '../../../data/models/bible/bible_book.dart';
 import '../../../data/models/bookmarks/bookmark_model.dart';
@@ -235,10 +236,11 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
     final highlightsAsync = ref.watch(highlightsNotifierProvider);
 
     return PopScope(
-      canPop: false,
+      canPop: !_isSelectionMode,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          Navigator.of(context).maybePop();
+        if (didPop) return;
+        if (_isSelectionMode) {
+          _clearSelection();
         }
       },
       child: Scaffold(
@@ -460,6 +462,7 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
         bookName: book.name,
         chapterNumber: widget.chapterNumber,
         onSelectBook: () {
+          Navigator.pop(context);
           Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => AiBookExegesisScreen(bookName: book.name),
@@ -467,6 +470,7 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
           );
         },
         onSelectChapter: () {
+          Navigator.pop(context);
           Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (context) => AiChapterExegesisScreen(
@@ -1016,10 +1020,8 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
       final highlight = HighlightModel(
         id: existingId ?? const Uuid().v4(),
         bookId: widget.bookId,
-        bookName: book.name,
         chapterNumber: widget.chapterNumber,
         verseNumber: verseNumber,
-        verseText: text,
         colorValue: colorValue,
         createdAt: DateTime.now(),
       );

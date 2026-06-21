@@ -130,10 +130,16 @@ class AiConfigService {
     } catch (_) {}
 
     // 3. No config available at all — throw clear error
-    debugPrint('AiConfigService: No config found in Firestore or cache.');
+    debugPrint('\n======================================================');
+    debugPrint('🚨 BIBLE AI ERROR: CONFIGURATION MISSING 🚨');
+    debugPrint('The app connected to Firestore successfully, but the ');
+    debugPrint('"ai_config/settings" document DOES NOT EXIST.');
+    debugPrint('ACTION REQUIRED: Open your Admin Panel app, go to ');
+    debugPrint('Bible AI Settings, enter your Gemini API Key, and hit Save.');
+    debugPrint('======================================================\n');
     throw Exception(
       'AI configuration not available. '
-      'Ensure Firestore ai_config/settings is properly configured and the device is online.',
+      'Please save settings in the Admin Panel first.',
     );
   }
 

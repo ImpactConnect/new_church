@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
-import '../../../../data/models/ai/ai_models.dart';
-import '../../../../data/models/bookmarks/ai_content_bookmark_model.dart';
+import '../../../data/models/ai/ai_models.dart';
+import '../../../data/models/bookmarks/ai_content_bookmark_model.dart';
 
 import '../providers/bible_providers.dart';
 import '../../bookmarks/providers/ai_content_bookmarks_providers.dart';
@@ -358,13 +358,13 @@ class _AiExplanationScreenState extends ConsumerState<AiExplanationScreen> {
                       } else {
                         // Add bookmark - save the full analysis data
                         final analysisJson = jsonEncode(_lastLoadedData!.toJson());
-                        final bookmark = AiContentBookmarkModel.fromFeature(
+                        final bookmark = AiContentBookmarkModel(
                           id: const Uuid().v4(),
                           bookName: widget.bookName,
                           chapterNumber: widget.chapterNumber,
                           verseNumber: widget.verseNumber,
                           verseText: widget.verseText,
-                          feature: widget.feature,
+                          feature: widget.feature.name,
                           analysisJson: analysisJson,
                           createdAt: DateTime.now(),
                         );

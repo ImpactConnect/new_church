@@ -1,22 +1,10 @@
-import 'package:hive/hive.dart';
 
-part 'chat_session_model.g.dart';
 
-@HiveType(typeId: 44)
-class ChatSessionModel extends HiveObject {
-  @HiveField(0)
+class ChatSessionModel {
   String? id;
-
-  @HiveField(1)
   String title;
-
-  @HiveField(2)
   DateTime? createdAt;
-
-  @HiveField(3)
   DateTime? updatedAt;
-
-  @HiveField(4)
   List<ChatMessageModel> messages;
 
   // Not persisted in Hive – only used at runtime
@@ -71,18 +59,10 @@ class ChatSessionModel extends HiveObject {
   }
 }
 
-@HiveType(typeId: 45)
-class ChatMessageModel extends HiveObject {
-  @HiveField(0)
+class ChatMessageModel {
   String message;
-
-  @HiveField(1)
   bool isUser;
-
-  @HiveField(2)
   bool isHidden;
-
-  @HiveField(3)
   DateTime? timestamp;
 
   ChatMessageModel({

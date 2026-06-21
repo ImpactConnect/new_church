@@ -139,7 +139,7 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const BottomNavBar(currentIndex: 3),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 4),
     );
   }
 }

@@ -1,37 +1,15 @@
-import 'package:hive/hive.dart';
 
-part 'exegesis_session_model.g.dart';
 
-@HiveType(typeId: 60)
-class ExegesisSessionModel extends HiveObject {
-  @HiveField(0)
+class ExegesisSessionModel {
   final String id;
-
-  @HiveField(1)
   final String userId;
-
-  @HiveField(2)
   final String type; // 'character', 'book', 'chapter', 'passage'
-
-  @HiveField(3)
   final String query;
-
-  @HiveField(4)
   final String? chapter;
-
-  @HiveField(5)
   final String title;
-
-  @HiveField(6)
   final String contentJson;
-
-  @HiveField(7)
   final String depth;
-
-  @HiveField(8)
   final DateTime? createdAt;
-
-  @HiveField(9)
   final DateTime? updatedAt;
 
   ExegesisSessionModel({

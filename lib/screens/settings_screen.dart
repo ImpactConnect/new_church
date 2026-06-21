@@ -86,7 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
           ),
         ),
-        bottomNavigationBar: const BottomNavBar(currentIndex: 4),
+        bottomNavigationBar: const BottomNavBar(currentIndex: 5),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ListView(

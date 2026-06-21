@@ -332,8 +332,9 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Something went wrong, please try again'),
+          SnackBar(
+            content: Text('Error: $e'),
+            duration: const Duration(seconds: 4),
           ),
         );
         if (_messages.isNotEmpty && _messages.last.message.isEmpty) {

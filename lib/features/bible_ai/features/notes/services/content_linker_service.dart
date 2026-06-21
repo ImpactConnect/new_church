@@ -9,4 +9,14 @@ class ContentLinkerService {
   }) {
     return '**$bookName $chapter:$verse** — "$verseText"';
   }
+
+  /// Formats a chat message for insertion into a standalone note.
+  static String formatChatMessage({
+    required String sender,
+    required DateTime timestamp,
+    required String message,
+  }) {
+    // Just a simple formatter for now
+    return '**$sender**:\n$message';
+  }
 }

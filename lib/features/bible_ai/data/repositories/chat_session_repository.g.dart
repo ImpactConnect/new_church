@@ -7,7 +7,7 @@ part of 'chat_session_repository.dart';
 // **************************************************************************
 
 String _$chatSessionRepositoryHash() =>
-    r'930b59997b2a4f24bd51fd70815589144c45cdd5';
+    r'b2d0d7743d3e2167eb4b2aad1421ea7c9327b472';
 
 /// In-memory chat session store — saves the current chat history for AI Bible chat.
 ///

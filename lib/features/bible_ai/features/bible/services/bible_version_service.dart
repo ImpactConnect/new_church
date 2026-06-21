@@ -9,8 +9,6 @@ import '../../../data/models/bible/bible_version.dart';
 final bibleVersionServiceProvider = Provider((ref) => BibleVersionService());
 
 class BibleVersionService {
-  final Dio _dio = Dio();
-
   // Metadata to map API data to our internal schema
   static const List<Map<String, dynamic>> _booksMetadata = [
     {'name': 'Genesis', 'chapters': 50, 'id': 'gen'},
@@ -109,28 +107,16 @@ class BibleVersionService {
       final url =
           'https://api.getbible.net/v2/${version.abbreviation.toLowerCase()}.json';
 
-      // Download to string or bytes first to parse and transform
-      final response = await _dio.get(
-        url,
-        onReceiveProgress: (received, total) {
-          // This progress is for the download part
-          if (total != -1) {
-            onProgress(received / total * 0.8); // 80% download, 20% processing
-          }
-        },
-      );
-
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(url));
+      final rawResponse = await request.close();
+      
       onProgress(0.85); // Processing starting
 
-      final data = response.data;
-      if (data == null) throw Exception('Empty response');
+      final responseBody = await rawResponse.transform(utf8.decoder).join();
+      if (responseBody.isEmpty) throw Exception('Empty response');
 
-      Map<String, dynamic> jsonData;
-      if (data is String) {
-        jsonData = json.decode(data);
-      } else {
-        jsonData = data as Map<String, dynamic>;
-      }
+      final Map<String, dynamic> jsonData = json.decode(responseBody);
 
       // Check format
       // getbible.net/v2/[version].json returns { ..., "books": [...] }

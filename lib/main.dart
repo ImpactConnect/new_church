@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide ChangeNotifierProvider;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +15,8 @@ import 'providers/language_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/bible_screen.dart';
 import 'screens/bible_ai_entry_screen.dart';
+import 'features/bible_ai/features/bible/screens/bible_home_screen.dart';
+import 'features/bible_ai/features/bible/widgets/verse_of_day_card.dart';
 import 'screens/bible_reading_plan_screen.dart';
 import 'screens/blog/blog_detail_screen.dart';
 import 'screens/blog/blog_list_screen.dart';
@@ -156,9 +158,7 @@ class MyApp extends StatelessWidget {
             home: const SplashScreen(),
             routes: {
               '/home': (context) => const HomePage(),
-              '/bible': (context) => BibleScreen(
-                    bibleService: MyApp.of(context).bibleService,
-                  ),
+              '/bible': (context) => const BibleAiEntryScreen(),
               '/notes': (context) => NotesScreen(
                     noteService: MyApp.of(context).noteService,
                   ),
@@ -385,15 +385,7 @@ class _HomePageState extends State<HomePage> {
     },
     {
       'icon': Icons.menu_book,
-      'label': 'Bible',
-      'color': Colors.blue,
-      'route': (BuildContext context) => BibleScreen(
-            bibleService: MyApp.of(context).bibleService,
-          ),
-    },
-    {
-      'icon': Icons.auto_awesome,
-      'label': 'Bible AI',
+      'label': 'AI Bible',
       'color': Colors.indigo,
       'route': (BuildContext context) => const BibleAiEntryScreen(),
     },
@@ -555,135 +547,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildVerseOfDayCard() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: MyApp.of(context).bibleService.getVerseOfDay(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-
-        final verseData = snapshot.data!;
-        final reference =
-            '${verseData['book']} ${verseData['chapter']}:${verseData['verse']}';
-
-        return Container(
-          margin: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColorDark],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -20,
-                top: -20,
-                child: Icon(
-                  Icons.format_quote_rounded,
-                  size: 140,
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.auto_awesome, color: Colors.white, size: 16),
-                              SizedBox(width: 6),
-                              Text('Verse of the Day', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
-                          onPressed: () async {
-                            await MyApp.of(context).bibleService.clearVerseOfDay();
-                            setState(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      '"${verseData['text']}"',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        height: 1.5,
-                        color: Colors.white,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '- $reference',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.bookmark_border, color: Colors.white),
-                          onPressed: () {
-                            final verse = MyApp.of(context).bibleService.findVerse(
-                                  verseData['book'],
-                                  verseData['chapter'],
-                                  verseData['verse'],
-                                );
-
-                            if (verse != null) {
-                              setState(() {
-                                verse.toggleBookmark();
-                              });
-                              MyApp.of(context).bibleService.savePreferences();
-                            }
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.share, color: Colors.white),
-                          onPressed: () {
-                            Share.share('${verseData['text']} - $reference');
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // Verse of the Day replaced with ContinueReadingCard
 
   @override
   Widget build(BuildContext context) {
@@ -720,7 +584,10 @@ class _HomePageState extends State<HomePage> {
                 const HomeCarousel(collectionPath: 'carousel_items'),
                 _buildSectionTitle('Quick Actions'),
                 _buildButtonGrid(quickActions),
-                _buildVerseOfDayCard(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: VerseOfDayCard(),
+                ),
                 _buildSectionTitle('Media'),
                 _buildButtonGrid(mediaButtons),
                 const Padding(

@@ -201,11 +201,38 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Bible AI Chats: per-user private data
+    match /bible_ai_chats/{userId}/sessions/{doc=**} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     // Prayer and Testimonies
     match /prayer_testimonies/{doc} {
       allow read: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
+    }
+
+    // Bible AI config: anyone can read, only admins can write
+    match /bible_ai/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /ai_config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /ai_prompts/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /ai_exegesis/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /test/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Default: deny everything else

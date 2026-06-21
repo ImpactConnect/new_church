@@ -4,6 +4,7 @@ import '../screens/members/members_connect_screen.dart';
 import '../screens/ministers_corner_screen.dart';
 import '../screens/sermon_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/bible_ai_entry_screen.dart';
 
 class BottomNavBar extends StatelessWidget {
   const BottomNavBar({
@@ -51,18 +52,21 @@ class BottomNavBar extends StatelessWidget {
     Widget screen;
     switch (index) {
       case 1:
+        screen = const BibleAiEntryScreen();
+        break;
+      case 2:
         screen = SermonScreen(
           sermonService: myApp.sermonService,
           audioPlayerService: myApp.audioPlayerService,
         );
         break;
-      case 2:
+      case 3:
         screen = const MembersConnectScreen();
         break;
-      case 3:
+      case 4:
         screen = const MinistersCornerScreen();
         break;
-      case 4:
+      case 5:
         screen = const SettingsScreen();
         break;
       default:
@@ -85,6 +89,11 @@ class BottomNavBar extends StatelessWidget {
           icon: Icon(Icons.home),
           label: 'Home',
           tooltip: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.menu_book),
+          label: 'AI Bible',
+          tooltip: 'AI Bible',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.headphones),

@@ -176,98 +176,7 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
     VerseFeature? fallbackMode,
   }) async {
     if (_cache.containsKey(mode)) return;
-
-    final isPremiumUser = ref.read(isPremiumUserProvider);
-    final shouldShowAds = AdService.shouldShowAds(isPremiumUser: isPremiumUser);
-
-    if (!shouldShowAds) {
-      await _fetchMode(mode);
-      return;
-    }
-
-    if (_isRewardFlowInProgress) return;
-
-    setState(() {
-      _isRewardFlowInProgress = true;
-      _loading[mode] = true;
-      _error = null;
-    });
-
-    RewardedAd? rewardedAd;
-    try {
-      await AdService.loadRewarded(
-        onLoaded: (ad) => rewardedAd = ad,
-        onFailedToLoad: (_) => rewardedAd = null,
-      );
-
-      if (rewardedAd == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ad is unavailable right now. Continuing...'),
-            ),
-          );
-        }
-        await _fetchMode(mode);
-        return;
-      }
-
-      final adClosedCompleter = Completer<void>();
-      var didEarnReward = false;
-      var failedToShow = false;
-
-      rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          if (!adClosedCompleter.isCompleted) {
-            adClosedCompleter.complete();
-          }
-        },
-        onAdFailedToShowFullScreenContent: (ad, _) {
-          failedToShow = true;
-          ad.dispose();
-          if (!adClosedCompleter.isCompleted) {
-            adClosedCompleter.complete();
-          }
-        },
-      );
-
-      rewardedAd!.show(
-        onUserEarnedReward: (_, _) {
-          didEarnReward = true;
-        },
-      );
-
-      await adClosedCompleter.future;
-      if (!mounted) return;
-
-      if (failedToShow) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not show ad. Continuing...')),
-        );
-        await _fetchMode(mode);
-        return;
-      }
-
-      if (didEarnReward) {
-        await _fetchMode(mode);
-        return;
-      }
-
-      setState(() {
-        _loading[mode] = false;
-        if (fallbackMode != null) {
-          _activeMode = fallbackMode;
-        }
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete the ad to continue.')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isRewardFlowInProgress = false);
-      }
-    }
+    await _fetchMode(mode);
   }
 
   void _switchMode(VerseFeature mode) {
@@ -410,13 +319,13 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
       }
     } else {
       final json = jsonEncode(data.toJson());
-      final bm = AiContentBookmarkModel.fromFeature(
+      final bm = AiContentBookmarkModel(
         id: const Uuid().v4(),
         bookName: widget.bookName,
         chapterNumber: widget.chapterNumber,
         verseNumber: widget.verseNumber,
         verseText: widget.verseText,
-        feature: _activeMode,
+        feature: _activeMode.name,
         analysisJson: json,
         createdAt: DateTime.now(),
       );
@@ -531,10 +440,8 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // Use default leading BackButton
+
         title: Row(
           children: [
             Container(
@@ -618,26 +525,33 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
 
   Widget _buildError() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 16),
-          const Text('Something went wrong'),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () {
-              _cache.remove(_activeMode);
-              _fetchMode(_activeMode);
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _error ?? 'Something went wrong',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () {
+                _cache.remove(_activeMode);
+                _fetchMode(_activeMode);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

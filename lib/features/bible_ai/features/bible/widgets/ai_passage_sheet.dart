@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 
-import '../../../../data/models/ai/ai_models.dart';
+import '../../../data/models/ai/ai_models.dart';
 import '../providers/bible_providers.dart';
 
 class AiPassageSheet extends ConsumerStatefulWidget {
