@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../../config/app_colors.dart';
+import '../../../../pneuma_ai/shared/widgets/bible_passage_bottom_sheet.dart';
 
 /// A reusable widget that renders text as Markdown and automatically finds and linkifies
 /// Bible verse references, opening the BiblePassageBottomSheet when tapped.
@@ -93,9 +94,7 @@ class AiMarkdownBody extends StatelessWidget {
       onTapLink: (text, href, title) {
         if (href != null && href.startsWith('verse://')) {
           final verse = Uri.decodeComponent(href.replaceFirst('verse://', ''));
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Tapped verse: $verse')),
-          );
+          showBiblePassageBottomSheet(context, verse);
         }
       },
     );

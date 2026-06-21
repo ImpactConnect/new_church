@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/ministers_content.dart';
-import '../widgets/bottom_nav_bar.dart';
 
 class MinistersCornerScreen extends StatefulWidget {
   const MinistersCornerScreen({Key? key}) : super(key: key);
@@ -139,7 +138,6 @@ class _MinistersCornerScreenState extends State<MinistersCornerScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const BottomNavBar(currentIndex: 4),
     );
   }
 }

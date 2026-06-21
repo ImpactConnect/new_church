@@ -71,7 +71,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     }
 
     // Try to find an existing session matching this topic or verse
-    final repo = ref.read(chatSessionRepositoryProvider);
+    final repo = ref.read(chatSessionRepositoryProvider.notifier);
     final allSessions = await repo.getAllSessions();
     ChatSessionModel? match;
 
@@ -189,7 +189,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           ),
         )
         .toList();
-    final repo = ref.read(chatSessionRepositoryProvider);
+    final repo = ref.read(chatSessionRepositoryProvider.notifier);
     await repo.saveSession(_session);
     // Invalidate the provider so it re-reads
     ref.invalidate(chatSessionsProvider);

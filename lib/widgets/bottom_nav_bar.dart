@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../screens/members/members_connect_screen.dart';
-import '../screens/ministers_corner_screen.dart';
 import '../screens/sermon_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/bible_ai_entry_screen.dart';
@@ -64,9 +63,6 @@ class BottomNavBar extends StatelessWidget {
         screen = const MembersConnectScreen();
         break;
       case 4:
-        screen = const MinistersCornerScreen();
-        break;
-      case 5:
         screen = const SettingsScreen();
         break;
       default:
@@ -104,11 +100,6 @@ class BottomNavBar extends StatelessWidget {
           icon: Icon(Icons.people_alt_outlined),
           label: 'Members',
           tooltip: 'Members Connect',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_pin_rounded),
-          label: 'Pastor\'s Desk',
-          tooltip: 'Pastor\'s Desk',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),

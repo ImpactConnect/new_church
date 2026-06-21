@@ -218,7 +218,7 @@ class RabbiIntroScreen extends ConsumerWidget {
                     },
                     onDismissed: (_) async {
                       if (session.id != null) {
-                        final repo = ref.read(chatSessionRepositoryProvider);
+                        final repo = ref.read(chatSessionRepositoryProvider.notifier);
                         await repo.deleteSession(session.id!);
                         ref.invalidate(chatSessionsProvider);
                       }

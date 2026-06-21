@@ -135,6 +135,81 @@ class VerseOfDayCard extends ConsumerWidget {
                             ],
                           ),
                         ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert, color: Colors.white),
+                          onSelected: (value) {
+                            if (value == 'explain') {
+                              Navigator.of(context, rootNavigator: true).push(
+                                MaterialPageRoute(
+                                  builder: (context) => VerseAiResultsScreen(
+                                    bookName: bookName,
+                                    chapterNumber: chapter,
+                                    verseNumber: verseNum,
+                                    verseText: verseText,
+                                    initialMode: VerseFeature.explain,
+                                  ),
+                                ),
+                              );
+                            } else if (value == 'bookmark') {
+                              if (isBookmarked) {
+                                final b = existingBookmarks.firstWhere((b) => 
+                                  b.bookId == bookId && 
+                                  b.chapterNumber == chapter && 
+                                  b.verseNumber == verseNum);
+                                ref.read(bookmarksNotifierProvider.notifier).deleteBookmark(b.id);
+                              } else {
+                                final bookmark = BookmarkModel(
+                                  id: const Uuid().v4(),
+                                  bookId: actualBookId,
+                                  bookName: bookName,
+                                  chapterNumber: chapter,
+                                  verseNumber: verseNum,
+                                  verseText: verseText,
+                                  createdAt: DateTime.now(),
+                                );
+                                ref.read(bookmarksNotifierProvider.notifier).addBookmark(bookmark);
+                              }
+                            } else if (value == 'share') {
+                              Share.share('"$verseText" - $reference');
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'explain',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.auto_awesome, color: Colors.indigo, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('AI Explain'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'bookmark',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                                    color: Colors.amber,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'share',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.share, color: Colors.blue, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('Share'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -156,70 +231,7 @@ class VerseOfDayCard extends ConsumerWidget {
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // AI Explain Button
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context, rootNavigator: true).push(
-                              MaterialPageRoute(
-                                builder: (context) => VerseAiResultsScreen(
-                                  bookName: bookName,
-                                  chapterNumber: chapter,
-                                  verseNumber: verseNum,
-                                  verseText: verseText,
-                                  initialMode: VerseFeature.explain,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.auto_awesome, size: 16, color: Colors.indigo),
-                          label: const Text('AI Explain', style: TextStyle(color: Colors.indigo)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            minimumSize: const Size(0, 36),
-                          ),
-                        ),
-                        const Spacer(),
-                        // Bookmark Button
-                        IconButton(
-                          icon: Icon(
-                            isBookmarked ? Icons.bookmark : Icons.bookmark_border, 
-                            color: Colors.white
-                          ),
-                          onPressed: () {
-                            if (isBookmarked) {
-                              final b = existingBookmarks.firstWhere((b) => 
-                                b.bookId == bookId && 
-                                b.chapterNumber == chapter && 
-                                b.verseNumber == verseNum);
-                              ref.read(bookmarksNotifierProvider.notifier).deleteBookmark(b.id);
-                            } else {
-                              final bookmark = BookmarkModel(
-                                id: const Uuid().v4(),
-                                bookId: actualBookId,
-                                bookName: bookName,
-                                chapterNumber: chapter,
-                                verseNumber: verseNum,
-                                verseText: verseText,
-                                createdAt: DateTime.now(),
-                              );
-                              ref.read(bookmarksNotifierProvider.notifier).addBookmark(bookmark);
-                            }
-                          },
-                        ),
-                        // Share Button
-                        IconButton(
-                          icon: const Icon(Icons.share, color: Colors.white),
-                          onPressed: () {
-                            Share.share('"$verseText" - $reference');
-                          },
-                        ),
-                      ],
-                    ),
+
                   ],
                 ),
               ),

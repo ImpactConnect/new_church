@@ -17,6 +17,8 @@ import 'screens/bible_screen.dart';
 import 'screens/bible_ai_entry_screen.dart';
 import 'features/bible_ai/features/bible/screens/bible_home_screen.dart';
 import 'features/bible_ai/features/bible/widgets/verse_of_day_card.dart';
+import 'features/pneuma_ai/screens/pneuma_ai_hub_screen.dart';
+import 'package:church_mobile/features/pneuma_ai/config/app_config.dart' as pneuma_config;
 import 'screens/bible_reading_plan_screen.dart';
 import 'screens/blog/blog_detail_screen.dart';
 import 'screens/blog/blog_list_screen.dart';
@@ -91,6 +93,7 @@ Future<void> main() async {
   // Initialize Hive for Bible AI offline config caching
   await Hive.initFlutter();
   await Hive.openBox<String>('bible_ai_cache');
+  await pneuma_config.AppConfig.initHive();
 
   // Initialize shared preferences
   final prefs = await SharedPreferences.getInstance();
@@ -390,18 +393,16 @@ class _HomePageState extends State<HomePage> {
       'route': (BuildContext context) => const BibleAiEntryScreen(),
     },
     {
-      'icon': Icons.note_alt,
-      'label': 'Notes',
-      'color': Colors.green,
-      'route': (BuildContext context) => NotesScreen(
-            noteService: MyApp.of(context).noteService,
-          ),
-    },
-    {
       'icon': Icons.book,
       'label': 'Devotional',
       'color': Colors.purple,
       'route': (BuildContext context) => const DevotionalScreen(),
+    },
+    {
+      'icon': Icons.auto_awesome,
+      'label': 'Pneuma AI',
+      'color': Color(0xFF6B2FC8),
+      'route': (BuildContext context) => const PneumaAiHubScreen(),
     },
   ];
 
@@ -478,7 +479,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Text(
         title,
         style: const TextStyle(
@@ -494,10 +495,10 @@ class _HomePageState extends State<HomePage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 5,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      mainAxisSpacing: 16,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      mainAxisSpacing: 12,
       crossAxisSpacing: 8,
-      childAspectRatio: 0.65,
+      childAspectRatio: 0.6,
       children: buttons.map((button) {
         return InkWell(
           onTap: () {
@@ -531,9 +532,10 @@ class _HomePageState extends State<HomePage> {
                 child: Text(
                   button['label'] as String,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[800],
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                     height: 1.1,
                   ),
                   maxLines: 2,
@@ -584,14 +586,11 @@ class _HomePageState extends State<HomePage> {
                 const HomeCarousel(collectionPath: 'carousel_items'),
                 _buildSectionTitle('Quick Actions'),
                 _buildButtonGrid(quickActions),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: VerseOfDayCard(),
-                ),
+                const VerseOfDayCard(),
                 _buildSectionTitle('Media'),
                 _buildButtonGrid(mediaButtons),
                 const Padding(
-                  padding: EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.only(top: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
