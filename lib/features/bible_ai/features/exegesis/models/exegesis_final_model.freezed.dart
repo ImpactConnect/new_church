@@ -23,12 +23,8 @@ mixin _$WordOccurrence {
   String get reference => throw _privateConstructorUsedError;
   String get context => throw _privateConstructorUsedError;
 
-  /// Serializes this WordOccurrence to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of WordOccurrence
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $WordOccurrenceCopyWith<WordOccurrence> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -52,8 +48,6 @@ class _$WordOccurrenceCopyWithImpl<$Res, $Val extends WordOccurrence>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of WordOccurrence
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -92,8 +86,6 @@ class __$$WordOccurrenceImplCopyWithImpl<$Res>
       _$WordOccurrenceImpl _value, $Res Function(_$WordOccurrenceImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of WordOccurrence
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -141,13 +133,11 @@ class _$WordOccurrenceImpl implements _WordOccurrence {
             (identical(other.context, context) || other.context == context));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, reference, context);
 
-  /// Create a copy of WordOccurrence
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$WordOccurrenceImplCopyWith<_$WordOccurrenceImpl> get copyWith =>
@@ -174,11 +164,8 @@ abstract class _WordOccurrence implements WordOccurrence {
   String get reference;
   @override
   String get context;
-
-  /// Create a copy of WordOccurrence
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$WordOccurrenceImplCopyWith<_$WordOccurrenceImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -200,12 +187,8 @@ mixin _$WordStudyItem {
   List<WordOccurrence> get otherOccurrences =>
       throw _privateConstructorUsedError;
 
-  /// Serializes this WordStudyItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of WordStudyItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $WordStudyItemCopyWith<WordStudyItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -238,8 +221,6 @@ class _$WordStudyItemCopyWithImpl<$Res, $Val extends WordStudyItem>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of WordStudyItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -322,8 +303,6 @@ class __$$WordStudyItemImplCopyWithImpl<$Res>
       _$WordStudyItemImpl _value, $Res Function(_$WordStudyItemImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of WordStudyItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -452,7 +431,7 @@ class _$WordStudyItemImpl implements _WordStudyItem {
                 .equals(other._otherOccurrences, _otherOccurrences));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -466,9 +445,7 @@ class _$WordStudyItemImpl implements _WordStudyItem {
       discoveryNote,
       const DeepCollectionEquality().hash(_otherOccurrences));
 
-  /// Create a copy of WordStudyItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$WordStudyItemImplCopyWith<_$WordStudyItemImpl> get copyWith =>
@@ -515,11 +492,8 @@ abstract class _WordStudyItem implements WordStudyItem {
   String get discoveryNote;
   @override
   List<WordOccurrence> get otherOccurrences;
-
-  /// Create a copy of WordStudyItem
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$WordStudyItemImplCopyWith<_$WordStudyItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -540,12 +514,8 @@ mixin _$MorphItem {
   String? get personNumber => throw _privateConstructorUsedError;
   String get plainEnglishExplanation => throw _privateConstructorUsedError;
 
-  /// Serializes this MorphItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of MorphItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $MorphItemCopyWith<MorphItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -577,8 +547,6 @@ class _$MorphItemCopyWithImpl<$Res, $Val extends MorphItem>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of MorphItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -661,8 +629,6 @@ class __$$MorphItemImplCopyWithImpl<$Res>
       _$MorphItemImpl _value, $Res Function(_$MorphItemImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of MorphItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -780,7 +746,7 @@ class _$MorphItemImpl implements _MorphItem {
                 other.plainEnglishExplanation == plainEnglishExplanation));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -794,9 +760,7 @@ class _$MorphItemImpl implements _MorphItem {
       personNumber,
       plainEnglishExplanation);
 
-  /// Create a copy of MorphItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$MorphItemImplCopyWith<_$MorphItemImpl> get copyWith =>
@@ -843,11 +807,8 @@ abstract class _MorphItem implements MorphItem {
   String? get personNumber;
   @override
   String get plainEnglishExplanation;
-
-  /// Create a copy of MorphItem
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$MorphItemImplCopyWith<_$MorphItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -863,12 +824,8 @@ mixin _$ConfusedWord {
   String get meaningDifference => throw _privateConstructorUsedError;
   String get exampleVerse => throw _privateConstructorUsedError;
 
-  /// Serializes this ConfusedWord to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ConfusedWord
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ConfusedWordCopyWith<ConfusedWord> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -896,8 +853,6 @@ class _$ConfusedWordCopyWithImpl<$Res, $Val extends ConfusedWord>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ConfusedWord
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -950,8 +905,6 @@ class __$$ConfusedWordImplCopyWithImpl<$Res>
       _$ConfusedWordImpl _value, $Res Function(_$ConfusedWordImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ConfusedWord
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1021,14 +974,12 @@ class _$ConfusedWordImpl implements _ConfusedWord {
                 other.exampleVerse == exampleVerse));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType, word, strongsNumber, meaningDifference, exampleVerse);
 
-  /// Create a copy of ConfusedWord
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ConfusedWordImplCopyWith<_$ConfusedWordImpl> get copyWith =>
@@ -1060,11 +1011,8 @@ abstract class _ConfusedWord implements ConfusedWord {
   String get meaningDifference;
   @override
   String get exampleVerse;
-
-  /// Create a copy of ConfusedWord
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ConfusedWordImplCopyWith<_$ConfusedWordImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1081,12 +1029,8 @@ mixin _$SemanticItem {
   String get wordUsedHereStrongs => throw _privateConstructorUsedError;
   List<ConfusedWord> get confusedWith => throw _privateConstructorUsedError;
 
-  /// Serializes this SemanticItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of SemanticItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $SemanticItemCopyWith<SemanticItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1115,8 +1059,6 @@ class _$SemanticItemCopyWithImpl<$Res, $Val extends SemanticItem>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of SemanticItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1175,8 +1117,6 @@ class __$$SemanticItemImplCopyWithImpl<$Res>
       _$SemanticItemImpl _value, $Res Function(_$SemanticItemImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of SemanticItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1264,7 +1204,7 @@ class _$SemanticItemImpl implements _SemanticItem {
                 .equals(other._confusedWith, _confusedWith));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -1274,9 +1214,7 @@ class _$SemanticItemImpl implements _SemanticItem {
       wordUsedHereStrongs,
       const DeepCollectionEquality().hash(_confusedWith));
 
-  /// Create a copy of SemanticItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$SemanticItemImplCopyWith<_$SemanticItemImpl> get copyWith =>
@@ -1311,11 +1249,8 @@ abstract class _SemanticItem implements SemanticItem {
   String get wordUsedHereStrongs;
   @override
   List<ConfusedWord> get confusedWith;
-
-  /// Create a copy of SemanticItem
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$SemanticItemImplCopyWith<_$SemanticItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1329,12 +1264,8 @@ mixin _$DevelopmentMention {
   String get reference => throw _privateConstructorUsedError;
   String get development => throw _privateConstructorUsedError;
 
-  /// Serializes this DevelopmentMention to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of DevelopmentMention
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DevelopmentMentionCopyWith<DevelopmentMention> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1358,8 +1289,6 @@ class _$DevelopmentMentionCopyWithImpl<$Res, $Val extends DevelopmentMention>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of DevelopmentMention
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1398,8 +1327,6 @@ class __$$DevelopmentMentionImplCopyWithImpl<$Res>
       $Res Function(_$DevelopmentMentionImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of DevelopmentMention
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1449,13 +1376,11 @@ class _$DevelopmentMentionImpl implements _DevelopmentMention {
                 other.development == development));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, reference, development);
 
-  /// Create a copy of DevelopmentMention
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DevelopmentMentionImplCopyWith<_$DevelopmentMentionImpl> get copyWith =>
@@ -1482,11 +1407,8 @@ abstract class _DevelopmentMention implements DevelopmentMention {
   String get reference;
   @override
   String get development;
-
-  /// Create a copy of DevelopmentMention
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DevelopmentMentionImplCopyWith<_$DevelopmentMentionImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1501,12 +1423,8 @@ mixin _$FirstMentionDetail {
   String? get verseText => throw _privateConstructorUsedError;
   String get whatItEstablishes => throw _privateConstructorUsedError;
 
-  /// Serializes this FirstMentionDetail to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of FirstMentionDetail
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $FirstMentionDetailCopyWith<FirstMentionDetail> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1530,8 +1448,6 @@ class _$FirstMentionDetailCopyWithImpl<$Res, $Val extends FirstMentionDetail>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of FirstMentionDetail
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1575,8 +1491,6 @@ class __$$FirstMentionDetailImplCopyWithImpl<$Res>
       $Res Function(_$FirstMentionDetailImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of FirstMentionDetail
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1637,14 +1551,12 @@ class _$FirstMentionDetailImpl implements _FirstMentionDetail {
                 other.whatItEstablishes == whatItEstablishes));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, reference, verseText, whatItEstablishes);
 
-  /// Create a copy of FirstMentionDetail
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$FirstMentionDetailImplCopyWith<_$FirstMentionDetailImpl> get copyWith =>
@@ -1674,11 +1586,8 @@ abstract class _FirstMentionDetail implements FirstMentionDetail {
   String? get verseText;
   @override
   String get whatItEstablishes;
-
-  /// Create a copy of FirstMentionDetail
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$FirstMentionDetailImplCopyWith<_$FirstMentionDetailImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1695,12 +1604,8 @@ mixin _$MentionItem {
       throw _privateConstructorUsedError;
   String? get emphasisPattern => throw _privateConstructorUsedError;
 
-  /// Serializes this MentionItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of MentionItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $MentionItemCopyWith<MentionItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1730,8 +1635,6 @@ class _$MentionItemCopyWithImpl<$Res, $Val extends MentionItem>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of MentionItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1760,8 +1663,6 @@ class _$MentionItemCopyWithImpl<$Res, $Val extends MentionItem>
     ) as $Val);
   }
 
-  /// Create a copy of MentionItem
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $FirstMentionDetailCopyWith<$Res> get firstMention {
@@ -1797,8 +1698,6 @@ class __$$MentionItemImplCopyWithImpl<$Res>
       _$MentionItemImpl _value, $Res Function(_$MentionItemImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of MentionItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1877,7 +1776,7 @@ class _$MentionItemImpl implements _MentionItem {
                 other.emphasisPattern == emphasisPattern));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -1886,9 +1785,7 @@ class _$MentionItemImpl implements _MentionItem {
       const DeepCollectionEquality().hash(_developmentMentions),
       emphasisPattern);
 
-  /// Create a copy of MentionItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$MentionItemImplCopyWith<_$MentionItemImpl> get copyWith =>
@@ -1920,11 +1817,8 @@ abstract class _MentionItem implements MentionItem {
   List<DevelopmentMention> get developmentMentions;
   @override
   String? get emphasisPattern;
-
-  /// Create a copy of MentionItem
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$MentionItemImplCopyWith<_$MentionItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1939,12 +1833,8 @@ mixin _$LogicalConnector {
   String get originalWord => throw _privateConstructorUsedError;
   String get significance => throw _privateConstructorUsedError;
 
-  /// Serializes this LogicalConnector to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of LogicalConnector
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $LogicalConnectorCopyWith<LogicalConnector> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -1968,8 +1858,6 @@ class _$LogicalConnectorCopyWithImpl<$Res, $Val extends LogicalConnector>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of LogicalConnector
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2013,8 +1901,6 @@ class __$$LogicalConnectorImplCopyWithImpl<$Res>
       $Res Function(_$LogicalConnectorImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of LogicalConnector
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2074,14 +1960,12 @@ class _$LogicalConnectorImpl implements _LogicalConnector {
                 other.significance == significance));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, word, originalWord, significance);
 
-  /// Create a copy of LogicalConnector
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$LogicalConnectorImplCopyWith<_$LogicalConnectorImpl> get copyWith =>
@@ -2111,11 +1995,8 @@ abstract class _LogicalConnector implements LogicalConnector {
   String get originalWord;
   @override
   String get significance;
-
-  /// Create a copy of LogicalConnector
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$LogicalConnectorImplCopyWith<_$LogicalConnectorImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2131,12 +2012,8 @@ mixin _$DiscourseAnalysis {
       throw _privateConstructorUsedError;
   String get authorIntent => throw _privateConstructorUsedError;
 
-  /// Serializes this DiscourseAnalysis to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of DiscourseAnalysis
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DiscourseAnalysisCopyWith<DiscourseAnalysis> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2163,8 +2040,6 @@ class _$DiscourseAnalysisCopyWithImpl<$Res, $Val extends DiscourseAnalysis>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of DiscourseAnalysis
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2211,8 +2086,6 @@ class __$$DiscourseAnalysisImplCopyWithImpl<$Res>
       $Res Function(_$DiscourseAnalysisImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of DiscourseAnalysis
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2282,14 +2155,12 @@ class _$DiscourseAnalysisImpl implements _DiscourseAnalysis {
                 other.authorIntent == authorIntent));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, rhetoricalFunction,
       const DeepCollectionEquality().hash(_logicalConnectors), authorIntent);
 
-  /// Create a copy of DiscourseAnalysis
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DiscourseAnalysisImplCopyWith<_$DiscourseAnalysisImpl> get copyWith =>
@@ -2319,11 +2190,8 @@ abstract class _DiscourseAnalysis implements DiscourseAnalysis {
   List<LogicalConnector> get logicalConnectors;
   @override
   String get authorIntent;
-
-  /// Create a copy of DiscourseAnalysis
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DiscourseAnalysisImplCopyWith<_$DiscourseAnalysisImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2339,12 +2207,8 @@ mixin _$CrossRef {
   String get connectionType => throw _privateConstructorUsedError;
   String get specificContribution => throw _privateConstructorUsedError;
 
-  /// Serializes this CrossRef to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of CrossRef
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $CrossRefCopyWith<CrossRef> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2371,8 +2235,6 @@ class _$CrossRefCopyWithImpl<$Res, $Val extends CrossRef>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of CrossRef
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2425,8 +2287,6 @@ class __$$CrossRefImplCopyWithImpl<$Res>
       _$CrossRefImpl _value, $Res Function(_$CrossRefImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of CrossRef
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2497,14 +2357,12 @@ class _$CrossRefImpl implements _CrossRef {
                 other.specificContribution == specificContribution));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType, reference, verseText, connectionType, specificContribution);
 
-  /// Create a copy of CrossRef
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$CrossRefImplCopyWith<_$CrossRefImpl> get copyWith =>
@@ -2536,11 +2394,8 @@ abstract class _CrossRef implements CrossRef {
   String get connectionType;
   @override
   String get specificContribution;
-
-  /// Create a copy of CrossRef
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$CrossRefImplCopyWith<_$CrossRefImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2556,12 +2411,8 @@ mixin _$Allusion {
   String get allusionText => throw _privateConstructorUsedError;
   String get howToHearIt => throw _privateConstructorUsedError;
 
-  /// Serializes this Allusion to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Allusion
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $AllusionCopyWith<Allusion> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2588,8 +2439,6 @@ class _$AllusionCopyWithImpl<$Res, $Val extends Allusion>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Allusion
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2642,8 +2491,6 @@ class __$$AllusionImplCopyWithImpl<$Res>
       _$AllusionImpl _value, $Res Function(_$AllusionImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Allusion
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2714,14 +2561,12 @@ class _$AllusionImpl implements _Allusion {
                 other.howToHearIt == howToHearIt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType, sourceText, sourceVerseText, allusionText, howToHearIt);
 
-  /// Create a copy of Allusion
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$AllusionImplCopyWith<_$AllusionImpl> get copyWith =>
@@ -2753,11 +2598,8 @@ abstract class _Allusion implements Allusion {
   String get allusionText;
   @override
   String get howToHearIt;
-
-  /// Create a copy of Allusion
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$AllusionImplCopyWith<_$AllusionImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2771,12 +2613,8 @@ mixin _$TextualNote {
   bool get include => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
 
-  /// Serializes this TextualNote to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of TextualNote
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $TextualNoteCopyWith<TextualNote> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2800,8 +2638,6 @@ class _$TextualNoteCopyWithImpl<$Res, $Val extends TextualNote>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of TextualNote
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2840,8 +2676,6 @@ class __$$TextualNoteImplCopyWithImpl<$Res>
       _$TextualNoteImpl _value, $Res Function(_$TextualNoteImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of TextualNote
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -2889,13 +2723,11 @@ class _$TextualNoteImpl implements _TextualNote {
             (identical(other.notes, notes) || other.notes == notes));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, include, notes);
 
-  /// Create a copy of TextualNote
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$TextualNoteImplCopyWith<_$TextualNoteImpl> get copyWith =>
@@ -2920,11 +2752,8 @@ abstract class _TextualNote implements TextualNote {
   bool get include;
   @override
   String? get notes;
-
-  /// Create a copy of TextualNote
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$TextualNoteImplCopyWith<_$TextualNoteImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2939,12 +2768,8 @@ mixin _$Misreading {
   String get whyItIsWrong => throw _privateConstructorUsedError;
   String get whatItActuallyMeans => throw _privateConstructorUsedError;
 
-  /// Serializes this Misreading to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Misreading
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $MisreadingCopyWith<Misreading> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -2971,8 +2796,6 @@ class _$MisreadingCopyWithImpl<$Res, $Val extends Misreading>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Misreading
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3019,8 +2842,6 @@ class __$$MisreadingImplCopyWithImpl<$Res>
       _$MisreadingImpl _value, $Res Function(_$MisreadingImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Misreading
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3081,14 +2902,12 @@ class _$MisreadingImpl implements _Misreading {
                 other.whatItActuallyMeans == whatItActuallyMeans));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType, commonMisreading, whyItIsWrong, whatItActuallyMeans);
 
-  /// Create a copy of Misreading
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$MisreadingImplCopyWith<_$MisreadingImpl> get copyWith =>
@@ -3117,11 +2936,8 @@ abstract class _Misreading implements Misreading {
   String get whyItIsWrong;
   @override
   String get whatItActuallyMeans;
-
-  /// Create a copy of Misreading
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$MisreadingImplCopyWith<_$MisreadingImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3135,12 +2951,8 @@ mixin _$CulturalKey {
   String get item => throw _privateConstructorUsedError;
   String get howItShapesReading => throw _privateConstructorUsedError;
 
-  /// Serializes this CulturalKey to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of CulturalKey
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $CulturalKeyCopyWith<CulturalKey> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3164,8 +2976,6 @@ class _$CulturalKeyCopyWithImpl<$Res, $Val extends CulturalKey>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of CulturalKey
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3204,8 +3014,6 @@ class __$$CulturalKeyImplCopyWithImpl<$Res>
       _$CulturalKeyImpl _value, $Res Function(_$CulturalKeyImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of CulturalKey
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3254,13 +3062,11 @@ class _$CulturalKeyImpl implements _CulturalKey {
                 other.howItShapesReading == howItShapesReading));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, item, howItShapesReading);
 
-  /// Create a copy of CulturalKey
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$CulturalKeyImplCopyWith<_$CulturalKeyImpl> get copyWith =>
@@ -3286,11 +3092,8 @@ abstract class _CulturalKey implements CulturalKey {
   String get item;
   @override
   String get howItShapesReading;
-
-  /// Create a copy of CulturalKey
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$CulturalKeyImplCopyWith<_$CulturalKeyImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3306,12 +3109,8 @@ mixin _$HistoricalCulturalSetting {
   List<CulturalKey> get specificCulturalKeys =>
       throw _privateConstructorUsedError;
 
-  /// Serializes this HistoricalCulturalSetting to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of HistoricalCulturalSetting
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $HistoricalCulturalSettingCopyWith<HistoricalCulturalSetting> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3336,8 +3135,6 @@ class _$HistoricalCulturalSettingCopyWithImpl<$Res,
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of HistoricalCulturalSetting
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3379,8 +3176,6 @@ class __$$HistoricalCulturalSettingImplCopyWithImpl<$Res>
       $Res Function(_$HistoricalCulturalSettingImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of HistoricalCulturalSetting
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3438,14 +3233,12 @@ class _$HistoricalCulturalSettingImpl implements _HistoricalCulturalSetting {
                 .equals(other._specificCulturalKeys, _specificCulturalKeys));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, world,
       const DeepCollectionEquality().hash(_specificCulturalKeys));
 
-  /// Create a copy of HistoricalCulturalSetting
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$HistoricalCulturalSettingImplCopyWith<_$HistoricalCulturalSettingImpl>
@@ -3473,11 +3266,8 @@ abstract class _HistoricalCulturalSetting implements HistoricalCulturalSetting {
   String get world;
   @override
   List<CulturalKey> get specificCulturalKeys;
-
-  /// Create a copy of HistoricalCulturalSetting
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$HistoricalCulturalSettingImplCopyWith<_$HistoricalCulturalSettingImpl>
       get copyWith => throw _privateConstructorUsedError;
 }
@@ -3494,12 +3284,8 @@ mixin _$LiteraryContext {
   String get structuralRole => throw _privateConstructorUsedError;
   String get passageFlow => throw _privateConstructorUsedError;
 
-  /// Serializes this LiteraryContext to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of LiteraryContext
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $LiteraryContextCopyWith<LiteraryContext> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3528,8 +3314,6 @@ class _$LiteraryContextCopyWithImpl<$Res, $Val extends LiteraryContext>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of LiteraryContext
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3588,8 +3372,6 @@ class __$$LiteraryContextImplCopyWithImpl<$Res>
       _$LiteraryContextImpl _value, $Res Function(_$LiteraryContextImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of LiteraryContext
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3669,14 +3451,12 @@ class _$LiteraryContextImpl implements _LiteraryContext {
                 other.passageFlow == passageFlow));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, genre, immediateBefore,
       immediateAfter, structuralRole, passageFlow);
 
-  /// Create a copy of LiteraryContext
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$LiteraryContextImplCopyWith<_$LiteraryContextImpl> get copyWith =>
@@ -3712,11 +3492,8 @@ abstract class _LiteraryContext implements LiteraryContext {
   String get structuralRole;
   @override
   String get passageFlow;
-
-  /// Create a copy of LiteraryContext
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$LiteraryContextImplCopyWith<_$LiteraryContextImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3733,12 +3510,8 @@ mixin _$LanguageWord {
   String get strongsNumber => throw _privateConstructorUsedError;
   String get fullSemanticRange => throw _privateConstructorUsedError;
 
-  /// Serializes this LanguageWord to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of LanguageWord
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $LanguageWordCopyWith<LanguageWord> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3767,8 +3540,6 @@ class _$LanguageWordCopyWithImpl<$Res, $Val extends LanguageWord>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of LanguageWord
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3827,8 +3598,6 @@ class __$$LanguageWordImplCopyWithImpl<$Res>
       _$LanguageWordImpl _value, $Res Function(_$LanguageWordImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of LanguageWord
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -3908,14 +3677,12 @@ class _$LanguageWordImpl implements _LanguageWord {
                 other.fullSemanticRange == fullSemanticRange));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, word, originalScript,
       transliteration, strongsNumber, fullSemanticRange);
 
-  /// Create a copy of LanguageWord
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$LanguageWordImplCopyWith<_$LanguageWordImpl> get copyWith =>
@@ -3950,11 +3717,8 @@ abstract class _LanguageWord implements LanguageWord {
   String get strongsNumber;
   @override
   String get fullSemanticRange;
-
-  /// Create a copy of LanguageWord
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$LanguageWordImplCopyWith<_$LanguageWordImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -3970,12 +3734,8 @@ mixin _$ConceptDefinition {
   String get semanticDisambiguation => throw _privateConstructorUsedError;
   String get modernVsAncient => throw _privateConstructorUsedError;
 
-  /// Serializes this ConceptDefinition to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ConceptDefinitionCopyWith<ConceptDefinition> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4006,8 +3766,6 @@ class _$ConceptDefinitionCopyWithImpl<$Res, $Val extends ConceptDefinition>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4036,8 +3794,6 @@ class _$ConceptDefinitionCopyWithImpl<$Res, $Val extends ConceptDefinition>
     ) as $Val);
   }
 
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $LanguageWordCopyWith<$Res> get hebrewWord {
@@ -4046,8 +3802,6 @@ class _$ConceptDefinitionCopyWithImpl<$Res, $Val extends ConceptDefinition>
     });
   }
 
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $LanguageWordCopyWith<$Res> get greekWord {
@@ -4085,8 +3839,6 @@ class __$$ConceptDefinitionImplCopyWithImpl<$Res>
       $Res Function(_$ConceptDefinitionImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4157,14 +3909,12 @@ class _$ConceptDefinitionImpl implements _ConceptDefinition {
                 other.modernVsAncient == modernVsAncient));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, hebrewWord, greekWord,
       semanticDisambiguation, modernVsAncient);
 
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ConceptDefinitionImplCopyWith<_$ConceptDefinitionImpl> get copyWith =>
@@ -4197,11 +3947,8 @@ abstract class _ConceptDefinition implements ConceptDefinition {
   String get semanticDisambiguation;
   @override
   String get modernVsAncient;
-
-  /// Create a copy of ConceptDefinition
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ConceptDefinitionImplCopyWith<_$ConceptDefinitionImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4216,12 +3963,8 @@ mixin _$TopicFirstMention {
   String? get verseText => throw _privateConstructorUsedError;
   String get whatItEstablishes => throw _privateConstructorUsedError;
 
-  /// Serializes this TopicFirstMention to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of TopicFirstMention
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $TopicFirstMentionCopyWith<TopicFirstMention> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4245,8 +3988,6 @@ class _$TopicFirstMentionCopyWithImpl<$Res, $Val extends TopicFirstMention>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of TopicFirstMention
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4290,8 +4031,6 @@ class __$$TopicFirstMentionImplCopyWithImpl<$Res>
       $Res Function(_$TopicFirstMentionImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of TopicFirstMention
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4352,14 +4091,12 @@ class _$TopicFirstMentionImpl implements _TopicFirstMention {
                 other.whatItEstablishes == whatItEstablishes));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, reference, verseText, whatItEstablishes);
 
-  /// Create a copy of TopicFirstMention
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$TopicFirstMentionImplCopyWith<_$TopicFirstMentionImpl> get copyWith =>
@@ -4389,11 +4126,8 @@ abstract class _TopicFirstMention implements TopicFirstMention {
   String? get verseText;
   @override
   String get whatItEstablishes;
-
-  /// Create a copy of TopicFirstMention
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$TopicFirstMentionImplCopyWith<_$TopicFirstMentionImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4414,12 +4148,8 @@ mixin _$DefiningPassage {
   String? get connectionsToOtherDefiningPassages =>
       throw _privateConstructorUsedError;
 
-  /// Serializes this DefiningPassage to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of DefiningPassage
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DefiningPassageCopyWith<DefiningPassage> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4451,8 +4181,6 @@ class _$DefiningPassageCopyWithImpl<$Res, $Val extends DefiningPassage>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of DefiningPassage
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4530,8 +4258,6 @@ class __$$DefiningPassageImplCopyWithImpl<$Res>
       _$DefiningPassageImpl _value, $Res Function(_$DefiningPassageImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of DefiningPassage
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4654,7 +4380,7 @@ class _$DefiningPassageImpl implements _DefiningPassage {
                     connectionsToOtherDefiningPassages));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -4667,9 +4393,7 @@ class _$DefiningPassageImpl implements _DefiningPassage {
       whatThisPassageSays,
       connectionsToOtherDefiningPassages);
 
-  /// Create a copy of DefiningPassage
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DefiningPassageImplCopyWith<_$DefiningPassageImpl> get copyWith =>
@@ -4715,11 +4439,8 @@ abstract class _DefiningPassage implements DefiningPassage {
   String get whatThisPassageSays;
   @override
   String? get connectionsToOtherDefiningPassages;
-
-  /// Create a copy of DefiningPassage
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DefiningPassageImplCopyWith<_$DefiningPassageImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4734,12 +4455,8 @@ mixin _$Distortion {
   String get howItEnters => throw _privateConstructorUsedError;
   String get linguisticCorrection => throw _privateConstructorUsedError;
 
-  /// Serializes this Distortion to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Distortion
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DistortionCopyWith<Distortion> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4764,8 +4481,6 @@ class _$DistortionCopyWithImpl<$Res, $Val extends Distortion>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Distortion
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4810,8 +4525,6 @@ class __$$DistortionImplCopyWithImpl<$Res>
       _$DistortionImpl _value, $Res Function(_$DistortionImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Distortion
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -4872,14 +4585,12 @@ class _$DistortionImpl implements _Distortion {
                 other.linguisticCorrection == linguisticCorrection));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, distortion, howItEnters, linguisticCorrection);
 
-  /// Create a copy of Distortion
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DistortionImplCopyWith<_$DistortionImpl> get copyWith =>
@@ -4908,11 +4619,8 @@ abstract class _Distortion implements Distortion {
   String get howItEnters;
   @override
   String get linguisticCorrection;
-
-  /// Create a copy of Distortion
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DistortionImplCopyWith<_$DistortionImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -4965,12 +4673,8 @@ mixin _$VerseExegesis {
   String? get contextSummary => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
 
-  /// Serializes this VerseExegesis to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $VerseExegesisCopyWith<VerseExegesis> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -5021,8 +4725,6 @@ class _$VerseExegesisCopyWithImpl<$Res, $Val extends VerseExegesis>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -5141,8 +4843,6 @@ class _$VerseExegesisCopyWithImpl<$Res, $Val extends VerseExegesis>
     ) as $Val);
   }
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $HistoricalCulturalSettingCopyWith<$Res> get historicalCulturalSetting {
@@ -5152,8 +4852,6 @@ class _$VerseExegesisCopyWithImpl<$Res, $Val extends VerseExegesis>
     });
   }
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $LiteraryContextCopyWith<$Res> get literaryContext {
@@ -5162,8 +4860,6 @@ class _$VerseExegesisCopyWithImpl<$Res, $Val extends VerseExegesis>
     });
   }
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $DiscourseAnalysisCopyWith<$Res> get discourseAnalysis {
@@ -5172,8 +4868,6 @@ class _$VerseExegesisCopyWithImpl<$Res, $Val extends VerseExegesis>
     });
   }
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $TextualNoteCopyWith<$Res>? get textualApparatusNotes {
@@ -5237,8 +4931,6 @@ class __$$VerseExegesisImplCopyWithImpl<$Res>
       _$VerseExegesisImpl _value, $Res Function(_$VerseExegesisImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -5585,7 +5277,7 @@ class _$VerseExegesisImpl extends _VerseExegesis {
                 other.createdAt == createdAt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hashAll([
         runtimeType,
@@ -5613,9 +5305,7 @@ class _$VerseExegesisImpl extends _VerseExegesis {
         createdAt
       ]);
 
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$VerseExegesisImplCopyWith<_$VerseExegesisImpl> get copyWith =>
@@ -5663,59 +5353,48 @@ abstract class _VerseExegesis extends VerseExegesis {
   @override
   ExegesisSource get source;
   @override
-  String get subject; // formatted ref string e.g. "John 3:16"
-  @override
-  String get translation; // ESV / NIV / KJV / NASB / NLT
-  @override
-  List<Map<String, dynamic>> get verseRefsJson; // serialized VerseRef list
+  String get subject;
+  @override // formatted ref string e.g. "John 3:16"
+  String get translation;
+  @override // ESV / NIV / KJV / NASB / NLT
+  List<Map<String, dynamic>> get verseRefsJson;
+  @override // serialized VerseRef list
 // ── Layer 1: The Orienting Insight ──
-  @override
-  String get bigPicture; // ── Layer 2: Historical & Cultural Setting ──
-  @override
-  HistoricalCulturalSetting
-      get historicalCulturalSetting; // ── Layer 3: Literary & Structural Context ──
-  @override
-  LiteraryContext
-      get literaryContext; // ── Layer 4: Original Language Word Study ──
-  @override
-  List<WordStudyItem> get wordStudy; // ── Layer 5: Morphological Analysis ──
-  @override
-  List<MorphItem>
-      get morphologicalAnalysis; // ── Layer 6: Semantic Disambiguation (conditional) ──
-  @override
-  List<SemanticItem>
-      get semanticDisambiguation; // ── Layer 7: First & Significant Mentions ──
-  @override
-  List<MentionItem> get mentionAnalysis; // ── Layer 8: Discourse Analysis ──
-  @override
-  DiscourseAnalysis get discourseAnalysis; // ── Layer 9: Cross-References ──
-  @override
-  List<CrossRef>
-      get crossReferences; // ── Layer 10: Intertextual Allusions (conditional) ──
-  @override
-  List<Allusion>?
-      get intertextualAllusions; // ── Layer 11: Textual Apparatus Notes (conditional) ──
-  @override
-  TextualNote?
-      get textualApparatusNotes; // ── Layer 12: The Implied Theological Claim ──
-  @override
-  String
-      get impliedTheologicalClaim; // ── Layer 13: What This Text Cannot Mean ──
-  @override
-  List<Misreading> get whatItCannotMean; // ── Layer 14: From Text to Life ──
-  @override
-  String get fromTextToLife; // ── Final: Something To Sit With ──
-  @override
-  String get somethingToSitWith; // ── Metadata ──
-  @override
+  String get bigPicture;
+  @override // ── Layer 2: Historical & Cultural Setting ──
+  HistoricalCulturalSetting get historicalCulturalSetting;
+  @override // ── Layer 3: Literary & Structural Context ──
+  LiteraryContext get literaryContext;
+  @override // ── Layer 4: Original Language Word Study ──
+  List<WordStudyItem> get wordStudy;
+  @override // ── Layer 5: Morphological Analysis ──
+  List<MorphItem> get morphologicalAnalysis;
+  @override // ── Layer 6: Semantic Disambiguation (conditional) ──
+  List<SemanticItem> get semanticDisambiguation;
+  @override // ── Layer 7: First & Significant Mentions ──
+  List<MentionItem> get mentionAnalysis;
+  @override // ── Layer 8: Discourse Analysis ──
+  DiscourseAnalysis get discourseAnalysis;
+  @override // ── Layer 9: Cross-References ──
+  List<CrossRef> get crossReferences;
+  @override // ── Layer 10: Intertextual Allusions (conditional) ──
+  List<Allusion>? get intertextualAllusions;
+  @override // ── Layer 11: Textual Apparatus Notes (conditional) ──
+  TextualNote? get textualApparatusNotes;
+  @override // ── Layer 12: The Implied Theological Claim ──
+  String get impliedTheologicalClaim;
+  @override // ── Layer 13: What This Text Cannot Mean ──
+  List<Misreading> get whatItCannotMean;
+  @override // ── Layer 14: From Text to Life ──
+  String get fromTextToLife;
+  @override // ── Final: Something To Sit With ──
+  String get somethingToSitWith;
+  @override // ── Metadata ──
   String? get contextSummary;
   @override
   DateTime get createdAt;
-
-  /// Create a copy of VerseExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$VerseExegesisImplCopyWith<_$VerseExegesisImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -5754,12 +5433,8 @@ mixin _$TopicExegesis {
   String? get contextSummary => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
 
-  /// Serializes this TopicExegesis to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $TopicExegesisCopyWith<TopicExegesis> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -5801,8 +5476,6 @@ class _$TopicExegesisCopyWithImpl<$Res, $Val extends TopicExegesis>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -5886,8 +5559,6 @@ class _$TopicExegesisCopyWithImpl<$Res, $Val extends TopicExegesis>
     ) as $Val);
   }
 
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $ConceptDefinitionCopyWith<$Res> get conceptDefinition {
@@ -5896,8 +5567,6 @@ class _$TopicExegesisCopyWithImpl<$Res, $Val extends TopicExegesis>
     });
   }
 
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $TopicFirstMentionCopyWith<$Res> get firstMention {
@@ -5946,8 +5615,6 @@ class __$$TopicExegesisImplCopyWithImpl<$Res>
       _$TopicExegesisImpl _value, $Res Function(_$TopicExegesisImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -6169,7 +5836,7 @@ class _$TopicExegesisImpl extends _TopicExegesis {
                 other.createdAt == createdAt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -6189,9 +5856,7 @@ class _$TopicExegesisImpl extends _TopicExegesis {
       contextSummary,
       createdAt);
 
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$TopicExegesisImplCopyWith<_$TopicExegesisImpl> get copyWith =>
@@ -6232,38 +5897,34 @@ abstract class _TopicExegesis extends TopicExegesis {
   @override
   ExegesisSource get source;
   @override
-  String get subject; // the topic name e.g. "Grace"
+  String get subject;
+  @override // the topic name e.g. "Grace"
 // ── Layer 1: The Orienting Insight ──
-  @override
-  String get bigPicture; // ── Concept Definition (Hebrew + Greek) ──
-  @override
-  ConceptDefinition get conceptDefinition; // ── First Mention ──
-  @override
-  TopicFirstMention get firstMention; // ── 3–5 Defining Passage Studies ──
-  @override
-  List<DefiningPassage> get definingPassages; // ── Canonical Progression ──
-  @override
-  String get canonicalProgression; // ── Common Distortions ──
-  @override
-  List<Distortion>
-      get commonDistortions; // ── Layer 12: Implied Theological Claim ──
-  @override
-  String get impliedTheologicalClaim; // ── Layer 13: What This Cannot Mean ──
-  @override
-  List<Misreading> get whatItCannotMean; // ── Layer 14: From Text to Life ──
-  @override
-  String get fromTextToLife; // ── Final: Something To Sit With ──
-  @override
-  String get somethingToSitWith; // ── Metadata ──
-  @override
+  String get bigPicture;
+  @override // ── Concept Definition (Hebrew + Greek) ──
+  ConceptDefinition get conceptDefinition;
+  @override // ── First Mention ──
+  TopicFirstMention get firstMention;
+  @override // ── 3–5 Defining Passage Studies ──
+  List<DefiningPassage> get definingPassages;
+  @override // ── Canonical Progression ──
+  String get canonicalProgression;
+  @override // ── Common Distortions ──
+  List<Distortion> get commonDistortions;
+  @override // ── Layer 12: Implied Theological Claim ──
+  String get impliedTheologicalClaim;
+  @override // ── Layer 13: What This Cannot Mean ──
+  List<Misreading> get whatItCannotMean;
+  @override // ── Layer 14: From Text to Life ──
+  String get fromTextToLife;
+  @override // ── Final: Something To Sit With ──
+  String get somethingToSitWith;
+  @override // ── Metadata ──
   String? get contextSummary;
   @override
   DateTime get createdAt;
-
-  /// Create a copy of TopicExegesis
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$TopicExegesisImplCopyWith<_$TopicExegesisImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

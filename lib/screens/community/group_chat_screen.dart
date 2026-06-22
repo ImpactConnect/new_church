@@ -245,9 +245,24 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   final imageUrl = data['imageUrl'] ?? '';
                   final memberIds = List<String>.from(data['members'] ?? []);
 
-                  return ListView(
-                    controller: scrollController,
-                    children: [
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: _firestore.collection('members').snapshots(),
+                    builder: (context, memberSnap) {
+                      if (!memberSnap.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      final members = memberSnap.data!.docs.where((doc) {
+                        final mData = doc.data() as Map<String, dynamic>;
+                        final List<dynamic> mGroups = mData['churchGroups'] ?? (mData['churchGroup'] != null && mData['churchGroup'].toString().isNotEmpty ? [mData['churchGroup']] : []);
+                        final isManuallyAdded = memberIds.contains(doc.id);
+                        final isInChurchGroup = mGroups.contains(name);
+                        return isManuallyAdded || isInChurchGroup;
+                      }).toList();
+
+                      return ListView(
+                        controller: scrollController,
+                        children: [
                       // Header Drag indicator
                       Center(
                         child: Container(
@@ -283,7 +298,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Group · ${memberIds.length} members',
+                              'Group · ${members.length} members',
                               style: const TextStyle(fontSize: 14, color: Color(0xFF667781)),
                             ),
                           ],
@@ -322,42 +337,32 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${memberIds.length} Members',
+                              '${members.length} Members',
                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF667781)),
                             ),
                             const Divider(),
-                            StreamBuilder<QuerySnapshot>(
-                              stream: _firestore.collection('members').snapshots(),
-                              builder: (context, memberSnap) {
-                                if (!memberSnap.hasData) {
-                                  return const Center(child: CircularProgressIndicator());
-                                }
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: members.length,
+                              itemBuilder: (context, index) {
+                                final mData = members[index].data() as Map<String, dynamic>;
+                                final mName = mData['name'] ?? 'Unknown Member';
+                                final List<dynamic> mGroups = mData['churchGroups'] ?? (mData['churchGroup'] != null && mData['churchGroup'].toString().isNotEmpty ? [mData['churchGroup']] : []);
+                                final String mGroup = mGroups.isNotEmpty ? mGroups.join(', ') : '';
+                                final isMe = members[index].id == widget.currentUser.id;
 
-                                final members = memberSnap.data!.docs.where((doc) => memberIds.contains(doc.id)).toList();
-
-                                return ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: members.length,
-                                  itemBuilder: (context, index) {
-                                    final mData = members[index].data() as Map<String, dynamic>;
-                                    final mName = mData['name'] ?? 'Unknown Member';
-                                    final mGroup = mData['churchGroup'] ?? '';
-                                    final isMe = members[index].id == widget.currentUser.id;
-
-                                    return ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: CircleAvatar(
-                                        backgroundColor: const Color(0xFFDFE5E7),
-                                        child: Text(mName[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
-                                      ),
-                                      title: Text(
-                                        isMe ? '$mName (You)' : mName,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF111B21)),
-                                      ),
-                                      subtitle: mGroup.isNotEmpty ? Text(mGroup) : null,
-                                    );
-                                  },
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: CircleAvatar(
+                                    backgroundColor: const Color(0xFFDFE5E7),
+                                    child: Text(mName[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
+                                  ),
+                                  title: Text(
+                                    isMe ? '$mName (You)' : mName,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF111B21)),
+                                  ),
+                                  subtitle: mGroup.isNotEmpty ? Text(mGroup) : null,
                                 );
                               },
                             ),
@@ -367,8 +372,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                     ],
                   );
                 },
-              ),
-            );
+              );
+            },
+          ),
+        );
           },
         );
       },

@@ -20,8 +20,6 @@ final bibleRepositoryProvider = Provider<BibleRepository>.internal(
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef BibleRepositoryRef = ProviderRef<BibleRepository>;
 String _$aiServiceHash() => r'7ba18e895601e5956a96c94ec9f62f4783262f51';
 
@@ -36,8 +34,6 @@ final aiServiceProvider = Provider<AiService>.internal(
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef AiServiceRef = ProviderRef<AiService>;
 String _$aiExplanationServiceHash() =>
     r'743275348294bd38cec14bad2c0ef67f84cbd19c';
@@ -54,8 +50,6 @@ final aiExplanationServiceProvider = Provider<AIExplanationService>.internal(
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef AiExplanationServiceRef = ProviderRef<AIExplanationService>;
 String _$bibleBooksHash() => r'66b58d7100914366c6ce9075a30e6da260ea516f';
 
@@ -70,8 +64,6 @@ final bibleBooksProvider = AutoDisposeFutureProvider<List<BibleBook>>.internal(
   allTransitiveDependencies: null,
 );
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 typedef BibleBooksRef = AutoDisposeFutureProviderRef<List<BibleBook>>;
 String _$bibleChapterHash() => r'498aa1c5480f8df9216269ab537de6d3d77ce59a';
 
@@ -221,8 +213,6 @@ class BibleChapterProvider extends AutoDisposeFutureProvider<BibleChapter?> {
   }
 }
 
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
 mixin BibleChapterRef on AutoDisposeFutureProviderRef<BibleChapter?> {
   /// The parameter `bookId` of this provider.
   String get bookId;
@@ -276,4 +266,4 @@ final bibleVersionNotifierProvider =
 
 typedef _$BibleVersionNotifier = AutoDisposeNotifier<BibleVersion>;
 // ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/models/linked_content_reference.dart';
+import 'package:church_mobile/features/notes/presentation/widgets/add_to_note_dialog.dart' as real;
+import 'package:church_mobile/features/notes/data/models/linked_content_reference.dart' as real_model;
 
-/// Dialog for adding formatted content (e.g., a Bible verse) to an existing standalone note.
-/// This is a stub implementation — shows a snackbar confirmation.
+/// Wrapper dialog that routes the request to the real standalone AddToNoteDialog
 class AddToNoteDialog extends StatelessWidget {
   final String formattedContent;
   final LinkedContentReference linkedContentReference;
@@ -17,40 +18,47 @@ class AddToNoteDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Save to Note'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            suggestedTitle,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            formattedContent,
-            style: const TextStyle(fontStyle: FontStyle.italic),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Saved to note')),
-            );
-          },
-          child: const Text('Save'),
-        ),
-      ],
+    // Map the old LinkedContentReference to the new one safely
+    real_model.LinkedContentReference realRef;
+    try {
+      final typeName = linkedContentReference.type.toString().split('.').last;
+      real_model.LinkedContentType realType;
+      if (typeName == 'verse') {
+        realType = real_model.LinkedContentType.verse;
+      } else if (typeName == 'chat') {
+        realType = real_model.LinkedContentType.chat;
+      } else if (typeName == 'exegesis') {
+        realType = real_model.LinkedContentType.exegesis;
+      } else {
+        realType = real_model.LinkedContentType.verse; // fallback
+      }
+
+      realRef = real_model.LinkedContentReference(
+        id: linkedContentReference.id,
+        type: realType,
+        sourceId: linkedContentReference.sourceId,
+        sourceReference: linkedContentReference.sourceReference,
+        linkedAt: linkedContentReference.linkedAt,
+        metadata: linkedContentReference.metadata != null
+            ? Map<String, dynamic>.from(linkedContentReference.metadata)
+            : {},
+      );
+    } catch (_) {
+      // Fallback reference if parsing fails
+      realRef = real_model.LinkedContentReference(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: real_model.LinkedContentType.verse,
+        sourceId: 'unknown',
+        sourceReference: suggestedTitle,
+        linkedAt: DateTime.now(),
+        metadata: {},
+      );
+    }
+
+    return real.AddToNoteDialog(
+      formattedContent: formattedContent,
+      linkedContentReference: realRef,
+      suggestedTitle: suggestedTitle,
     );
   }
 }

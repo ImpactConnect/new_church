@@ -285,19 +285,20 @@ class _MembersTabState extends State<_MembersTab> {
                   final name = (data['name'] ?? '').toString().toLowerCase();
                   final email = (data['email'] ?? '').toString().toLowerCase();
                   final phone = (data['phoneNumber'] ?? '').toString().toLowerCase();
-                  final group = (data['churchGroup'] ?? '').toString().toLowerCase();
+                  final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
+                  final groupsStr = groupsList.join(', ').toLowerCase();
                   return name.contains(_searchQuery) ||
                          email.contains(_searchQuery) ||
                          phone.contains(_searchQuery) ||
-                         group.contains(_searchQuery);
+                         groupsStr.contains(_searchQuery);
                 }).toList();
               }
 
               if (_selectedGroupFilter != 'All') {
                 docs = docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  final group = data['churchGroup'] ?? '';
-                  return group == _selectedGroupFilter;
+                  final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
+                  return groupsList.contains(_selectedGroupFilter);
                 }).toList();
               }
 
@@ -313,7 +314,8 @@ class _MembersTabState extends State<_MembersTab> {
                   final name = data['name'] ?? 'Unknown';
                   final email = data['email'] ?? '—';
                   final phone = data['phoneNumber'] ?? '';
-                  final group = data['churchGroup'] ?? '';
+                  final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
+                  final group = groupsList.join(', ');
                   
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
@@ -378,7 +380,7 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
   late TextEditingController _phoneCtrl;
   late TextEditingController _addressCtrl;
   late TextEditingController _occupationCtrl;
-  late TextEditingController _groupCtrl;
+  List<String> _selectedGroups = [];
   late TextEditingController _genderCtrl;
   late TextEditingController _maritalStatusCtrl;
   late TextEditingController _spouseNameCtrl;
@@ -393,7 +395,11 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
     _phoneCtrl = TextEditingController(text: data['phoneNumber'] ?? '');
     _addressCtrl = TextEditingController(text: data['address'] ?? '');
     _occupationCtrl = TextEditingController(text: data['occupation'] ?? '');
-    _groupCtrl = TextEditingController(text: data['churchGroup'] ?? '');
+    if (data['churchGroups'] != null) {
+      _selectedGroups = List<String>.from(data['churchGroups']);
+    } else if (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty) {
+      _selectedGroups = [data['churchGroup']];
+    }
     _genderCtrl = TextEditingController(text: data['gender'] ?? '');
     _maritalStatusCtrl = TextEditingController(text: data['maritalStatus'] ?? '');
     _spouseNameCtrl = TextEditingController(text: data['spouseName'] ?? '');
@@ -407,7 +413,6 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
     _occupationCtrl.dispose();
-    _groupCtrl.dispose();
     _genderCtrl.dispose();
     _maritalStatusCtrl.dispose();
     _spouseNameCtrl.dispose();
@@ -424,13 +429,29 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
         'phoneNumber': _phoneCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
         'occupation': _occupationCtrl.text.trim(),
-        'churchGroup': _groupCtrl.text.trim(),
+        'churchGroups': _selectedGroups,
         'gender': _genderCtrl.text.trim(),
         'maritalStatus': _maritalStatusCtrl.text.trim(),
         'spouseName': _spouseNameCtrl.text.trim(),
         'schoolName': _schoolNameCtrl.text.trim(),
         'stateOfOrigin': _stateOfOriginCtrl.text.trim(),
       });
+
+      // Sync member's group chat enrollments
+      try {
+        final allGroups = await FirebaseFirestore.instance.collection('community_groups').get();
+        for (final doc in allGroups.docs) {
+          final groupName = doc['name'];
+          if (_selectedGroups.contains(groupName)) {
+            await doc.reference.update({'members': FieldValue.arrayUnion([widget.memberDoc.id])});
+          } else {
+            await doc.reference.update({'members': FieldValue.arrayRemove([widget.memberDoc.id])});
+          }
+        }
+      } catch (e) {
+        print('Error syncing group membership: $e');
+      }
+
       setState(() {
         _isEditing = false;
         _saving = false;
@@ -475,9 +496,9 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Church Group', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text('Church Groups', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             const SizedBox(height: 2),
-            Text(_groupCtrl.text.isNotEmpty ? _groupCtrl.text : '—', style: const TextStyle(fontSize: 14)),
+            Text(_selectedGroups.isNotEmpty ? _selectedGroups.join(', ') : '—', style: const TextStyle(fontSize: 14)),
           ],
         ),
       );
@@ -488,29 +509,34 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('church_groups').orderBy('name').snapshots(),
         builder: (context, snap) {
-          List<String> groups = ['None'];
+          List<String> groups = [];
           if (snap.hasData) {
             groups.addAll(snap.data!.docs.map((d) => d['name'] as String).toList());
           }
-          final currentVal = _groupCtrl.text.trim();
-          if (currentVal.isNotEmpty && !groups.contains(currentVal)) {
-            groups.add(currentVal);
-          }
-          final selected = currentVal.isEmpty ? 'None' : currentVal;
-
-          return DropdownButtonFormField<String>(
-            value: selected,
-            decoration: const InputDecoration(
-              labelText: 'Church Group',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-            items: groups.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-            onChanged: (v) {
-              setState(() {
-                _groupCtrl.text = v == 'None' ? '' : v!;
-              });
-            },
+          if (groups.isEmpty) return const Text('No church groups available', style: TextStyle(color: Colors.grey));
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Church Groups', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: groups.map((g) {
+                  final isSelected = _selectedGroups.contains(g);
+                  return FilterChip(
+                    label: Text(g),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) _selectedGroups.add(g);
+                        else _selectedGroups.remove(g);
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
           );
         },
       ),
@@ -642,7 +668,13 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
                                           _phoneCtrl.text = data['phoneNumber'] ?? '';
                                           _addressCtrl.text = data['address'] ?? '';
                                           _occupationCtrl.text = data['occupation'] ?? '';
-                                          _groupCtrl.text = data['churchGroup'] ?? '';
+                                          if (data['churchGroups'] != null) {
+                                            _selectedGroups = List<String>.from(data['churchGroups']);
+                                          } else if (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty) {
+                                            _selectedGroups = [data['churchGroup']];
+                                          } else {
+                                            _selectedGroups = [];
+                                          }
                                           _genderCtrl.text = data['gender'] ?? '';
                                           _maritalStatusCtrl.text = data['maritalStatus'] ?? '';
                                           _spouseNameCtrl.text = data['spouseName'] ?? '';
@@ -842,7 +874,7 @@ class _ManageOfficialsDialogState extends State<_ManageOfficialsDialog> {
       'name': _selectedMember!['name'],
       'phoneNumber': _selectedMember!['phoneNumber'],
       'role': _roleCtrl.text.trim(),
-      'department': _deptCtrl.text.trim().isNotEmpty ? _deptCtrl.text.trim() : (_selectedMember!['churchGroup'] ?? ''),
+      'department': _deptCtrl.text.trim().isNotEmpty ? _deptCtrl.text.trim() : ((_selectedMember!['churchGroups'] ?? []).join(', ')),
       'addedAt': FieldValue.serverTimestamp(),
     });
     
@@ -879,7 +911,7 @@ class _ManageOfficialsDialogState extends State<_ManageOfficialsDialog> {
                       setState(() {
                         _selectedMember = data;
                         _selectedMemberId = docs[i].id;
-                        _deptCtrl.text = data['churchGroup'] ?? '';
+                        _deptCtrl.text = (data['churchGroups'] ?? []).join(', ');
                       });
                       Navigator.pop(ctx);
                     },
@@ -1803,19 +1835,26 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
   Future<void> _addByChurchGroup() async {
     if (_selectedChurchGroup == null) return;
     try {
-      final snap = await FirebaseFirestore.instance
+      final snapNew = await FirebaseFirestore.instance
+          .collection('members')
+          .where('churchGroups', arrayContains: _selectedChurchGroup)
+          .get();
+
+      final snapOld = await FirebaseFirestore.instance
           .collection('members')
           .where('churchGroup', isEqualTo: _selectedChurchGroup)
           .get();
 
-      if (snap.docs.isEmpty) {
+      final allDocs = [...snapNew.docs, ...snapOld.docs];
+
+      if (allDocs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No members found in church group "$_selectedChurchGroup"')),
         );
         return;
       }
 
-      final memberIds = snap.docs.map((doc) => doc.id).toList();
+      final memberIds = allDocs.map((doc) => doc.id).toSet().toList();
       setState(() {
         _selectedMemberIds.addAll(memberIds);
       });
@@ -1830,14 +1869,21 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
   Future<void> _removeByChurchGroup() async {
     if (_selectedChurchGroup == null) return;
     try {
-      final snap = await FirebaseFirestore.instance
+      final snapNew = await FirebaseFirestore.instance
+          .collection('members')
+          .where('churchGroups', arrayContains: _selectedChurchGroup)
+          .get();
+
+      final snapOld = await FirebaseFirestore.instance
           .collection('members')
           .where('churchGroup', isEqualTo: _selectedChurchGroup)
           .get();
 
-      if (snap.docs.isEmpty) return;
+      final allDocs = [...snapNew.docs, ...snapOld.docs];
 
-      final memberIds = snap.docs.map((doc) => doc.id).toList();
+      if (allDocs.isEmpty) return;
+
+      final memberIds = allDocs.map((doc) => doc.id).toSet().toList();
       setState(() {
         _selectedMemberIds.removeAll(memberIds);
       });
@@ -2112,8 +2158,9 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
                                     final data = doc.data() as Map<String, dynamic>;
                                     final name = (data['name'] ?? '').toString().toLowerCase();
                                     final email = (data['email'] ?? '').toString().toLowerCase();
-                                    final group = (data['churchGroup'] ?? '').toString().toLowerCase();
-                                    return name.contains(_searchQuery) || email.contains(_searchQuery) || group.contains(_searchQuery);
+                                    final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
+                                    final groupStr = groupsList.join(', ').toLowerCase();
+                                    return name.contains(_searchQuery) || email.contains(_searchQuery) || groupStr.contains(_searchQuery);
                                   }).toList();
                                 }
 
@@ -2129,7 +2176,8 @@ class _GroupFormDialogState extends State<_GroupFormDialog> {
                                     final memberId = mDoc.id;
                                     final name = mData['name'] ?? 'Unknown';
                                     final email = mData['email'] ?? '';
-                                    final churchGroup = mData['churchGroup'] ?? '';
+                                    final groupsList = mData['churchGroups'] ?? (mData['churchGroup'] != null && mData['churchGroup'].toString().isNotEmpty ? [mData['churchGroup']] : []);
+                                    final churchGroup = groupsList.join(', ');
                                     final isAssigned = _selectedMemberIds.contains(memberId);
 
                                     return Card(

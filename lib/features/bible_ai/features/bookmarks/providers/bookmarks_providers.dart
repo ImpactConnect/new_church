@@ -10,10 +10,11 @@ part 'bookmarks_providers.g.dart';
 @riverpod
 class BookmarksNotifier extends _$BookmarksNotifier {
   static const _prefsKey = 'regular_bookmarks';
+  Future<void>? _loadFuture;
 
   @override
   AsyncValue<List<BookmarkModel>> build() {
-    _loadBookmarks();
+    _loadFuture = _loadBookmarks();
     return const AsyncLoading();
   }
 
@@ -44,6 +45,9 @@ class BookmarksNotifier extends _$BookmarksNotifier {
   }
 
   Future<void> addBookmark(BookmarkModel bookmark) async {
+    if (_loadFuture != null) {
+      await _loadFuture;
+    }
     final current = state.value ?? [];
     if (current.any((b) => b.id == bookmark.id)) return;
     final updated = [...current, bookmark];
@@ -52,6 +56,9 @@ class BookmarksNotifier extends _$BookmarksNotifier {
   }
 
   Future<void> deleteBookmark(String id) async {
+    if (_loadFuture != null) {
+      await _loadFuture;
+    }
     final current = state.value ?? [];
     final updated = current.where((b) => b.id != id).toList();
     state = AsyncData(updated);

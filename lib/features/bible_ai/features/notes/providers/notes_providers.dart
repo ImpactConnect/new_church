@@ -9,10 +9,11 @@ part 'notes_providers.g.dart';
 @riverpod
 class NotesNotifier extends _$NotesNotifier {
   static const _prefsKey = 'bible_notes';
+  Future<void>? _loadFuture;
 
   @override
   AsyncValue<List<NoteModel>> build() {
-    _loadNotes();
+    _loadFuture = _loadNotes();
     return const AsyncLoading();
   }
 
@@ -43,6 +44,9 @@ class NotesNotifier extends _$NotesNotifier {
   }
 
   Future<void> addNote(NoteModel note) async {
+    if (_loadFuture != null) {
+      await _loadFuture;
+    }
     final current = state.value ?? [];
     if (current.any((n) => n.id == note.id)) return;
     final updated = [...current, note];
@@ -51,6 +55,9 @@ class NotesNotifier extends _$NotesNotifier {
   }
 
   Future<void> deleteNote(String id) async {
+    if (_loadFuture != null) {
+      await _loadFuture;
+    }
     final current = state.value ?? [];
     final updated = current.where((n) => n.id != id).toList();
     state = AsyncData(updated);

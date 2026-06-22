@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/routes.dart';
 import 'chapter_screen.dart';
+import '../../../../search/screens/search_screen.dart';
 import '../../../config/app_colors.dart';
 import '../../../data/models/bible/bible_book.dart';
 import '../../../data/repositories/user_settings_repository.dart';
@@ -183,7 +184,12 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {}, // Search not yet integrated
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SearchScreen()),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
@@ -736,7 +742,7 @@ class _BookmarksSection extends ConsumerWidget {
                 return dateB.compareTo(dateA);
               });
 
-            final display = sorted.take(4).toList();
+            final display = sorted.take(3).toList();
 
             return Column(
               children: display.map((bm) {
@@ -791,6 +797,7 @@ class _BookmarksSection extends ConsumerWidget {
                           builder: (_) => ChapterScreen(
                             bookId: (bm as dynamic).bookId,
                             chapterNumber: (bm as dynamic).chapterNumber,
+                            initialVerseNumber: (bm as dynamic).verseNumber,
                           ),
                         ),
                       );
@@ -857,6 +864,7 @@ class _NotesSection extends ConsumerWidget {
                     builder: (_) => ChapterScreen(
                       bookId: note.bookId,
                       chapterNumber: note.chapterNumber,
+                      initialVerseNumber: note.verseNumber,
                     ),
                   ),
                 ),
@@ -1258,6 +1266,7 @@ class _AllBookmarksSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final bookmarksAsync = ref.watch(bookmarksNotifierProvider);
     final aiBookmarksAsync = ref.watch(aiContentBookmarksNotifierProvider);
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -1285,54 +1294,102 @@ class _AllBookmarksSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: aiBookmarksAsync.when(
+            child: bookmarksAsync.when(
               data: (bookmarks) {
-                if (bookmarks.isEmpty) {
-                  return const Center(child: Text('No bookmarks saved.'));
-                }
-                final sorted = [...bookmarks]
-                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  itemCount: sorted.length,
-                  itemBuilder: (context, index) {
-                    final bm = sorted[index];
-                    return _ItemTile(
-                      leading: Icons.bookmark_rounded,
-                      leadingColor: Theme.of(context).primaryColor,
-                      title: '${bm.bookName} ${bm.chapterNumber}:${bm.verseNumber}',
-                      subtitle: bm.verseText.isNotEmpty
-                          ? bm.verseText
-                          : bm.feature,
-                      onTap: () {
-                        Navigator.pop(context); // Close sheet
-                        // Navigate to VerseAiResultsScreen with loaded feature
-                        try {
-                          final dataJson = jsonDecode(bm.analysisJson);
-                          VerseFeature feature;
-                          try {
-                            feature = VerseFeature.values.byName(bm.feature);
-                          } catch (_) {
-                            feature = VerseFeature.explain;
-                          }
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => VerseAiResultsScreen(
-                                bookName: bm.bookName,
-                                chapterNumber: bm.chapterNumber,
-                                verseNumber: bm.verseNumber,
-                                verseText: bm.verseText,
-                                initialMode: feature,
-                                cachedAnalysis: dataJson,
-                              ),
-                            ),
-                          );
-                        } catch (e) {
-                          // Ignore
+                return aiBookmarksAsync.when(
+                  data: (aiBookmarks) {
+                    final allBookmarks = [...bookmarks, ...aiBookmarks];
+                    if (allBookmarks.isEmpty) {
+                      return const Center(child: Text('No bookmarks saved.'));
+                    }
+                    final sorted = [...allBookmarks]
+                      ..sort((a, b) {
+                        DateTime dateA = DateTime.now();
+                        DateTime dateB = DateTime.now();
+
+                        if (a is AiContentBookmarkModel) {
+                          dateA = a.createdAt;
+                        } else {
+                          dateA = (a as dynamic).createdAt;
                         }
+
+                        if (b is AiContentBookmarkModel) {
+                          dateB = b.createdAt;
+                        } else {
+                          dateB = (b as dynamic).createdAt;
+                        }
+
+                        return dateB.compareTo(dateA);
+                      });
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: sorted.length,
+                      itemBuilder: (context, index) {
+                        final bm = sorted[index];
+                        final navigator = Navigator.of(context);
+                        if (bm is AiContentBookmarkModel) {
+                          return _ItemTile(
+                            leading: Icons.auto_awesome,
+                            leadingColor: Theme.of(context).primaryColor,
+                            title: bm.displayTitle,
+                            subtitle: bm.verseText.isNotEmpty
+                                ? bm.verseText
+                                : bm.feature,
+                            onTap: () {
+                              navigator.pop(); // Close sheet
+                              try {
+                                final dataJson = jsonDecode(bm.analysisJson);
+                                VerseFeature feature;
+                                try {
+                                  feature = VerseFeature.values.byName(bm.feature);
+                                } catch (_) {
+                                  feature = VerseFeature.explain;
+                                }
+                                navigator.push(
+                                  MaterialPageRoute(
+                                    builder: (_) => VerseAiResultsScreen(
+                                      bookName: bm.bookName,
+                                      chapterNumber: bm.chapterNumber,
+                                      verseNumber: bm.verseNumber,
+                                      verseText: bm.verseText,
+                                      initialMode: feature,
+                                      cachedAnalysis: dataJson,
+                                    ),
+                                  ),
+                                );
+                              } catch (e) {
+                                // Ignore
+                              }
+                            },
+                          );
+                        }
+
+                        // Regular bookmark
+                        final regularBm = bm as dynamic;
+                        return _ItemTile(
+                          leading: Icons.bookmark_rounded,
+                          leadingColor: Colors.amber,
+                          title: regularBm.reference,
+                          subtitle: regularBm.verseText,
+                          onTap: () {
+                            navigator.pop(); // Close sheet
+                            navigator.push(
+                              MaterialPageRoute(
+                                builder: (_) => ChapterScreen(
+                                  bookId: regularBm.bookId,
+                                  chapterNumber: regularBm.chapterNumber,
+                                  initialVerseNumber: regularBm.verseNumber,
+                                ),
+                              ),
+                            );
+                          },
+                        );
                       },
                     );
                   },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, _) => Center(child: Text(err.toString())),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -1401,12 +1458,14 @@ class _AllNotesSheet extends ConsumerWidget {
                           ? '${note.content.substring(0, 80)}...'
                           : note.content,
                       onTap: () {
-                        Navigator.pop(context); // Close sheet
-                        Navigator.of(context).push(
+                        final navigator = Navigator.of(context);
+                        navigator.pop(); // Close sheet
+                        navigator.push(
                           MaterialPageRoute(
                             builder: (_) => ChapterScreen(
                               bookId: note.bookId,
                               chapterNumber: note.chapterNumber,
+                              initialVerseNumber: note.verseNumber,
                             ),
                           ),
                         );

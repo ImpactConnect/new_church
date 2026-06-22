@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import '../providers/theme_provider.dart';
 import '../services/storage_manager.dart';
+import '../services/community_auth_service.dart';
+import '../screens/community/community_login_screen.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'help_support_screen.dart';
 
@@ -18,12 +20,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _appSize = '...';
   String _cacheSize = '...';
   bool _isLoading = true;
+  bool _isLoggedIn = false;
   final String _appVersion = '';
 
   @override
   void initState() {
     super.initState();
     _loadInfo();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final isLoggedIn = await CommunityAuthService().isUserLoggedIn();
+    if (mounted) {
+      setState(() => _isLoggedIn = isLoggedIn);
+    }
   }
 
   Future<void> _loadInfo() async {
@@ -91,6 +102,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ? const Center(child: CircularProgressIndicator())
             : ListView(
                 children: [
+                  // Account Section (Moved to top)
+                  _buildSectionHeader('ACCOUNT'),
+                  if (_isLoggedIn)
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                      onTap: _showSignOutDialog,
+                    )
+                  else
+                    ListTile(
+                      leading: const Icon(Icons.login, color: Colors.blue),
+                      title: const Text('Sign In', style: TextStyle(color: Colors.blue)),
+                      onTap: () {
+                         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CommunityLoginScreen())).then((_) => _checkLoginStatus());
+                      },
+                    ),
+                  _buildDivider(),
+
                   // Appearance Section
                   _buildSectionHeader('APPEARANCE'),
                   ListTile(
@@ -163,12 +192,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _buildDivider(),
 
-                  // Account Section
-                  _buildSectionHeader('ACCOUNT'),
                   ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-                    onTap: _showSignOutDialog,
+                    leading: const Icon(Icons.description_outlined),
+                    title: const Text('Terms of Service'),
+                    onTap: () => _launchURL('https://yourchurch.com/terms'),
                   ),
                 ],
               ),
@@ -196,9 +223,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true) {
+      await CommunityAuthService().signOut();
       await FirebaseAuth.instance.signOut();
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const CommunityLoginScreen()),
+          (route) => route.settings.name == '/' || route.isFirst,
+        );
       }
     }
   }

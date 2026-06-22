@@ -79,7 +79,7 @@ class _AddMemberFormState extends State<AddMemberForm> {
   DateTime? _dob;
   String _gender = 'Male';
   String _maritalStatus = 'Single';
-  String? _selectedGroup;
+  List<String> _selectedGroups = [];
   bool _isStudent = false;
   bool _saving = false;
   bool _uploadingImage = false;
@@ -156,11 +156,32 @@ class _AddMemberFormState extends State<AddMemberForm> {
         'occupation': _isStudent ? 'Student' : _professionCtrl.text.trim(),
         'schoolName': _isStudent ? _schoolCtrl.text.trim() : null,
         'stateOfOrigin': _stateCtrl.text.trim(),
-        'churchGroup': _selectedGroup ?? '',
+        'churchGroups': _selectedGroups,
         'photoUrl': _photoUrlCtrl.text.trim().isNotEmpty ? _photoUrlCtrl.text.trim() : null,
         'birthDate': Timestamp.fromDate(_dob!),
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      for (final group in _selectedGroups) {
+        try {
+          final groupsSnap = await FirebaseFirestore.instance
+              .collection('community_groups')
+              .where('name', isEqualTo: group)
+              .limit(1)
+              .get();
+              
+          if (groupsSnap.docs.isNotEmpty) {
+            await FirebaseFirestore.instance
+                .collection('community_groups')
+                .doc(groupsSnap.docs.first.id)
+                .update({
+              'members': FieldValue.arrayUnion([uid])
+            });
+          }
+        } catch (e) {
+          print('Error assigning to community group $group: $e');
+        }
+      }
 
       setState(() {
         _genUsername = username;
@@ -179,7 +200,7 @@ class _AddMemberFormState extends State<AddMemberForm> {
       _dob = null;
       _gender = 'Male';
       _maritalStatus = 'Single';
-      _selectedGroup = null;
+      _selectedGroups = [];
       _isStudent = false;
       _genUsername = null;
       _genPassword = null;
@@ -282,18 +303,37 @@ class _AddMemberFormState extends State<AddMemberForm> {
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance.collection('church_groups').orderBy('name').snapshots(),
                   builder: (context, snap) {
-                    List<String> groups = ['None'];
+                    List<String> groups = [];
                     if (snap.hasData) {
                       groups.addAll(snap.data!.docs.map((d) => d['name'] as String).toList());
                     }
-                    if (_selectedGroup != null && !groups.contains(_selectedGroup)) {
-                      groups.add(_selectedGroup!);
-                    }
-                    return DropdownButtonFormField<String>(
-                      value: _selectedGroup ?? 'None',
-                      decoration: _dec('Church Group / Unit'),
-                      items: groups.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-                      onChanged: (v) => setState(() => _selectedGroup = v == 'None' ? null : v),
+                    if (groups.isEmpty) return const Text('No church groups available', style: TextStyle(color: Colors.grey));
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Church Groups / Units:', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: groups.map((g) {
+                            final isSelected = _selectedGroups.contains(g);
+                            return FilterChip(
+                              label: Text(g),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedGroups.add(g);
+                                  } else {
+                                    _selectedGroups.remove(g);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     );
                   },
                 ),

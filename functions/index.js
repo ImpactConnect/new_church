@@ -106,3 +106,27 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
 
     return null;
 });
+
+// 3. Process Admin Tasks (e.g., Password Reset)
+exports.processAdminTasks = functions.firestore
+  .document('admin_tasks/{docId}')
+  .onCreate(async (snap, context) => {
+    const data = snap.data();
+
+    if (data.type === 'password_reset') {
+      try {
+        const userRecord = await admin.auth().getUserByEmail(data.email);
+        await admin.auth().updateUser(userRecord.uid, {
+          password: data.newPassword
+        });
+        
+        console.log(`Successfully updated password for user: ${data.email}`);
+        return snap.ref.update({ status: 'completed', completedAt: admin.firestore.FieldValue.serverTimestamp() });
+      } catch (error) {
+        console.error('Error updating user password:', error);
+        return snap.ref.update({ status: 'failed', error: error.toString() });
+      }
+    }
+    
+    return null;
+});

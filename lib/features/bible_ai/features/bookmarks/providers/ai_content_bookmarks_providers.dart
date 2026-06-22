@@ -9,10 +9,11 @@ part 'ai_content_bookmarks_providers.g.dart';
 @riverpod
 class AiContentBookmarksNotifier extends _$AiContentBookmarksNotifier {
   static const _prefsKey = 'ai_content_bookmarks';
+  Future<void>? _loadFuture;
 
   @override
   AsyncValue<List<AiContentBookmarkModel>> build() {
-    _loadBookmarks();
+    _loadFuture = _loadBookmarks();
     return const AsyncLoading();
   }
 
@@ -43,6 +44,9 @@ class AiContentBookmarksNotifier extends _$AiContentBookmarksNotifier {
   }
 
   Future<void> addBookmark(AiContentBookmarkModel bookmark) async {
+    if (_loadFuture != null) {
+      await _loadFuture;
+    }
     final current = state.value ?? [];
     if (current.any((b) => b.id == bookmark.id)) return;
     final updated = [...current, bookmark];
@@ -51,6 +55,9 @@ class AiContentBookmarksNotifier extends _$AiContentBookmarksNotifier {
   }
 
   Future<void> deleteBookmark(String id) async {
+    if (_loadFuture != null) {
+      await _loadFuture;
+    }
     final current = state.value ?? [];
     final updated = current.where((b) => b.id != id).toList();
     state = AsyncData(updated);

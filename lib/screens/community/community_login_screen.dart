@@ -185,8 +185,34 @@ class _CommunityLoginScreenState extends State<CommunityLoginScreen> {
 
               // Forgot Password
               TextButton(
-                onPressed: () {
-                  // TODO: Implement forgot password functionality
+                onPressed: () async {
+                  final username = _usernameController.text.trim();
+                  if (username.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter your username first.')),
+                    );
+                    return;
+                  }
+
+                  setState(() => _isLoading = true);
+                  try {
+                    await _authService.sendPasswordResetEmail(username);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Password reset link sent to your email.')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => _isLoading = false);
+                    }
+                  }
                 },
                 child: const Text('Forgot Password?'),
               ),

@@ -9,6 +9,10 @@ import '../../widgets/bottom_nav_bar.dart';
 import 'community_post_details_screen.dart';
 import 'create_community_post_screen.dart';
 import 'group_chat_screen.dart';
+import 'private_chat_screen.dart';
+import '../members/members_directory_screen.dart';
+import '../../models/member.dart';
+import '../../widgets/members/member_details_dialog.dart';
 
 class CommunityPostsScreen extends StatefulWidget {
   const CommunityPostsScreen({Key? key, required this.currentUser})
@@ -31,7 +35,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
   void initState() {
     super.initState();
     _postsStream = _postService.getPosts();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -111,6 +115,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                   Tab(text: 'Feeds'),
                   Tab(text: 'Questions'),
                   Tab(text: 'My Groups'),
+                  Tab(text: 'Chats'),
                 ],
               ),
             ),
@@ -178,6 +183,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                     _buildFeedsTab(feeds),
                     _buildQuestionsTab(questions),
                     _buildGroupsTab(),
+                    _buildChatsTab(),
                   ],
                 );
               },
@@ -189,10 +195,15 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
           ? null
           : FloatingActionButton(
               onPressed: () {
-                if (_tabController.index == 0) _showCreatePostScreen(PostType.post);
-                else if (_tabController.index == 1) _showCreatePostScreen(PostType.question);
+                if (_tabController.index == 0) {
+                  _showCreatePostScreen(PostType.post);
+                } else if (_tabController.index == 1) {
+                  _showCreatePostScreen(PostType.question);
+                } else if (_tabController.index == 3) {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const MembersDirectoryScreen()));
+                }
               },
-              child: const Icon(Icons.add),
+              child: Icon(_tabController.index == 3 ? Icons.chat : Icons.add),
             ),
       bottomNavigationBar: const BottomNavBar(currentIndex: 3), // Set to Community index
     );
@@ -267,59 +278,75 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
               // Header: Avatar, Name, Time
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: theme.primaryColor.withValues(alpha: 0.2),
-                      child: Text(
-                        post.authorName.isNotEmpty ? post.authorName[0].toUpperCase() : 'U',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                child: GestureDetector(
+                  onTap: () async {
+                    try {
+                      final doc = await FirebaseFirestore.instance.collection('members').doc(post.authorId).get();
+                      if (doc.exists && mounted) {
+                        final member = Member.fromFirestore(doc);
+                        showDialog(
+                          context: context,
+                          builder: (_) => MemberDetailsDialog(member: member),
+                        );
+                      }
+                    } catch (e) {
+                      // ignore
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: theme.primaryColor.withValues(alpha: 0.2),
+                        child: Text(
+                          post.authorName.isNotEmpty ? post.authorName[0].toUpperCase() : 'U',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                post.authorName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                              ),
-                              if (post.type == PostType.article) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.indigo.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'Article',
-                                    style: TextStyle(
-                                      color: Colors.indigo,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  post.authorName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                if (post.type == PostType.article) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.indigo.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'Article',
+                                      style: TextStyle(
+                                        color: Colors.indigo,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ],
-                            ],
-                          ),
-                          Text(
-                            formattedDate,
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                          ),
-                        ],
+                            ),
+                            Text(
+                              formattedDate,
+                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
                     IconButton(
                       icon: const Icon(Icons.more_horiz),
                       onPressed: () {},
                     )
                   ],
+                ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -490,12 +517,21 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
   }
 
   Widget _buildGroupsTab() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('community_groups')
-          .where('members', arrayContains: widget.currentUser.id)
-          .snapshots(),
-      builder: (context, snapshot) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('members').doc(widget.currentUser.memberId).snapshots(),
+      builder: (context, memberSnap) {
+        if (memberSnap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final memberData = memberSnap.data?.data() as Map<String, dynamic>? ?? {};
+        final List<dynamic> mGroups = memberData['churchGroups'] ?? (memberData['churchGroup'] != null && memberData['churchGroup'].toString().isNotEmpty ? [memberData['churchGroup']] : []);
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('community_groups')
+              .snapshots(),
+          builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -521,7 +557,37 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
           );
         }
 
-        final groups = snapshot.data!.docs;
+        final groups = snapshot.data!.docs.where((doc) {
+          final groupData = doc.data() as Map<String, dynamic>;
+          final name = groupData['name'] as String? ?? '';
+          final memberIds = List<String>.from(groupData['members'] ?? []);
+          
+          final isInChurchGroup = mGroups.contains(name);
+          final isManuallyAdded = memberIds.contains(widget.currentUser.memberId);
+          
+          return isInChurchGroup || isManuallyAdded;
+        }).toList();
+
+        if (groups.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'You do not belong to any groups yet.',
+                  style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ask your administrator to assign you to a group.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+          );
+        }
 
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -645,11 +711,13 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                 ),
               ),
             );
-          },
-        );
-      }
+      },
     );
-  }
+  },
+);
+  },
+);
+}
 
   Widget _buildPostCard(CommunityPost post, {bool isCompact = false}) {
     final DateTime postDate = post.createdAt.toDate();
@@ -794,5 +862,195 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
     } else {
       return '${postDate.day}/${postDate.month}/${postDate.year}';
     }
+  }
+  Widget _buildChatsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('private_chats')
+          .where('participants', arrayContains: widget.currentUser.id)
+          .orderBy('lastMessageTime', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'No private chats yet.',
+                  style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Go to the Members Directory to message someone.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final chats = snapshot.data!.docs;
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount: chats.length,
+          itemBuilder: (context, index) {
+            final chatDoc = chats[index];
+            final chatData = chatDoc.data() as Map<String, dynamic>;
+            
+            // Determine the other participant
+            final participants = List<String>.from(chatData['participants'] ?? []);
+            final participantNames = Map<String, dynamic>.from(chatData['participantNames'] ?? {});
+            final participantAvatars = Map<String, dynamic>.from(chatData['participantAvatars'] ?? {});
+            
+            String otherUserId = '';
+            if (participants.length == 2) {
+              otherUserId = participants.firstWhere((id) => id != widget.currentUser.id, orElse: () => participants[0]);
+            }
+            
+            final name = participantNames[otherUserId] ?? 'Unknown User';
+            final imageUrl = participantAvatars[otherUserId] ?? '';
+            
+            // Last message details
+            final lastMessage = chatData['lastMessage'] ?? '';
+            final lastMsgTime = chatData['lastMessageTime'] as Timestamp?;
+            final unreadCountMap = Map<String, dynamic>.from(chatData['unreadCount'] ?? {});
+            final myUnreadCount = unreadCountMap[widget.currentUser.id] ?? 0;
+            
+            String timeStr = '';
+            if (lastMsgTime != null) {
+              final date = lastMsgTime.toDate();
+              final now = DateTime.now();
+              if (date.day == now.day && date.month == now.month && date.year == now.year) {
+                timeStr = DateFormat('h:mm a').format(date);
+              } else if (date.day == now.day - 1 && date.month == now.month && date.year == now.year) {
+                timeStr = 'Yesterday';
+              } else {
+                timeStr = DateFormat('d/M/yy').format(date);
+              }
+            }
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 2,
+              shadowColor: Colors.black.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PrivateChatScreen(
+                        chatId: chatDoc.id,
+                        otherUserId: otherUserId,
+                        otherUserName: name,
+                        currentUser: widget.currentUser,
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 28,
+                          backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: imageUrl.isEmpty
+                              ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'U', style: const TextStyle(color: Colors.white, fontSize: 24))
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF111B21)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (timeStr.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    timeStr,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: myUnreadCount > 0 ? Theme.of(context).primaryColor : const Color(0xFF8696A0),
+                                      fontWeight: myUnreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    lastMessage.isEmpty ? 'Say hi!' : lastMessage,
+                                    style: TextStyle(
+                                      color: myUnreadCount > 0 ? const Color(0xFF111B21) : const Color(0xFF667781),
+                                      fontSize: 14,
+                                      fontWeight: myUnreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (myUnreadCount > 0)
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).primaryColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      myUnreadCount.toString(),
+                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

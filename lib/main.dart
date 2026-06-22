@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/local_notification_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 
 import 'firebase_options.dart';
 import 'providers/language_provider.dart';
@@ -32,7 +34,7 @@ import 'screens/live_stream_screen.dart';
 import 'screens/media/gallery_screen.dart';
 import 'screens/media/video_screen.dart';
 import 'screens/members/members_connect_screen.dart';
-import 'screens/notes_screen.dart';
+import 'features/notes/presentation/screens/standalone_notes_screen.dart';
 import 'screens/sermon_screen.dart';
 import 'services/audio_player_service.dart';
 import 'services/bible_service.dart';
@@ -45,6 +47,9 @@ import 'utils/toast_utils.dart';
 import 'widgets/bottom_nav_bar.dart';
 import 'widgets/home/upcoming_event_card.dart';
 import 'widgets/home_carousel.dart';
+import 'features/notes/data/models/standalone_note_model.dart';
+import 'features/notes/data/models/linked_content_reference.dart';
+import 'features/notes/data/models/note_tag_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -101,6 +106,23 @@ Future<void> main() async {
   await Hive.initFlutter();
   await Hive.openBox<String>('bible_ai_cache');
   await pneuma_config.AppConfig.initHive();
+
+  // Register adapters and open boxes for the new Notes feature
+  if (!Hive.isAdapterRegistered(100)) {
+    Hive.registerAdapter(StandaloneNoteAdapter());
+  }
+  if (!Hive.isAdapterRegistered(101)) {
+    Hive.registerAdapter(LinkedContentTypeAdapter());
+  }
+  if (!Hive.isAdapterRegistered(102)) {
+    Hive.registerAdapter(LinkedContentReferenceAdapter());
+  }
+  if (!Hive.isAdapterRegistered(103)) {
+    Hive.registerAdapter(NoteTagAdapter());
+  }
+  await Hive.openBox<StandaloneNote>('notes_box');
+  await Hive.openBox<NoteTag>('tags_box');
+  await Hive.openBox('notes_preferences_box');
 
   // Initialize shared preferences
   final prefs = await SharedPreferences.getInstance();
@@ -164,14 +186,21 @@ class MyApp extends StatelessWidget {
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             locale: languageProvider.currentLocale,
-            supportedLocales: LanguageProvider.supportedLocales.values,
+            supportedLocales: [
+              ...LanguageProvider.supportedLocales.values,
+              ...FlutterQuillLocalizations.supportedLocales,
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              FlutterQuillLocalizations.delegate,
+            ],
             home: const SplashScreen(),
             routes: {
               '/home': (context) => const HomePage(),
               '/bible': (context) => const BibleAiEntryScreen(),
-              '/notes': (context) => NotesScreen(
-                    noteService: MyApp.of(context).noteService,
-                  ),
+              '/notes': (context) => const StandaloneNotesScreen(),
               '/sermons': (context) => SermonScreen(
                     sermonService: MyApp.of(context).sermonService,
                     audioPlayerService: MyApp.of(context).audioPlayerService,
@@ -466,9 +495,7 @@ class _HomePageState extends State<HomePage> {
       'icon': Icons.note_alt,
       'label': 'Notes',
       'color': Colors.amber,
-      'route': (BuildContext context) => NotesScreen(
-            noteService: MyApp.of(context).noteService,
-          ),
+      'route': (BuildContext context) => const StandaloneNotesScreen(),
     },
     {
       'icon': Icons.event,

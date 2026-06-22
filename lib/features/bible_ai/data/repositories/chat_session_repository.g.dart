@@ -7,9 +7,9 @@ part of 'chat_session_repository.dart';
 // **************************************************************************
 
 String _$chatSessionRepositoryHash() =>
-    r'b2d0d7743d3e2167eb4b2aad1421ea7c9327b472';
+    r'586b88d34ace470e3573a01a0845fc6d98dfd32c';
 
-/// In-memory chat session store — saves the current chat history for AI Bible chat.
+/// Firestore-backed chat session store for AI Bible chat.
 ///
 /// Copied from [ChatSessionRepository].
 @ProviderFor(ChatSessionRepository)
@@ -26,4 +26,4 @@ final chatSessionRepositoryProvider =
 
 typedef _$ChatSessionRepository = Notifier<List<ChatSessionModel>>;
 // ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

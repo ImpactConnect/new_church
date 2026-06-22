@@ -81,7 +81,7 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
       if (_selectedFilter == 'Church Officials') {
         matchesGroup = _officialIds.contains(m.id);
       } else if (_selectedFilter != 'All') {
-        matchesGroup = m.churchGroup == _selectedFilter;
+        matchesGroup = m.churchGroups.contains(_selectedFilter);
       }
 
       return matchesSearch && matchesGroup;

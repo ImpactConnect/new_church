@@ -24,7 +24,7 @@ class Member {
     this.phoneNumber,
     this.email,
     this.address,
-    this.churchGroup,
+    this.churchGroups = const [],
     this.role,
   });
 
@@ -61,7 +61,11 @@ class Member {
       phoneNumber: data['phoneNumber'],
       email: data['email'],
       address: data['address'],
-      churchGroup: data['churchGroup'],
+      churchGroups: data['churchGroups'] != null
+          ? List<String>.from(data['churchGroups'])
+          : data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty
+              ? [data['churchGroup']]
+              : [],
       role: data['role'],
     );
   }
@@ -76,7 +80,7 @@ class Member {
   final String? phoneNumber;
   final String? email;
   final String? address;
-  final String? churchGroup;
+  final List<String> churchGroups;
   final String? role;
 
   Map<String, dynamic> toFirestore() {
@@ -92,7 +96,7 @@ class Member {
       'phoneNumber': phoneNumber,
       'email': email,
       'address': address,
-      'churchGroup': churchGroup,
+      'churchGroups': churchGroups,
       'role': role,
     };
   }

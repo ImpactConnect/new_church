@@ -3,6 +3,140 @@
 part of 'exegesis_final_model.dart';
 
 // **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
+class ExegesisLibraryItemAdapter extends TypeAdapter<ExegesisLibraryItem> {
+  @override
+  final int typeId = 117;
+
+  @override
+  ExegesisLibraryItem read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return ExegesisLibraryItem(
+      id: fields[0] as String,
+      typeIndex: fields[1] as int,
+      sourceIndex: fields[2] as int,
+      subject: fields[3] as String,
+      bigPicture: fields[4] as String,
+      createdAt: fields[5] as DateTime,
+      resultJson: fields[6] as String,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, ExegesisLibraryItem obj) {
+    writer
+      ..writeByte(7)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.typeIndex)
+      ..writeByte(2)
+      ..write(obj.sourceIndex)
+      ..writeByte(3)
+      ..write(obj.subject)
+      ..writeByte(4)
+      ..write(obj.bigPicture)
+      ..writeByte(5)
+      ..write(obj.createdAt)
+      ..writeByte(6)
+      ..write(obj.resultJson);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ExegesisLibraryItemAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class ExegesisEntryTypeAdapter extends TypeAdapter<ExegesisEntryType> {
+  @override
+  final int typeId = 115;
+
+  @override
+  ExegesisEntryType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return ExegesisEntryType.verse;
+      case 1:
+        return ExegesisEntryType.topic;
+      default:
+        return ExegesisEntryType.verse;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, ExegesisEntryType obj) {
+    switch (obj) {
+      case ExegesisEntryType.verse:
+        writer.writeByte(0);
+        break;
+      case ExegesisEntryType.topic:
+        writer.writeByte(1);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ExegesisEntryTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class ExegesisSourceAdapter extends TypeAdapter<ExegesisSource> {
+  @override
+  final int typeId = 116;
+
+  @override
+  ExegesisSource read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return ExegesisSource.newForm;
+      case 1:
+        return ExegesisSource.bibleReader;
+      default:
+        return ExegesisSource.newForm;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, ExegesisSource obj) {
+    switch (obj) {
+      case ExegesisSource.newForm:
+        writer.writeByte(0);
+        break;
+      case ExegesisSource.bibleReader:
+        writer.writeByte(1);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ExegesisSourceAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+// **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 

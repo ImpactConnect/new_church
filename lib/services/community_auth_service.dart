@@ -148,6 +148,31 @@ class CommunityAuthService {
     }
   }
 
+  Future<void> sendPasswordResetEmail(String username) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('members')
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isEmpty) {
+        throw Exception('User not found');
+      }
+
+      final email = querySnapshot.docs.first.data()['email'] as String?;
+      
+      if (email == null || email.isEmpty) {
+        throw Exception('No email associated with this account');
+      }
+
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      print('Password reset error: $e');
+      rethrow;
+    }
+  }
+
   // Optional: Method to clear mock users
   Future<void> clearMockUsers() async {
     try {

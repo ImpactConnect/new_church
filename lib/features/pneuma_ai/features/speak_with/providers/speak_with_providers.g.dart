@@ -122,7 +122,7 @@ final speakWithSearchQueryProvider =
 
 typedef _$SpeakWithSearchQuery = AutoDisposeNotifier<String>;
 String _$askSpeakWithControllerHash() =>
-    r'56c9cc31b551961e1f1d91ad7ca4b4b2ec8c1cb1';
+    r'5e0af4af5fe3d18eb702be59a6fd492455addc85';
 
 /// See also [AskSpeakWithController].
 @ProviderFor(AskSpeakWithController)
