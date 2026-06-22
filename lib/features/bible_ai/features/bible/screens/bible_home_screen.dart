@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:church_mobile/widgets/bottom_nav_bar.dart';
 
 import '../../../config/routes.dart';
 import 'chapter_screen.dart';
@@ -172,6 +173,7 @@ class BibleHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+      bottomNavigationBar: BottomNavBar(currentIndex: 1),
     );
   }
 }

@@ -750,6 +750,12 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
     String? fileType,
     Map<String, dynamic>? replyTo,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bubbleColor = isMe
+        ? (isDark ? const Color(0xFF005C4B) : const Color(0xFFD9FDD3))
+        : (isDark ? const Color(0xFF1F2C34) : Colors.white);
+    final textColor = isDark ? Colors.white : const Color(0xFF111B21);
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -757,7 +763,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFFD9FDD3) : Colors.white, // WhatsApp green vs white bubble
+          color: bubbleColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
@@ -823,7 +829,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                                       : replyTo['message'] ?? '',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                  style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12),
                                 ),
                               ],
                             ),
@@ -863,9 +869,9 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.insert_drive_file, color: Colors.black54),
+                            Icon(Icons.insert_drive_file, color: isDark ? Colors.white70 : Colors.black54),
                             const SizedBox(width: 8),
-                            const Text('Document attached', style: TextStyle(fontStyle: FontStyle.italic)),
+                            Text('Document attached', style: TextStyle(fontStyle: FontStyle.italic, color: textColor)),
                           ],
                         ),
                       ),
@@ -874,12 +880,12 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                   if (text.isNotEmpty)
                     Text(
                       text,
-                      style: const TextStyle(
-                        color: Color(0xFF111B21),
+                      style: TextStyle(
+                        color: textColor,
                         fontSize: 14.5,
                         height: 1.3,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -891,9 +897,9 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                 children: [
                   Text(
                     timeStr,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 9.5,
-                      color: Color(0xFF667781),
+                      color: isDark ? Colors.white60 : const Color(0xFF667781),
                     ),
                   ),
                   if (isMe) ...[

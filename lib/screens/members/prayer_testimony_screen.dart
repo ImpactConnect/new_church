@@ -62,15 +62,15 @@ class _PrayerTestimonyScreenState extends State<PrayerTestimonyScreen> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         resizeToAvoidBottomInset: true,
         body: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
@@ -81,19 +81,19 @@ class _PrayerTestimonyScreenState extends State<PrayerTestimonyScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  border: Border(bottom: BorderSide(color: Colors.grey.withOpacity(0.2))),
                 ),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_down, size: 28, color: Colors.black),
+                      icon: Icon(Icons.keyboard_arrow_down, size: 28, color: Theme.of(context).textTheme.bodyLarge?.color),
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Send Prayer/Testimony',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
                     ),
                   ],
                 ),
@@ -139,7 +139,7 @@ class _PrayerTestimonyScreenState extends State<PrayerTestimonyScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: Colors.grey[50],
+                          fillColor: Theme.of(context).cardColor,
                         ),
                         maxLines: 8,
                         maxLength: 1000,

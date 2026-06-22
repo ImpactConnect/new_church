@@ -324,7 +324,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
         _searchCtrl.text.trim().isNotEmpty || _isSearching;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: RefreshIndicator(
         key: _refreshKey,
         onRefresh: _handleRefresh,
@@ -378,7 +378,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                       Container(
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).cardColor,
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
@@ -388,7 +388,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                             ),
                           ],
                           border: Border.all(
-                              color: Colors.grey.withOpacity(0.22)),
+                              color: Colors.grey.withOpacity(0.2)),
                         ),
                         child: Row(
                           children: [
@@ -410,7 +410,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                                   border: InputBorder.none,
                                   isDense: true,
                                 ),
-                                style: const TextStyle(fontSize: 14),
+                                style: TextStyle(fontSize: 14, color: theme.textTheme.bodyLarge?.color),
                               ),
                             ),
                             if (_searchCtrl.text.isNotEmpty)
@@ -433,7 +433,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                           constraints:
                               const BoxConstraints(maxHeight: 240),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
@@ -527,7 +527,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                       Tab(text: 'Testimonies'),
                     ],
                   ),
-                  backgroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 ),
               ),
             ];

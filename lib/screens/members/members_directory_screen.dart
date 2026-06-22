@@ -279,7 +279,7 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
     final upcoming = _getUpcomingCelebrants();
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // ── App Bar ──────────────────────────────────────────────────────
@@ -331,7 +331,7 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                             )
                           : null,
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: Theme.of(context).cardColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -353,16 +353,17 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.grey.withOpacity(0.2)),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
+                        dropdownColor: Theme.of(context).cardColor,
                         isExpanded: true,
                         value: _selectedFilter,
                         icon: Icon(Icons.filter_list, size: 18, color: theme.primaryColor),
-                        style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13, fontWeight: FontWeight.w500),
                         items: [
                           const DropdownMenuItem(value: 'All', child: Text('All Members')),
                           const DropdownMenuItem(value: 'Church Officials', child: Text('Church Officials')),

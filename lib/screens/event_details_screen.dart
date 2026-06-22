@@ -156,7 +156,7 @@ ${widget.event.description}
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           child: Material(
-            color: Colors.white,
+            color: Theme.of(context).scaffoldBackgroundColor,
             child: CustomScrollView(
               controller: scrollController,
               slivers: [
@@ -225,8 +225,8 @@ ${widget.event.description}
                 ),
                 SliverToBoxAdapter(
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
                       borderRadius:
                           BorderRadius.vertical(top: Radius.circular(32)),
                     ),
@@ -307,7 +307,7 @@ ${widget.event.description}
                                   .bodyLarge
                                   ?.copyWith(
                                     height: 1.6,
-                                    color: Colors.grey[800],
+                                    color: Theme.of(context).textTheme.bodyLarge?.color,
                                   ),
                             ),
                           ],
@@ -329,9 +329,9 @@ ${widget.event.description}
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -352,7 +352,7 @@ ${widget.event.description}
                   title,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: Colors.grey[500],
                     fontWeight: FontWeight.w500,
                   ),
                 ),

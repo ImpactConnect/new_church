@@ -55,6 +55,7 @@ dependencies:
   webview_flutter_platform_interface: ^2.6.0
   webview_flutter: ^4.9.0  # For PDF viewing
   shared_preferences: ^2.2.2  # For persistent storage
+  flutter_native_splash: ^2.4.1
   table_calendar: ^3.0.9  # For Bible Reading Plan calendar
   flutter_local_notifications: ^17.1.2  # For reading reminders
   timezone: ^0.9.2  # For handling notification timezones

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide ChangeNotifierProvider;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -52,7 +53,8 @@ import 'features/notes/data/models/linked_content_reference.dart';
 import 'features/notes/data/models/note_tag_model.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   try {
     print('Initializing Firebase...');
@@ -197,6 +199,26 @@ class MyApp extends StatelessWidget {
               FlutterQuillLocalizations.delegate,
             ],
             home: const SplashScreen(),
+            builder: (context, child) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              if (isDark) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF0A0E17), // Deepest dark midnight blue
+                        Color(0xFF121B2D), // Rich dark navy
+                        Color(0xFF1B283F), // Lighter slate blue at the top
+                      ],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                  ),
+                  child: child,
+                );
+              }
+              return child ?? const SizedBox.shrink();
+            },
             routes: {
               '/home': (context) => const HomePage(),
               '/bible': (context) => const BibleAiEntryScreen(),
@@ -278,7 +300,7 @@ class MyApp extends StatelessWidget {
 
               // If no matching route is found
               return MaterialPageRoute(
-                builder: (context) => const SplashScreen(),
+                builder: (context) => const HomePage(),
               );
             },
             onUnknownRoute: (settings) {
@@ -326,6 +348,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _initializeApp() async {
     try {
+      FlutterNativeSplash.remove();
       // Skip SharedPreferences initialization on web
       if (!kIsWeb) {
         await SharedPreferences.getInstance();
@@ -566,10 +589,12 @@ class _HomePageState extends State<HomePage> {
                 child: Text(
                   button['label'] as String,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : Colors.black87,
                     height: 1.1,
                   ),
                   maxLines: 2,

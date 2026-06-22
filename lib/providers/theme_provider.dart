@@ -27,18 +27,25 @@ class ThemeProvider with ChangeNotifier {
   // Light theme data
   ThemeData get lightTheme {
     return ThemeData(
-      primarySwatch: Colors.blue,
+      useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: Colors.white,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF0D1B2A),
+        brightness: Brightness.light,
+        primary: const Color(0xFF0D1B2A),
+      ),
+      scaffoldBackgroundColor: const Color(0xFFF4F6F8),
       appBarTheme: const AppBarTheme(
         elevation: 0,
-        backgroundColor: Colors.blue,
+        centerTitle: true,
+        backgroundColor: Color(0xFF0D1B2A),
         foregroundColor: Colors.white,
       ),
       cardTheme: CardThemeData(
-        elevation: 2,
+        elevation: 1,
+        color: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
     );
@@ -47,18 +54,25 @@ class ThemeProvider with ChangeNotifier {
   // Dark theme data
   ThemeData get darkTheme {
     return ThemeData(
-      primarySwatch: Colors.blue,
+      useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF121212),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF0D1B2A),
+        brightness: Brightness.dark,
+        surface: const Color(0xFF1E1E1E),
+      ),
+      scaffoldBackgroundColor: Colors.transparent,
       appBarTheme: const AppBarTheme(
         elevation: 0,
-        backgroundColor: Color(0xFF1F1F1F),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
       ),
       cardTheme: CardThemeData(
-        elevation: 2,
+        elevation: 1,
+        color: const Color(0xFF1E1E1E),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
     );

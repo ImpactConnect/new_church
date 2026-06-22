@@ -139,11 +139,11 @@ class _DevotionalScreenState extends State<DevotionalScreen>
       child: Container(
         margin: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.2),
+              color: Colors.black.withOpacity(0.08),
               spreadRadius: 2,
               blurRadius: 8,
               offset: const Offset(0, 2),
@@ -185,11 +185,11 @@ class _DevotionalScreenState extends State<DevotionalScreen>
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16.0),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.08),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -258,11 +258,11 @@ class _DevotionalScreenState extends State<DevotionalScreen>
       child: Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
+              color: Colors.black.withOpacity(0.08),
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 2),
@@ -415,11 +415,11 @@ class _DevotionalScreenState extends State<DevotionalScreen>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.08),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -520,7 +520,7 @@ class _DevotionalScreenState extends State<DevotionalScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
