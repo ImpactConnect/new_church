@@ -111,12 +111,15 @@ class AskSpeakWithController extends _$AskSpeakWithController {
           .where((m) => m.id != userMsg.id)
           .toList();
 
+      final version = ref.read(bibleVersionNotifierProvider);
+
       final aiText = await aiService.chatWithFigure(
         mode: state!.mode,
         figure: state!.figureA,
         figureB: state!.figureB,
         userMessage: text,
         history: priorHistory,
+        bibleVersionName: version.name,
       );
 
       final aiResponse = ChatMessage(

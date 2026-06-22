@@ -265,14 +265,14 @@ class UpcomingEventCard extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  DateFormat('d').format(event.startDate),
+                                  DateFormat('d').format(event.effectiveDate),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Theme.of(context).primaryColor,
                                   ),
                                 ),
                                 Text(
-                                  DateFormat('MMM').format(event.startDate),
+                                  DateFormat('MMM').format(event.effectiveDate),
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Theme.of(context).primaryColor,

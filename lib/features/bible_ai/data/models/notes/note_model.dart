@@ -22,6 +22,32 @@ class NoteModel extends Equatable {
     required this.createdAt,
   });
 
+  factory NoteModel.fromJson(Map<String, dynamic> json) {
+    return NoteModel(
+      id: json['id'],
+      bookId: json['bookId'],
+      bookName: json['bookName'],
+      chapterNumber: json['chapterNumber'],
+      verseNumber: json['verseNumber'],
+      content: json['content'],
+      verseText: json['verseText'] ?? '',
+      createdAt: DateTime.parse(json['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'bookId': bookId,
+      'bookName': bookName,
+      'chapterNumber': chapterNumber,
+      'verseNumber': verseNumber,
+      'content': content,
+      'verseText': verseText,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
   String get reference => '$bookName $chapterNumber:$verseNumber';
 
   @override

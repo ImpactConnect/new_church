@@ -147,8 +147,8 @@ class _PneumaAiHubScreenState extends State<PneumaAiHubScreen> {
                 const SizedBox(height: 12),
                 _PneumaFeatureCard(
                   emoji: '📜',
-                  title: 'Ask Rabbi',
-                  subtitle: 'Interactive AI chat for scripture questions and theological exposition. Your personal Bible teacher, always available.',
+                  title: 'Ask GSW',
+                  subtitle: 'Get 24/7 spiritual guidance and answers to your scripture questions directly from Pastor GSW.',
                   gradient: const LinearGradient(
                     colors: [Color(0xFF4F63D2), Color(0xFF8B3FC0)],
                     begin: Alignment.topLeft,

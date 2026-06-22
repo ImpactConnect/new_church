@@ -17,6 +17,7 @@ class SpeakWithAiService {
     required BiblicalFigure figure,
     required String userMessage,
     required List<ChatMessage> history,
+    required String bibleVersionName,
     BiblicalFigure? figureB,
   }) async {
     // Use a direct persona system prompt.
@@ -31,6 +32,7 @@ class SpeakWithAiService {
       figureB: figureB,
       userMessage: userMessage,
       history: history,
+      bibleVersionName: bibleVersionName,
     );
 
     // Call AI
@@ -139,6 +141,7 @@ class SpeakWithAiService {
     required BiblicalFigure figure,
     required String userMessage,
     required List<ChatMessage> history,
+    required String bibleVersionName,
     BiblicalFigure? figureB,
   }) {
     // Build conversation history as plain text
@@ -180,6 +183,7 @@ class SpeakWithAiService {
           'Respond naturally as ' +
           figure.name +
           ', speaking directly to the user. ' +
+          'When citing scripture, use the $bibleVersionName translation. ' +
           'You may reference ' +
           figureB.name +
           ' where relevant. Keep your response to 100-250 words. ' +
@@ -204,6 +208,7 @@ class SpeakWithAiService {
         'Respond naturally as ' +
         figure.name +
         ', speaking in first person. ' +
+        'When citing scripture, use the $bibleVersionName translation. ' +
         'Keep your response to 100-250 words. ' +
         'Do NOT respond as JSON. Use markdown formatting (headings, bullet lists, bold text) to structure your response.\n' +
         'Respond as flowing, first-person prose grounded in scripture.';

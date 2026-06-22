@@ -300,7 +300,7 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
               b.bookName == widget.bookName &&
               b.chapterNumber == widget.chapterNumber &&
               b.verseNumber == widget.verseNumber &&
-              b.feature == _activeMode,
+              b.feature == _activeMode.name,
         );
 
     if (isBookmarked) {
@@ -309,7 +309,7 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
             b.bookName == widget.bookName &&
             b.chapterNumber == widget.chapterNumber &&
             b.verseNumber == widget.verseNumber &&
-            b.feature == _activeMode,
+            b.feature == _activeMode.name,
       );
       await notifier.deleteBookmark(bm.id);
       if (mounted) {
@@ -435,7 +435,7 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
               b.bookName == widget.bookName &&
               b.chapterNumber == widget.chapterNumber &&
               b.verseNumber == widget.verseNumber &&
-              b.feature == _activeMode,
+              b.feature == _activeMode.name,
         );
 
     return Scaffold(
@@ -456,13 +456,13 @@ class _VerseAiResultsScreenState extends ConsumerState<VerseAiResultsScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   _verseRef,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: color),
+                  style: const TextStyle(fontSize: 12, color: Colors.white),
                 ),
               ),
             ),

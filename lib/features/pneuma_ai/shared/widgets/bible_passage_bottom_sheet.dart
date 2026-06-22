@@ -355,7 +355,7 @@ class _BiblePassageBottomSheetState extends ConsumerState<BiblePassageBottomShee
                               );
                             },
                             icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                            label: const Text('Ask Rabbi'),
+                            label: const Text('Ask GSW'),
                           ),
                           const SizedBox(width: 8),
                           FilledButton.icon(

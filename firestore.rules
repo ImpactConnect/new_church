@@ -96,7 +96,8 @@ service cloud.firestore {
     // Carousel / banners: anyone can read
     match /carousel_items/{doc} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['itemType']));
     }
     match /carousel_config/{doc} {
       allow read: if true;
@@ -194,6 +195,19 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update: if isAuthenticated(); // For likes
       allow delete: if isAdmin();
+    }
+
+    // Community groups (communication groups)
+    match /community_groups/{doc} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Group messages (for group chat)
+    match /group_messages/{doc} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     // Bible reading plan progress: per-user private data

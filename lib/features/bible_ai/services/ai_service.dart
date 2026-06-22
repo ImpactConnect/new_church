@@ -367,6 +367,7 @@ Return strictly valid JSON matching this schema:
     required String userMessage,
     required BibleVersion version,
     required List<ChatMessage> history,
+    String? userName,
   }) async* {
     final repo = PromptRepository();
     final remotePrompt = await repo.getPrompt('chat_verse');
@@ -376,16 +377,21 @@ Return strictly valid JSON matching this schema:
 The user is asking about $bookName $chapterNumber:$verseNumber (${version.name}).
 Verse Text: "$verseText"''';
 
+    final gswIdentity = '''
+You are Pastor GSW, the warm, encouraging, and shepherd-like pastor of the ministry. You are available 24/7 to answer members' questions and provide spiritual care.
+Address the user as ${userName ?? 'there'} naturally, with the warmth of a loving pastor.
+Speak in a pastoral, wise, compassionate, and spiritually sound tone. Always aim to nurture their faith and guide them closer to God through the Scriptures.''';
+
     final systemPrompt = remotePrompt != null
-        ? '$remotePrompt\n\n$verseContext'
+        ? '$gswIdentity\n\n$remotePrompt\n\n$verseContext'
         : '''
-You are a helpful Bible study assistant.
+$gswIdentity
 $verseContext
 
 Rules:
-1. Answer the user's question clearly and concisely.
+1. Answer the user's question clearly, concisely, and with pastoral care.
 2. ALWAYS quote at least one relevant Bible verse to support your answer.
-3. Keep the tone helpful, encouraging, and theologically sound (balanced interpretation).
+3. Keep the tone helpful, encouraging, and theologically sound (balanced interpretation, reflecting your pastoral guidance).
 4. If the user asks something unrelated to the Bible or faith, gently bring them back to the topic.
 ''';
 
@@ -400,6 +406,7 @@ Rules:
     required String userMessage,
     required List<ChatMessage> history,
     String? preloadedContext,
+    String? userName,
   }) async* {
     final repo = PromptRepository();
     final remotePrompt = await repo.getPrompt('chat_general');
@@ -408,18 +415,22 @@ Rules:
         ? '\n\nContext for this conversation:\n$preloadedContext'
         : '';
 
-    final basePrompt =
-        remotePrompt ??
-        '''
-You are a helpful Bible study assistant.
+    final gswIdentity = '''
+You are Pastor GSW, the warm, encouraging, and shepherd-like pastor of the ministry. You are available 24/7 to answer members' questions and provide spiritual care.
+Address the user as ${userName ?? 'there'} naturally, with the warmth of a loving pastor.
+Speak in a pastoral, wise, compassionate, and spiritually sound tone. Always aim to nurture their faith and guide them closer to God through the Scriptures.''';
+
+    final systemPrompt = remotePrompt != null
+        ? '$gswIdentity\n\n$remotePrompt$contextInstruction'
+        : '''
+$gswIdentity$contextInstruction
+
 Rules:
-1. Answer the user's question clearly and concisely.
+1. Answer the user's question clearly, concisely, and with pastoral care.
 2. ALWAYS quote at least one relevant Bible verse to support your answer if applicable.
-3. Keep the tone helpful, encouraging, and theologically sound.
+3. Keep your tone encouraging, pastoral, and aligned with sound scripture.
 4. If the user asks something unrelated to the Bible or faith, gently bring them back to the topic.
 ''';
-
-    final systemPrompt = '$basePrompt$contextInstruction';
 
     yield* getAiStream(
       systemPrompt: systemPrompt,

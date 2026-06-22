@@ -26,9 +26,14 @@ import '../widgets/bible_selector_sheet.dart';
 import '../../notes/presentation/widgets/add_to_note_dialog.dart';
 import '../../notes/services/content_linker_service.dart';
 import '../../notes/data/models/linked_content_reference.dart';
-import '../../exegesis/models/exegesis_final_model.dart';
+import '../../../../pneuma_ai/features/exegesis/models/exegesis_final_model.dart';
 import '../../monetization/widgets/banner_ad_widget.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+
 import 'new_exegesis_screen.dart';
+import '../../../../pneuma_ai/features/exegesis/providers/exegesis_providers_final.dart';
+import '../../../../pneuma_ai/features/exegesis/screens/exegesis_loading_screen_final.dart';
 
 /// Chapter reading screen - displays verses with interactive features
 class ChapterScreen extends ConsumerStatefulWidget {
@@ -534,81 +539,96 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 12,
+              Row(
                 children: [
-                  _ActionChip(
-                    icon: Icons.lightbulb_outline,
-                    label: 'Verse Explain',
-                    isAi: true,
-                    onTap: () => _openAiSheet(
-                      context,
-                      ref,
-                      verseNumbers.first,
-                      text,
-                      VerseFeature.explain,
+                  Expanded(
+                    child: _ActionChip(
+                      icon: Icons.lightbulb_outline,
+                      label: 'Explain',
+                      isAi: true,
+                      onTap: () => _openAiSheet(
+                        context,
+                        ref,
+                        verseNumbers.first,
+                        text,
+                        VerseFeature.explain,
+                      ),
                     ),
                   ),
-                  _ActionChip(
-                    icon: Icons.auto_stories_outlined,
-                    label: 'Deep Exegesis',
-                    isAi: true,
-                    onTap: () {
-                      Navigator.pop(context);
-                      final books = ref.read(bibleBooksProvider).value ?? [];
-                      final book = books.firstWhere(
-                        (b) => b.id == widget.bookId,
-                        orElse: () => books.first,
-                      );
-                      final verseRef = VerseRef(
-                        book: book.name,
-                        chapter: widget.chapterNumber,
-                        verse: verseNumbers.first,
-                        endVerse: verseNumbers.length > 1
-                            ? verseNumbers.last
-                            : null,
-                      );
-                      Navigator.of(context, rootNavigator: true).push(
-                        MaterialPageRoute(
-                          builder: (_) => NewExegesisScreen(
-                            prefillVerseRef: verseRef,
-                            prefillVerseText: text,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ActionChip(
+                      icon: Icons.auto_stories_outlined,
+                      label: 'Exegesis',
+                      isAi: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        final books = ref.read(bibleBooksProvider).value ?? [];
+                        final book = books.firstWhere(
+                          (b) => b.id == widget.bookId,
+                          orElse: () => books.first,
+                        );
+                        final verseRef = VerseRef(
+                          book: book.name,
+                          chapter: widget.chapterNumber,
+                          verse: verseNumbers.first,
+                          endVerse: verseNumbers.length > 1
+                              ? verseNumbers.last
+                              : null,
+                        );
+                        final version = ref.read(bibleVersionNotifierProvider);
+                        ref.read(verseExegesisNotifierProvider.notifier).generate(
+                          verseRefs: [verseRef],
+                          verseTexts: {verseRef.referenceString: text},
+                          translation: version.abbreviation,
+                          isRange: verseNumbers.length > 1,
+                          source: ExegesisSource.bibleReader,
+                        );
+
+                        Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute(
+                            builder: (_) => ExegesisLoadingScreenFinal(
+                              subject: verseRef.referenceString,
+                              type: 'verse',
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                  _ActionChip(
-                    icon: Icons.chat_bubble_outline,
-                    label: 'Ask Rabbi',
-                    isAi: true,
-                    onTap: () {
-                      Navigator.pop(context);
-                      final books = ref.read(bibleBooksProvider).value ?? [];
-                      final book = books.firstWhere(
-                        (b) => b.id == widget.bookId,
-                        orElse: () => books.first,
-                      );
-                      final subject = verseNumbers.length > 1
-                          ? 'passage'
-                          : 'verse';
-                      final autoPrompt =
-                          'I want to study **${book.name} ${widget.chapterNumber}:${_formatVerseRange(verseNumbers)}** ("$text").\n\nPlease provide a very concise introductory summary of this $subject. '
-                          'Start by highlighting my query in bold. Then, give a 1-paragraph bottom-line submission. '
-                          'End by asking me to ask further questions for clarification.';
-                      Navigator.of(context, rootNavigator: true).push(
-                        MaterialPageRoute(
-                          builder: (context) => AiChatScreen(
-                            bookName: book.name,
-                            chapterNumber: widget.chapterNumber,
-                            verseNumber: verseNumbers.first,
-                            verseText: text,
-                            hiddenAutoPrompt: autoPrompt,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ActionChip(
+                      icon: Icons.chat_bubble_outline,
+                      label: 'Ask GSW',
+                      isAi: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        final books = ref.read(bibleBooksProvider).value ?? [];
+                        final book = books.firstWhere(
+                          (b) => b.id == widget.bookId,
+                          orElse: () => books.first,
+                        );
+                        final subject = verseNumbers.length > 1
+                            ? 'passage'
+                            : 'verse';
+                        final autoPrompt =
+                            'I want to study **${book.name} ${widget.chapterNumber}:${_formatVerseRange(verseNumbers)}** ("$text").\n\nPlease provide a very concise introductory summary of this $subject. '
+                            'Start by highlighting my query in bold. Then, give a 1-paragraph bottom-line submission. '
+                            'End by asking me to ask further questions for clarification.';
+                        Navigator.of(context, rootNavigator: true).push(
+                          MaterialPageRoute(
+                            builder: (context) => AiChatScreen(
+                              bookName: book.name,
+                              chapterNumber: widget.chapterNumber,
+                              verseNumber: verseNumbers.first,
+                              verseText: text,
+                              hiddenAutoPrompt: autoPrompt,
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -675,7 +695,16 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
                     label: 'Copy',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Copy to clipboard
+                      final books = ref.read(bibleBooksProvider).value ?? [];
+                      final book = books.firstWhere(
+                        (b) => b.id == widget.bookId,
+                        orElse: () => books.first,
+                      );
+                      final verseRefText = '${book.name} ${widget.chapterNumber}:${_formatVerseRange(verseNumbers)}';
+                      Clipboard.setData(ClipboardData(text: '$text\n—$verseRefText'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Copied to clipboard')),
+                      );
                     },
                   ),
                   _ActionChip(
@@ -683,7 +712,13 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
                     label: 'Share',
                     onTap: () {
                       Navigator.pop(context);
-                      // TODO: Share verse
+                      final books = ref.read(bibleBooksProvider).value ?? [];
+                      final book = books.firstWhere(
+                        (b) => b.id == widget.bookId,
+                        orElse: () => books.first,
+                      );
+                      final verseRefText = '${book.name} ${widget.chapterNumber}:${_formatVerseRange(verseNumbers)}';
+                      Share.share('$text\n—$verseRefText');
                     },
                   ),
                 ],
@@ -1159,21 +1194,27 @@ class _ActionChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                size: 18,
+                size: 16,
                 color: isAi ? primary : primary.withOpacity(0.8),
               ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isAi ? primary : primary.withOpacity(0.8),
-                  fontWeight: isAi ? FontWeight.bold : FontWeight.w500,
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isAi ? primary : primary.withOpacity(0.8),
+                    fontWeight: isAi ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

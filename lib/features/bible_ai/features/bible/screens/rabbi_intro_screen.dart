@@ -14,7 +14,7 @@ class RabbiIntroScreen extends ConsumerWidget {
     final sessionsAsync = ref.watch(chatSessionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ask Rabbi')),
+      appBar: AppBar(title: const Text('Ask GSW')),
       body: SafeArea(
         child: Column(
           children: [
@@ -91,7 +91,7 @@ class RabbiIntroScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Ask Rabbi',
+                  'Ask GSW',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -100,7 +100,7 @@ class RabbiIntroScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Your personal Bible Teacher. Ask any question and receive scripture-based answers without any denominational bias. Deepen your understanding of the Word today.',
+                  'Your pastor is always here for you. Ask GSW any question about scripture, life, or faith, and receive biblically-grounded, pastoral guidance 24/7.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.85),
                     fontSize: 13,

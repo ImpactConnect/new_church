@@ -21,7 +21,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -44,6 +44,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
             isScrollable: true,
             tabs: const [
               Tab(icon: Icon(Icons.person_add_outlined), text: 'Members'),
+              Tab(icon: Icon(Icons.group_outlined), text: 'Groups Manager'),
               Tab(icon: Icon(Icons.campaign_outlined), text: 'Announcements'),
               Tab(icon: Icon(Icons.star_outline), text: 'Testimonies'),
               Tab(icon: Icon(Icons.forum_outlined), text: 'Community Posts'),
@@ -56,6 +57,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
             controller: _tabController,
             children: const [
               _MembersTab(),
+              _GroupsManagerTab(),
               _AnnouncementsTab(),
               _TestimoniesTab(),
               _CommunityPostsTab(),
@@ -466,6 +468,55 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
     );
   }
 
+  Widget _buildChurchGroupDropdown() {
+    if (!_isEditing) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Church Group', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            const SizedBox(height: 2),
+            Text(_groupCtrl.text.isNotEmpty ? _groupCtrl.text : '—', style: const TextStyle(fontSize: 14)),
+          ],
+        ),
+      );
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('church_groups').orderBy('name').snapshots(),
+        builder: (context, snap) {
+          List<String> groups = ['None'];
+          if (snap.hasData) {
+            groups.addAll(snap.data!.docs.map((d) => d['name'] as String).toList());
+          }
+          final currentVal = _groupCtrl.text.trim();
+          if (currentVal.isNotEmpty && !groups.contains(currentVal)) {
+            groups.add(currentVal);
+          }
+          final selected = currentVal.isEmpty ? 'None' : currentVal;
+
+          return DropdownButtonFormField<String>(
+            value: selected,
+            decoration: const InputDecoration(
+              labelText: 'Church Group',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: groups.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+            onChanged: (v) {
+              setState(() {
+                _groupCtrl.text = v == 'None' ? '' : v!;
+              });
+            },
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildTextField(String label, TextEditingController controller) {
     if (!_isEditing) {
       return Padding(
@@ -636,7 +687,7 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
                                   children: [
                                     _buildTextField('Occupation', _occupationCtrl),
                                     _buildTextField('School Name (If Student)', _schoolNameCtrl),
-                                    _buildTextField('Church Group', _groupCtrl),
+                                    _buildChurchGroupDropdown(),
                                     _buildTextField('Marital Status', _maritalStatusCtrl),
                                     _buildTextField('Spouse Name', _spouseNameCtrl),
                                   ],
@@ -1473,6 +1524,657 @@ class _PastorsDeskTabState extends State<_PastorsDeskTab> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── GROUPS MANAGER TAB ──────────────────────────────────────────────────────
+class _GroupsManagerTab extends StatefulWidget {
+  const _GroupsManagerTab();
+  @override
+  State<_GroupsManagerTab> createState() => _GroupsManagerTabState();
+}
+
+class _GroupsManagerTabState extends State<_GroupsManagerTab> {
+  void _showGroupFormDialog(String? groupId, DocumentSnapshot? groupToEdit) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _GroupFormDialog(groupId: groupId, groupToEdit: groupToEdit),
+    );
+  }
+
+  Future<void> _deleteGroup(String groupId, String groupName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Group'),
+        content: Text('Are you sure you want to delete group "$groupName"? All messages will be lost.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('community_groups').doc(groupId).delete();
+      final messagesSnap = await FirebaseFirestore.instance.collection('group_messages').where('groupId', isEqualTo: groupId).get();
+      final batch = FirebaseFirestore.instance.batch();
+      for (var doc in messagesSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group deleted successfully')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Communication Groups', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  Text('Manage discussion channels and member access.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                ],
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _showGroupFormDialog(null, null),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Group'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Groups List
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('community_groups').orderBy('createdAt', descending: true).snapshots(),
+              builder: (context, snap) {
+                if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
+                if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                final docs = snap.data!.docs;
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 16),
+                        const Text('No groups created yet.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => _showGroupFormDialog(null, null),
+                          child: const Text('Create Your First Group'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 400,
+                    mainAxisExtent: 180,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: docs.length,
+                  itemBuilder: (_, i) {
+                    final d = docs[i].data() as Map<String, dynamic>;
+                    final groupId = docs[i].id;
+                    final name = d['name'] ?? 'Unnamed';
+                    final desc = d['description'] ?? '';
+                    final imageUrl = d['imageUrl'] ?? '';
+                    final members = List<String>.from(d['members'] ?? []);
+
+                    return Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: InkWell(
+                        onTap: () => _showGroupFormDialog(groupId, docs[i]),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 28,
+                                    backgroundImage: imageUrl.isNotEmpty
+                                        ? NetworkImage(ImageProxy.proxy(imageUrl))
+                                        : null,
+                                    backgroundColor: Colors.blue[50],
+                                    child: imageUrl.isEmpty
+                                        ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'G', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 20))
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue[50],
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text('${members.length} members', style: const TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                    onPressed: () => _deleteGroup(groupId, name),
+                                    tooltip: 'Delete Group',
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Expanded(
+                                child: Text(
+                                  desc.isNotEmpty ? desc : 'No description provided.',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── GROUP FORM DIALOG ───────────────────────────────────────────────────────
+class _GroupFormDialog extends StatefulWidget {
+  final String? groupId;
+  final DocumentSnapshot? groupToEdit;
+
+  const _GroupFormDialog({this.groupId, this.groupToEdit});
+
+  @override
+  State<_GroupFormDialog> createState() => _GroupFormDialogState();
+}
+
+class _GroupFormDialogState extends State<_GroupFormDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
+
+  String _searchQuery = '';
+  String? _selectedChurchGroup;
+  List<String> _churchGroups = [];
+  StreamSubscription? _groupsSub;
+
+  Uint8List? _imageBytes;
+  String? _imageFileName;
+  String? _existingImageUrl;
+
+  Set<String> _selectedMemberIds = {};
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.groupToEdit != null) {
+      final data = widget.groupToEdit!.data() as Map<String, dynamic>? ?? {};
+      _nameCtrl.text = data['name'] ?? '';
+      _descCtrl.text = data['description'] ?? '';
+      _existingImageUrl = data['imageUrl'];
+      _selectedMemberIds = Set<String>.from(data['members'] ?? []);
+    }
+
+    _groupsSub = FirebaseFirestore.instance.collection('church_groups').orderBy('name').snapshots().listen((snap) {
+      if (mounted) {
+        setState(() {
+          _churchGroups = snap.docs.map((d) => d['name'] as String).toList();
+          if (_churchGroups.isNotEmpty && _selectedChurchGroup == null) {
+            _selectedChurchGroup = _churchGroups.first;
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _groupsSub?.cancel();
+    _nameCtrl.dispose();
+    _descCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.image, withData: true);
+    if (result != null) {
+      setState(() {
+        _imageBytes = result.files.first.bytes;
+        _imageFileName = result.files.first.name;
+      });
+    }
+  }
+
+  Future<void> _addByChurchGroup() async {
+    if (_selectedChurchGroup == null) return;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('members')
+          .where('churchGroup', isEqualTo: _selectedChurchGroup)
+          .get();
+
+      if (snap.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No members found in church group "$_selectedChurchGroup"')),
+        );
+        return;
+      }
+
+      final memberIds = snap.docs.map((doc) => doc.id).toList();
+      setState(() {
+        _selectedMemberIds.addAll(memberIds);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added ${memberIds.length} members from "$_selectedChurchGroup"')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _removeByChurchGroup() async {
+    if (_selectedChurchGroup == null) return;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('members')
+          .where('churchGroup', isEqualTo: _selectedChurchGroup)
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final memberIds = snap.docs.map((doc) => doc.id).toList();
+      setState(() {
+        _selectedMemberIds.removeAll(memberIds);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Removed members belonging to "$_selectedChurchGroup"')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _saveGroup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _saving = true);
+    try {
+      String? imageUrl = _existingImageUrl;
+      if (_imageBytes != null) {
+        final imageRef = FirebaseStorage.instance.ref('groups/${DateTime.now().millisecondsSinceEpoch}_$_imageFileName');
+        await imageRef.putData(_imageBytes!);
+        imageUrl = await imageRef.getDownloadURL();
+      }
+
+      final Map<String, dynamic> data = {
+        'name': _nameCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
+        'imageUrl': imageUrl ?? '',
+        'members': _selectedMemberIds.toList(),
+      };
+
+      if (widget.groupId == null) {
+        data['createdAt'] = FieldValue.serverTimestamp();
+        data['lastMessage'] = '';
+        data['lastMessageSenderName'] = '';
+        data['lastMessageTime'] = null;
+        await FirebaseFirestore.instance.collection('community_groups').add(data);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group created successfully')));
+      } else {
+        await FirebaseFirestore.instance.collection('community_groups').doc(widget.groupId).update(data);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group updated successfully')));
+      }
+
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving group: $e')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 950,
+        height: 700,
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.groupId == null ? 'Create New Group' : 'Edit Group Details',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+              const Divider(height: 24),
+
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left Column: Details
+                    Expanded(
+                      flex: 4,
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              GestureDetector(
+                                onTap: _pickImage,
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      width: 120,
+                                      height: 120,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.grey[300]!, width: 2),
+                                      ),
+                                      child: ClipOval(
+                                        child: _imageBytes != null
+                                            ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                                            : (_existingImageUrl != null && _existingImageUrl!.isNotEmpty
+                                                ? Image.network(ImageProxy.proxy(_existingImageUrl!), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.group, size: 60, color: Colors.grey))
+                                                : const Icon(Icons.group, size: 60, color: Colors.grey)),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: Theme.of(context).primaryColor,
+                                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text('Click to upload group icon', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              const SizedBox(height: 24),
+                              TextFormField(
+                                controller: _nameCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Group Name',
+                                  border: OutlineInputBorder(),
+                                ),
+                                validator: (v) => v!.trim().isEmpty ? 'Group name is required' : null,
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _descCtrl,
+                                maxLines: 4,
+                                decoration: const InputDecoration(
+                                  labelText: 'Description',
+                                  border: OutlineInputBorder(),
+                                  alignLabelWithHint: true,
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                              if (_saving)
+                                const Center(child: CircularProgressIndicator())
+                              else
+                                ElevatedButton.icon(
+                                  onPressed: _saveGroup,
+                                  icon: const Icon(Icons.save),
+                                  label: Text(widget.groupId == null ? 'Create Group' : 'Save Changes'),
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(double.infinity, 48),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const VerticalDivider(width: 32),
+
+                    // Right Column: Members & Church Groups
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Church Group Section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Add/Remove by Church Group / Unit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    if (_churchGroups.isEmpty)
+                                      const Expanded(child: Text('No church groups available.'))
+                                    else ...[
+                                      Expanded(
+                                        child: Container(
+                                          height: 40,
+                                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.grey[400]!),
+                                            borderRadius: BorderRadius.circular(6),
+                                            color: Colors.white,
+                                          ),
+                                          child: DropdownButtonHideUnderline(
+                                            child: DropdownButton<String>(
+                                              isExpanded: true,
+                                              value: _selectedChurchGroup,
+                                              items: _churchGroups.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+                                              onChanged: (val) => setState(() => _selectedChurchGroup = val),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      ElevatedButton.icon(
+                                        onPressed: _addByChurchGroup,
+                                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                                        label: const Text('Add All'),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ElevatedButton.icon(
+                                        onPressed: _removeByChurchGroup,
+                                        icon: const Icon(Icons.remove_circle_outline, size: 18),
+                                        label: const Text('Remove All'),
+                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                                      ),
+                                    ]
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Search & Assign Members Manually', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${_selectedMemberIds.length} Selected',
+                                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _searchCtrl,
+                            onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
+                            decoration: InputDecoration(
+                              hintText: 'Search members by name, email or group...',
+                              prefixIcon: const Icon(Icons.search),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
+                                      _searchCtrl.clear();
+                                      setState(() => _searchQuery = '');
+                                    })
+                                  : null,
+                              border: const OutlineInputBorder(),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          Expanded(
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: FirebaseFirestore.instance.collection('members').orderBy('name').snapshots(),
+                              builder: (context, memberSnap) {
+                                if (!memberSnap.hasData) return const Center(child: CircularProgressIndicator());
+                                var memberDocs = memberSnap.data!.docs;
+
+                                if (_searchQuery.isNotEmpty) {
+                                  memberDocs = memberDocs.where((doc) {
+                                    final data = doc.data() as Map<String, dynamic>;
+                                    final name = (data['name'] ?? '').toString().toLowerCase();
+                                    final email = (data['email'] ?? '').toString().toLowerCase();
+                                    final group = (data['churchGroup'] ?? '').toString().toLowerCase();
+                                    return name.contains(_searchQuery) || email.contains(_searchQuery) || group.contains(_searchQuery);
+                                  }).toList();
+                                }
+
+                                if (memberDocs.isEmpty) {
+                                  return const Center(child: Text('No members found'));
+                                }
+
+                                return ListView.builder(
+                                  itemCount: memberDocs.length,
+                                  itemBuilder: (context, index) {
+                                    final mDoc = memberDocs[index];
+                                    final mData = mDoc.data() as Map<String, dynamic>;
+                                    final memberId = mDoc.id;
+                                    final name = mData['name'] ?? 'Unknown';
+                                    final email = mData['email'] ?? '';
+                                    final churchGroup = mData['churchGroup'] ?? '';
+                                    final isAssigned = _selectedMemberIds.contains(memberId);
+
+                                    return Card(
+                                      margin: const EdgeInsets.only(bottom: 6),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor: isAssigned ? Colors.green[50] : Colors.grey[100],
+                                          child: Text(
+                                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                            style: TextStyle(color: isAssigned ? Colors.green : Colors.grey[700], fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        subtitle: Text('$email${churchGroup.isNotEmpty ? '  ·  $churchGroup' : ''}'),
+                                        trailing: ElevatedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              if (isAssigned) {
+                                                _selectedMemberIds.remove(memberId);
+                                              } else {
+                                                _selectedMemberIds.add(memberId);
+                                              }
+                                            });
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: isAssigned ? Colors.red[50] : Colors.blue[50],
+                                            foregroundColor: isAssigned ? Colors.red : Colors.blue,
+                                            elevation: 0,
+                                          ),
+                                          child: Text(isAssigned ? 'Remove' : 'Assign'),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

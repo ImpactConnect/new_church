@@ -22,6 +22,32 @@ class BookmarkModel extends Equatable {
     this.category,
   });
 
+  factory BookmarkModel.fromJson(Map<String, dynamic> json) {
+    return BookmarkModel(
+      id: json['id'],
+      bookId: json['bookId'],
+      bookName: json['bookName'],
+      chapterNumber: json['chapterNumber'],
+      verseNumber: json['verseNumber'],
+      verseText: json['verseText'],
+      createdAt: DateTime.parse(json['createdAt']),
+      category: json['category'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'bookId': bookId,
+      'bookName': bookName,
+      'chapterNumber': chapterNumber,
+      'verseNumber': verseNumber,
+      'verseText': verseText,
+      'createdAt': createdAt.toIso8601String(),
+      'category': category,
+    };
+  }
+
   String get reference => '$bookName $chapterNumber:$verseNumber';
 
   @override

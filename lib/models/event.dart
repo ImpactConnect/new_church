@@ -50,7 +50,34 @@ class Event {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  bool get isUpcoming => endDate.isAfter(DateTime.now());
+  bool get isUpcoming => effectiveEndDate.isAfter(DateTime.now());
+
+  DateTime get effectiveDate {
+    final now = DateTime.now();
+    if (recurrence == 'daily') {
+      if (now.isAfter(endDate) || now.isAfter(startDate)) {
+        // Find next occurrence matching the time of startDate
+        var next = DateTime(now.year, now.month, now.day, startDate.hour, startDate.minute);
+        if (now.isAfter(next)) {
+          next = next.add(const Duration(days: 1));
+        }
+        return next;
+      }
+    }
+    return startDate;
+  }
+
+  DateTime get effectiveEndDate {
+    final now = DateTime.now();
+    if (recurrence == 'daily') {
+      if (now.isAfter(endDate)) {
+        final effStart = effectiveDate;
+        final duration = endDate.difference(startDate);
+        return effStart.add(duration);
+      }
+    }
+    return endDate;
+  }
 
   Map<String, dynamic> toMap() {
     return {

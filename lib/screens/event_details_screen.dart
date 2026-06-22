@@ -89,7 +89,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         calendar.id,
         title: widget.event.title,
         description: widget.event.description,
-        start: TZDateTime.from(widget.event.startDate, local),
+        start: TZDateTime.from(widget.event.effectiveDate, local),
         end: TZDateTime.from(widget.event.endDate, local),
         location: widget.event.venue,
         recurrenceRule: recurrenceRule,
@@ -113,7 +113,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     final String shareText = '''
 ${widget.event.title}
 
-Date: ${DateFormat('MMM d, y').format(widget.event.startDate)}
+Date: ${DateFormat('MMM d, y').format(widget.event.effectiveDate)}
 Time: ${widget.event.programmeTime}
 Venue: ${widget.event.venue}
 
@@ -135,7 +135,7 @@ ${widget.event.description}
     try {
       await LocalNotificationService().scheduleEventReminder(
         id: widget.event.id.hashCode,
-        eventTime: widget.event.startDate,
+        eventTime: widget.event.effectiveDate,
         title: 'Upcoming Event: ${widget.event.title}',
         body:
             'Starting soon at ${widget.event.programmeTime}. Tap to see details!',
@@ -276,7 +276,7 @@ ${widget.event.description}
                               Icons.calendar_month,
                               'Date',
                               DateFormat('MMMM d, yyyy')
-                                  .format(widget.event.startDate)),
+                                  .format(widget.event.effectiveDate)),
                           if (widget.event.programmeTime.isNotEmpty) ...[
                             const SizedBox(height: 16),
                             _buildModernInfoRow(Icons.access_time, 'Time',

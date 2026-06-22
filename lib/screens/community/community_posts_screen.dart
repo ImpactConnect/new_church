@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../../models/community_post.dart';
 import '../../models/community_user.dart';
@@ -6,6 +8,7 @@ import '../../services/community_post_service.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'community_post_details_screen.dart';
 import 'create_community_post_screen.dart';
+import 'group_chat_screen.dart';
 
 class CommunityPostsScreen extends StatefulWidget {
   const CommunityPostsScreen({Key? key, required this.currentUser})
@@ -107,7 +110,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                 tabs: const [
                   Tab(text: 'Feeds'),
                   Tab(text: 'Questions'),
-                  Tab(text: 'Articles'),
+                  Tab(text: 'My Groups'),
                 ],
               ),
             ),
@@ -166,16 +169,15 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                   return titleMatches || contentMatches;
                 }).toList();
 
-                final feeds = filteredPosts.where((p) => p.type == PostType.post).toList();
+                final feeds = filteredPosts.where((p) => p.type == PostType.post || p.type == PostType.article).toList();
                 final questions = filteredPosts.where((p) => p.type == PostType.question).toList();
-                final articles = filteredPosts.where((p) => p.type == PostType.article).toList();
 
                 return TabBarView(
                   controller: _tabController,
                   children: [
                     _buildFeedsTab(feeds),
                     _buildQuestionsTab(questions),
-                    _buildArticlesTab(articles),
+                    _buildGroupsTab(),
                   ],
                 );
               },
@@ -183,14 +185,15 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (_tabController.index == 0) _showCreatePostScreen(PostType.post);
-          else if (_tabController.index == 1) _showCreatePostScreen(PostType.question);
-          else _showCreatePostScreen(PostType.article);
-        },
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _tabController.index == 2
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                if (_tabController.index == 0) _showCreatePostScreen(PostType.post);
+                else if (_tabController.index == 1) _showCreatePostScreen(PostType.question);
+              },
+              child: const Icon(Icons.add),
+            ),
       bottomNavigationBar: const BottomNavBar(currentIndex: 3), // Set to Community index
     );
   }
@@ -279,9 +282,31 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            post.authorName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          Row(
+                            children: [
+                              Text(
+                                post.authorName,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              if (post.type == PostType.article) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.indigo.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Article',
+                                    style: TextStyle(
+                                      color: Colors.indigo,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
                             formattedDate,
@@ -299,6 +324,16 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
               ),
               const SizedBox(height: 10),
 
+              // Article Title (if any)
+              if (post.type == PostType.article && post.title.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12).copyWith(bottom: 6),
+                  child: Text(
+                    post.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
+                  ),
+                ),
+
               // Content
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -311,8 +346,15 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
               ),
               const SizedBox(height: 10),
 
-              // Image (if any)
-              if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
+              // Image/Banner (if any)
+              if (post.type == PostType.article && post.bannerUrl != null)
+                Image.network(
+                  post.bannerUrl!,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  height: 200,
+                )
+              else if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
                 Image.network(
                   post.imageUrls!.first,
                   width: double.infinity,
@@ -447,16 +489,165 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
     );
   }
 
-  Widget _buildArticlesTab(List<CommunityPost> articles) {
-    if (articles.isEmpty) {
-      return const Center(child: Text("No articles published yet.", style: TextStyle(color: Colors.grey)));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12).copyWith(bottom: 80),
-      itemCount: articles.length,
-      itemBuilder: (context, index) {
-        return _buildPostCard(articles[index], isCompact: false);
-      },
+  Widget _buildGroupsTab() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('community_groups')
+          .where('members', arrayContains: widget.currentUser.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'You do not belong to any groups yet.',
+                  style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ask your administrator to assign you to a group.',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final groups = snapshot.data!.docs;
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount: groups.length,
+          itemBuilder: (context, index) {
+            final groupDoc = groups[index];
+            final groupData = groupDoc.data() as Map<String, dynamic>;
+            final name = groupData['name'] ?? 'Unnamed Group';
+            final imageUrl = groupData['imageUrl'] ?? '';
+            
+            // Last message details
+            final lastMessage = groupData['lastMessage'] ?? '';
+            final lastMsgSender = groupData['lastMessageSenderName'] ?? '';
+            final lastMsgTime = groupData['lastMessageTime'] as Timestamp?;
+            
+            String lastMsgText = 'No messages yet';
+            if (lastMessage.isNotEmpty) {
+              lastMsgText = lastMsgSender.isNotEmpty ? '$lastMsgSender: $lastMessage' : lastMessage;
+            }
+
+            String timeStr = '';
+            if (lastMsgTime != null) {
+              final date = lastMsgTime.toDate();
+              final now = DateTime.now();
+              if (date.day == now.day && date.month == now.month && date.year == now.year) {
+                timeStr = DateFormat('h:mm a').format(date);
+              } else if (date.day == now.day - 1 && date.month == now.month && date.year == now.year) {
+                timeStr = 'Yesterday';
+              } else {
+                timeStr = DateFormat('d/M/yy').format(date);
+              }
+            }
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              elevation: 3,
+              shadowColor: Colors.black.withValues(alpha: 0.1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GroupChatScreen(
+                        groupId: groupDoc.id,
+                        groupName: name,
+                        currentUser: widget.currentUser,
+                      ),
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 30,
+                          backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
+                          backgroundColor: Theme.of(context).primaryColor,
+                          child: imageUrl.isEmpty
+                              ? const Icon(Icons.group, color: Colors.white, size: 30)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF111B21)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (timeStr.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    timeStr,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: lastMessage.isNotEmpty ? Theme.of(context).primaryColor : const Color(0xFF8696A0),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              lastMsgText,
+                              style: const TextStyle(
+                                color: Color(0xFF667781),
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }
     );
   }
 

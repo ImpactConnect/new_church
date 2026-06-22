@@ -22,6 +22,32 @@ class AiContentBookmarkModel extends Equatable {
     required this.createdAt,
   });
 
+  factory AiContentBookmarkModel.fromJson(Map<String, dynamic> json) {
+    return AiContentBookmarkModel(
+      id: json['id'],
+      bookName: json['bookName'],
+      chapterNumber: json['chapterNumber'],
+      verseNumber: json['verseNumber'],
+      verseText: json['verseText'],
+      feature: json['feature'],
+      analysisJson: json['analysisJson'],
+      createdAt: DateTime.parse(json['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'bookName': bookName,
+      'chapterNumber': chapterNumber,
+      'verseNumber': verseNumber,
+      'verseText': verseText,
+      'feature': feature,
+      'analysisJson': analysisJson,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
   String get displayTitle => '$bookName $chapterNumber:$verseNumber · ${feature.toUpperCase()}';
 
   @override

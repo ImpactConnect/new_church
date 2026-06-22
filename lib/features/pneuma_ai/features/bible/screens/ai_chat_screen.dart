@@ -14,6 +14,9 @@ import '../../../../pneuma_ai/features/notes/presentation/widgets/add_to_note_di
 import 'package:church_mobile/features/bible_ai/features/notes/services/content_linker_service.dart';
 import '../../../../pneuma_ai/features/notes/data/models/linked_content_reference.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:church_mobile/services/community_auth_service.dart';
+
 class AiChatScreen extends ConsumerStatefulWidget {
   final String? bookName;
   final int? chapterNumber;
@@ -45,10 +48,11 @@ class AiChatScreen extends ConsumerStatefulWidget {
 }
 
 class _AiChatScreenState extends ConsumerState<AiChatScreen> {
-  static const String _defaultRabbiWelcomeMessage =
-      'Hi, welcome. I am your Bible teacher with deep knowledge of the Scriptures. '
-      'Ask me any question on any topic, passage, doctrine, or practical life issue, '
-      'and I will help you with Scripture-based insight and clear biblical understanding.';
+  String _userFirstName = 'there';
+
+  String _getWelcomeMessage() {
+    return 'Hi $_userFirstName, so nice to meet you here. I am always available 24/7 to help answer your spiritual concerns, unpack the Scriptures, and walk with you in your faith journey. What is on your heart today?';
+  }
 
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -66,6 +70,19 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   }
 
   Future<void> _initSession() async {
+    try {
+      final authService = CommunityAuthService();
+      final user = await authService.getCurrentUser();
+      if (user != null && user.displayName.isNotEmpty) {
+        _userFirstName = user.displayName.split(' ').first;
+      } else {
+        final fbUser = FirebaseAuth.instance.currentUser;
+        if (fbUser != null && fbUser.displayName != null && fbUser.displayName!.isNotEmpty) {
+          _userFirstName = fbUser.displayName!.split(' ').first;
+        }
+      }
+    } catch (_) {}
+
     if (widget.existingSession != null) {
       _loadSession(widget.existingSession!);
       return;
@@ -140,7 +157,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
       setState(() {
         if (widget.showWelcomeMessageOnNewSession) {
           _messages.add(
-            ChatMessage(message: _defaultRabbiWelcomeMessage, isUser: false),
+            ChatMessage(message: _getWelcomeMessage(), isUser: false),
           );
         }
         _isInitializing = false;
@@ -222,11 +239,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               userMessage: text,
               version: version,
               history: _messages.sublist(0, _messages.length - 2),
+              userName: _userFirstName,
             )
           : service.chatGeneral(
               userMessage: text,
               history: _messages.sublist(0, _messages.length - 2),
               preloadedContext: widget.preloadedContext,
+              userName: _userFirstName,
             );
 
       await for (final chunk in stream) {
@@ -308,11 +327,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               userMessage: text,
               version: version,
               history: _messages.sublist(0, _messages.length - 2),
+              userName: _userFirstName,
             )
           : service.chatGeneral(
               userMessage: text,
               history: _messages.sublist(0, _messages.length - 2),
               preloadedContext: widget.preloadedContext,
+              userName: _userFirstName,
             );
 
       await for (final chunk in stream) {
@@ -392,7 +413,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   Widget build(BuildContext context) {
     if (_isInitializing) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Ask Rabbi')),
+        appBar: AppBar(title: const Text('Ask GSW')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -402,7 +423,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ask Rabbi', style: TextStyle(fontSize: 16)),
+            const Text('Ask GSW', style: TextStyle(fontSize: 16)),
             if (widget.bookName != null)
               Text(
                 '${widget.bookName} ${widget.chapterNumber}:${widget.verseNumber}',
@@ -412,7 +433,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
               Text(widget.topic!, style: Theme.of(context).textTheme.labelSmall)
             else
               Text(
-                'Bible Teacher',
+                'Your Pastor',
                 style: Theme.of(context).textTheme.labelSmall,
               ),
           ],
@@ -535,7 +556,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              msg.isUser ? 'Your Message' : 'Rabbi\'s Response',
+              msg.isUser ? 'Your Message' : 'Pastor GSW\'s Response',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -565,7 +586,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   Future<void> _saveMessageToNote(ChatMessage msg) async {
     // Determine the sender
-    final sender = msg.isUser ? 'You' : 'Rabbi';
+    final sender = msg.isUser ? 'You' : 'Pastor GSW';
 
     // Format the content using ContentLinkerService
     final formattedContent = ContentLinkerService.formatChatMessage(

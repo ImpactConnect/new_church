@@ -326,7 +326,7 @@ class _AiExplanationScreenState extends ConsumerState<AiExplanationScreen> {
                           b.bookName == widget.bookName &&
                           b.chapterNumber == widget.chapterNumber &&
                           b.verseNumber == widget.verseNumber &&
-                          b.feature == widget.feature,
+                          b.feature == widget.feature.name,
                     );
                   }
 
@@ -345,7 +345,7 @@ class _AiExplanationScreenState extends ConsumerState<AiExplanationScreen> {
                               b.bookName == widget.bookName &&
                               b.chapterNumber == widget.chapterNumber &&
                               b.verseNumber == widget.verseNumber &&
-                              b.feature == widget.feature,
+                              b.feature == widget.feature.name,
                         );
                         await ref
                             .read(aiContentBookmarksNotifierProvider.notifier)
@@ -414,7 +414,7 @@ class _AiExplanationScreenState extends ConsumerState<AiExplanationScreen> {
               );
             },
             icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('Ask Rabbi'),
+            label: const Text('Ask GSW'),
           ),
           body: _buildBody(snapshot),
         );

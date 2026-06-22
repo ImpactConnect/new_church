@@ -28,70 +28,148 @@ class BibleHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // ── App Bar ──
-            SliverAppBar(
-              floating: true,
-              title: const Text('AI Bible'),
-              actions: [const _BibleVersionChip(), const SizedBox(width: 8)],
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  // ── Search Bar ──
-                  const SizedBox(height: 8),
-                  _SearchBar(),
-                  const SizedBox(height: 20),
-
-                  // ── Continue Reading ──
-                  const ContinueReadingCard(),
-                  const SizedBox(height: 28),
-
-                  // ── Reading Plan Section ──
-                  const _ReadingPlanSection(),
-                  const SizedBox(height: 28),
-
-                  // ── Bookmarks Section ──
-                  _SectionHeader(
-                    title: 'Bookmarks',
-                    icon: Icons.bookmark_rounded,
-                    onViewMore: () => Navigator.of(context).pushNamed(Routes.bookmarks),
+      body: CustomScrollView(
+        slivers: [
+          // ── App Bar / Hero Section ──
+          SliverAppBar(
+            expandedHeight: 180,
+            pinned: true,
+            backgroundColor: const Color(0xFF1A0A3C),
+            actions: [const _BibleVersionChip(), const SizedBox(width: 8)],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF1A0A3C), Color(0xFF3D1A7A), Color(0xFF6B2FC8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  const _BookmarksSection(),
-                  const SizedBox(height: 28),
-
-                  // ── Notes / Annotations Section ──
-                  _SectionHeader(
-                    title: 'Annotations',
-                    icon: Icons.edit_note_rounded,
-                    onViewMore: () => Navigator.of(context).pushNamed(Routes.notes),
+                  Positioned(
+                    top: -30, right: -30,
+                    child: Container(
+                      width: 160, height: 160,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.05),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  const _NotesSection(),
-                  const SizedBox(height: 28),
-
-                  // ── Browse Books (Inline Selector) ──
-                  _SectionHeader(
-                    title: 'Browse Books',
-                    icon: Icons.menu_book_rounded,
-                    onViewMore: null,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Text('📖', style: TextStyle(fontSize: 28)),
+                            ),
+                            const SizedBox(width: 14),
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'AI Bible',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                Text(
+                                  'Read, Study & Grow',
+                                  style: TextStyle(
+                                    color: Color(0xFFD4BBFF),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  const _InlineBookChapterSelector(),
-                  const SizedBox(height: 24),
-
-                  const Center(child: BannerAdWidget()),
-                  const SizedBox(height: 32),
-                ]),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // ── Search Bar ──
+                const SizedBox(height: 16),
+                _SearchBar(),
+                const SizedBox(height: 20),
+
+                // ── Continue Reading ──
+                const ContinueReadingCard(),
+                const SizedBox(height: 28),
+
+                // ── Browse Books (Inline Selector) ──
+                const _SectionHeader(
+                  title: 'Browse Books',
+                  icon: Icons.menu_book_rounded,
+                  onViewMore: null,
+                ),
+                const SizedBox(height: 8),
+                const _InlineBookChapterSelector(),
+                const SizedBox(height: 28),
+
+                // ── Bookmarks Section ──
+                _SectionHeader(
+                  title: 'Bookmarks',
+                  icon: Icons.bookmark_rounded,
+                  onViewMore: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const _AllBookmarksSheet(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                const _BookmarksSection(),
+                const SizedBox(height: 28),
+
+                // ── Notes / Annotations Section ──
+                _SectionHeader(
+                  title: 'Annotations',
+                  icon: Icons.edit_note_rounded,
+                  onViewMore: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const _AllNotesSheet(),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                const _NotesSection(),
+                const SizedBox(height: 24),
+
+                const Center(child: BannerAdWidget()),
+                const SizedBox(height: 32),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -763,7 +841,7 @@ class _NotesSection extends ConsumerWidget {
 
         final sorted = [...notes]
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        final display = sorted.take(4).toList();
+        final display = sorted.take(3).toList();
 
         return Column(
           children: display.map((note) {
@@ -1166,6 +1244,182 @@ class _LoadingShimmer extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ALL BOOKMARKS SHEET
+// ═══════════════════════════════════════════════════════════════════
+
+class _AllBookmarksSheet extends ConsumerWidget {
+  const _AllBookmarksSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final aiBookmarksAsync = ref.watch(aiContentBookmarksNotifierProvider);
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'All Bookmarks',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: aiBookmarksAsync.when(
+              data: (bookmarks) {
+                if (bookmarks.isEmpty) {
+                  return const Center(child: Text('No bookmarks saved.'));
+                }
+                final sorted = [...bookmarks]
+                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: sorted.length,
+                  itemBuilder: (context, index) {
+                    final bm = sorted[index];
+                    return _ItemTile(
+                      leading: Icons.bookmark_rounded,
+                      leadingColor: Theme.of(context).primaryColor,
+                      title: '${bm.bookName} ${bm.chapterNumber}:${bm.verseNumber}',
+                      subtitle: bm.verseText.isNotEmpty
+                          ? bm.verseText
+                          : bm.feature,
+                      onTap: () {
+                        Navigator.pop(context); // Close sheet
+                        // Navigate to VerseAiResultsScreen with loaded feature
+                        try {
+                          final dataJson = jsonDecode(bm.analysisJson);
+                          VerseFeature feature;
+                          try {
+                            feature = VerseFeature.values.byName(bm.feature);
+                          } catch (_) {
+                            feature = VerseFeature.explain;
+                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => VerseAiResultsScreen(
+                                bookName: bm.bookName,
+                                chapterNumber: bm.chapterNumber,
+                                verseNumber: bm.verseNumber,
+                                verseText: bm.verseText,
+                                initialMode: feature,
+                                cachedAnalysis: dataJson,
+                              ),
+                            ),
+                          );
+                        } catch (e) {
+                          // Ignore
+                        }
+                      },
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text(err.toString())),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ALL NOTES SHEET
+// ═══════════════════════════════════════════════════════════════════
+
+class _AllNotesSheet extends ConsumerWidget {
+  const _AllNotesSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(notesNotifierProvider);
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'All Annotations',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: notesAsync.when(
+              data: (notes) {
+                if (notes.isEmpty) {
+                  return const Center(child: Text('No annotations saved.'));
+                }
+                final sorted = [...notes]
+                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  itemCount: sorted.length,
+                  itemBuilder: (context, index) {
+                    final note = sorted[index];
+                    return _ItemTile(
+                      leading: Icons.sticky_note_2_rounded,
+                      leadingColor: Colors.blue,
+                      title: note.reference,
+                      subtitle: note.content.length > 80
+                          ? '${note.content.substring(0, 80)}...'
+                          : note.content,
+                      onTap: () {
+                        Navigator.pop(context); // Close sheet
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ChapterScreen(
+                              bookId: note.bookId,
+                              chapterNumber: note.chapterNumber,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text(err.toString())),
+            ),
+          ),
+        ],
       ),
     );
   }

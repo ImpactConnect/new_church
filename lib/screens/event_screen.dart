@@ -324,7 +324,7 @@ class _EventCard extends StatelessWidget {
                               size: 14, color: Colors.grey[500]),
                           const SizedBox(width: 6),
                           Text(
-                            DateFormat('MMM d, y').format(event.startDate),
+                            DateFormat('MMM d, y').format(event.effectiveDate),
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 13,
@@ -417,7 +417,7 @@ class _EventCard extends StatelessWidget {
                                 color: Theme.of(context).primaryColor),
                             const SizedBox(width: 6),
                             Text(
-                              DateFormat('MMM d, y').format(event.startDate),
+                              DateFormat('MMM d, y').format(event.effectiveDate),
                               style: TextStyle(
                                 color: Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.w600,
