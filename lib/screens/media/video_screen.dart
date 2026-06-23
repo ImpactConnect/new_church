@@ -497,23 +497,24 @@ class _VideoScreenState extends State<VideoScreen> {
   // ─── Search bar ──────────────────────────────────────────────────────────
 
   Widget _buildSearchBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF3F4F6),
           borderRadius: BorderRadius.circular(16),
         ),
         child: TextField(
           controller: _searchController,
-          style: const TextStyle(fontSize: 15),
+          style: TextStyle(fontSize: 15, color: isDark ? Colors.white : Colors.black87),
           decoration: InputDecoration(
             hintText: 'Search videos...',
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+            hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey[500]),
+            prefixIcon: Icon(Icons.search, color: isDark ? Colors.white70 : Colors.grey[600]),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
+                    icon: Icon(Icons.clear, size: 20, color: isDark ? Colors.white70 : Colors.black54),
                     onPressed: () => setState(() {
                       _searchController.clear();
                       _searchQuery = '';
@@ -547,6 +548,7 @@ class _VideoScreenState extends State<VideoScreen> {
 
   Widget _categoryChip(String label, String? value, ColorScheme colors) {
     final selected = _selectedCategory == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => setState(() => _selectedCategory = value),
       child: AnimatedContainer(
@@ -554,13 +556,17 @@ class _VideoScreenState extends State<VideoScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? colors.primary : const Color(0xFFF3F4F6),
+          color: selected
+              ? colors.primary
+              : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF3F4F6)),
           borderRadius: BorderRadius.circular(24),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? Colors.white : Colors.black87,
+            color: selected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.black87),
             fontWeight: selected ? FontWeight.bold : FontWeight.w500,
             fontSize: 13,
           ),
@@ -695,6 +701,7 @@ class _VideoScreenState extends State<VideoScreen> {
   // ─── Cards ───────────────────────────────────────────────────────────────
 
   Widget _buildVideoCard(VideoItem video) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final videoId = _extractYouTubeId(video.videoUrl);
     final thumb =
         videoId != null ? _youtubeThumbnail(videoId) : video.thumbnailUrl;
@@ -702,8 +709,22 @@ class _VideoScreenState extends State<VideoScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [
+                  Color(0xFF1E293B), // Slate 800
+                  Color(0xFF0F172A), // Slate 900
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isDark ? null : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -728,9 +749,9 @@ class _VideoScreenState extends State<VideoScreen> {
                   CachedNetworkImage(
                     imageUrl: thumb,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: Colors.grey[200]),
+                    placeholder: (_, __) => Container(color: isDark ? Colors.white10 : Colors.grey[200]),
                     errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey[200],
+                      color: isDark ? Colors.white10 : Colors.grey[200],
                       child: const Icon(Icons.video_library,
                           color: Colors.grey, size: 32),
                     ),
@@ -809,7 +830,7 @@ class _VideoScreenState extends State<VideoScreen> {
                         return Text(
                           '${MediaUtils.formatViews(views)} views • ${MediaUtils.formatRelativeDate(video.postedDate)}',
                           style:
-                              TextStyle(color: Colors.grey[600], fontSize: 12),
+                              TextStyle(color: isDark ? Colors.white54 : Colors.grey[600], fontSize: 12),
                         );
                       },
                     ),
@@ -820,13 +841,13 @@ class _VideoScreenState extends State<VideoScreen> {
                         children: [
                           Icon(Icons.person,
                               size: 14,
-                              color: Theme.of(context).colorScheme.primary),
+                              color: isDark ? const Color(0xFF818CF8) : Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               video.preacher!,
-                              style: const TextStyle(
-                                  color: Colors.black87,
+                              style: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.black87,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12),
                               maxLines: 1,
@@ -847,6 +868,7 @@ class _VideoScreenState extends State<VideoScreen> {
   }
 
   Widget _buildFeaturedCard(VideoItem video) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final videoId = _extractYouTubeId(video.videoUrl);
     final thumb =
         videoId != null ? _youtubeThumbnail(videoId) : video.thumbnailUrl;
@@ -857,8 +879,22 @@ class _VideoScreenState extends State<VideoScreen> {
         width: 260,
         margin: const EdgeInsets.only(right: 16, bottom: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
+          gradient: isDark
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFF1E293B), // Slate 800
+                    Color(0xFF0F172A), // Slate 900
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isDark ? null : const Color(0xFFF9FAFB),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200,
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -881,9 +917,9 @@ class _VideoScreenState extends State<VideoScreen> {
                       imageUrl: thumb,
                       fit: BoxFit.cover,
                       placeholder: (_, __) =>
-                          Container(color: Colors.grey[300]),
+                          Container(color: isDark ? Colors.white10 : Colors.grey[300]),
                       errorWidget: (_, __, ___) => Container(
-                        color: Colors.grey[300],
+                        color: isDark ? Colors.white10 : Colors.grey[300],
                         child: const Icon(Icons.video_library,
                             size: 40, color: Colors.grey),
                       ),
@@ -933,7 +969,7 @@ class _VideoScreenState extends State<VideoScreen> {
                     const SizedBox(height: 6),
                     Text(
                       '${MediaUtils.formatViews(video.views)} views • ${MediaUtils.formatRelativeDate(video.postedDate)}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      style: TextStyle(color: isDark ? Colors.white54 : Colors.grey[600], fontSize: 12),
                     ),
                     if (video.preacher != null &&
                         video.preacher!.isNotEmpty) ...[
@@ -942,13 +978,13 @@ class _VideoScreenState extends State<VideoScreen> {
                         children: [
                           Icon(Icons.person,
                               size: 14,
-                              color: Theme.of(context).colorScheme.primary),
+                              color: isDark ? const Color(0xFF818CF8) : Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               video.preacher!,
-                              style: const TextStyle(
-                                  color: Colors.black87,
+                              style: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.black87,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12),
                               maxLines: 1,

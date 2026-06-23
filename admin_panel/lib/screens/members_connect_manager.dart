@@ -6,6 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'member_widgets.dart';
 import '../utils/image_proxy.dart';
+import 'prayer_testimonies_manager.dart';
 
 class MembersConnectManager extends StatefulWidget {
   const MembersConnectManager({super.key});
@@ -46,7 +47,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
               Tab(icon: Icon(Icons.person_add_outlined), text: 'Members'),
               Tab(icon: Icon(Icons.group_outlined), text: 'Groups Manager'),
               Tab(icon: Icon(Icons.campaign_outlined), text: 'Announcements'),
-              Tab(icon: Icon(Icons.star_outline), text: 'Testimonies'),
+              Tab(icon: Icon(Icons.volunteer_activism_outlined), text: 'Prayers & Testimonies'),
               Tab(icon: Icon(Icons.forum_outlined), text: 'Community Posts'),
               Tab(icon: Icon(Icons.person_pin), text: 'Pastor\'s Desk'),
             ],
@@ -59,7 +60,7 @@ class _MembersConnectManagerState extends State<MembersConnectManager>
               _MembersTab(),
               _GroupsManagerTab(),
               _AnnouncementsTab(),
-              _TestimoniesTab(),
+              PrayerTestimoniesManager(),
               _CommunityPostsTab(),
               _PastorsDeskTab(),
             ],
@@ -1116,148 +1117,6 @@ class _AnnouncementsTabState extends State<_AnnouncementsTab> {
   }
 }
 
-// ─── TESTIMONIES TAB ─────────────────────────────────────────────────────────
-class _TestimoniesTab extends StatefulWidget {
-  const _TestimoniesTab();
-  @override
-  State<_TestimoniesTab> createState() => _TestimoniesTabState();
-}
-
-class _TestimoniesTabState extends State<_TestimoniesTab> {
-  final _nameCtrl = TextEditingController();
-  final _bodyCtrl = TextEditingController();
-  bool _saving = false;
-
-  Future<void> _post() async {
-    if (_nameCtrl.text.trim().isEmpty || _bodyCtrl.text.trim().isEmpty) return;
-    setState(() => _saving = true);
-    await FirebaseFirestore.instance.collection('testimonies').add({
-      'testifier': _nameCtrl.text.trim(),
-      'testimony': _bodyCtrl.text.trim(),
-      'dateShared': FieldValue.serverTimestamp(),
-      'approved': true,
-    });
-    _nameCtrl.clear();
-    _bodyCtrl.clear();
-    setState(() => _saving = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(
-          width: 340,
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('Add Testimony',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _nameCtrl,
-                  decoration: const InputDecoration(
-                      labelText: 'Testifier Name',
-                      border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _bodyCtrl,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                      labelText: 'Testimony',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true),
-                ),
-                const SizedBox(height: 14),
-                _saving
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton.icon(
-                        onPressed: _post,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Post Testimony'),
-                        style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 46)),
-                      ),
-              ]),
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('testimonies')
-                .orderBy('dateShared', descending: true)
-                .snapshots(),
-            builder: (context, snap) {
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final docs = snap.data!.docs;
-              if (docs.isEmpty) {
-                return const Center(child: Text('No testimonies yet.'));
-              }
-              return ListView.builder(
-                itemCount: docs.length,
-                itemBuilder: (_, i) {
-                  final d = docs[i].data() as Map<String, dynamic>;
-                  final approved = d['approved'] == true;
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    color: approved ? null : Colors.amber[50],
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: approved
-                            ? Colors.green[100]
-                            : Colors.orange[100],
-                        child: Icon(
-                          approved
-                              ? Icons.check_circle_outline
-                              : Icons.pending_outlined,
-                          color: approved ? Colors.green : Colors.orange,
-                        ),
-                      ),
-                      title: Text(d['testifier'] ?? 'Anonymous',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold)),
-                      subtitle: Text(d['testimony'] ?? '',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        if (!approved)
-                          TextButton(
-                            onPressed: () => FirebaseFirestore.instance
-                                .collection('testimonies')
-                                .doc(docs[i].id)
-                                .update({'approved': true}),
-                            child: const Text('Approve',
-                                style: TextStyle(color: Colors.green)),
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: Colors.red),
-                          onPressed: () => FirebaseFirestore.instance
-                              .collection('testimonies')
-                              .doc(docs[i].id)
-                              .delete(),
-                        ),
-                      ]),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ]),
-    );
-  }
-}
 
 // ─── COMMUNITY POSTS TAB ─────────────────────────────────────────────────────
 class _CommunityPostsTab extends StatelessWidget {

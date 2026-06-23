@@ -36,11 +36,26 @@ class SermonCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor == Colors.white
-            ? const Color(0xFFF9FAFB)
-            : Theme.of(context).cardColor,
+        gradient: Theme.of(context).brightness == Brightness.dark
+            ? const LinearGradient(
+                colors: [
+                  Color(0xFF1E293B), // Slate 800
+                  Color(0xFF0F172A), // Slate 900
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? null
+            : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.grey.shade200,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -139,8 +154,8 @@ class SermonCard extends StatelessWidget {
                 // ── Info ───────────────────────────────────────────────
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
                       SizedBox(
                         height: 20,
                         child: LayoutBuilder(
@@ -195,7 +210,9 @@ class SermonCard extends StatelessWidget {
                       Text(
                         sermon.preacherName,
                         style: TextStyle(
-                            color: colors.primary.withValues(alpha: 0.7),
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white70
+                                : colors.primary.withValues(alpha: 0.7),
                             fontSize: 13,
                             fontWeight: FontWeight.w600),
                         maxLines: 1,
@@ -213,13 +230,17 @@ class SermonCard extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: colors.primary.withValues(alpha: 0.1),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white.withOpacity(0.12)
+                                    : colors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 sermon.category,
                                 style: TextStyle(
-                                  color: colors.primary,
+                                  color: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.white70
+                                      : colors.primary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -252,7 +273,7 @@ class SermonCard extends StatelessWidget {
                           // Bookmark indicator
                           if (sermon.isBookmarked)
                             Icon(Icons.bookmark_rounded,
-                                size: 14, color: colors.primary),
+                                size: 14, color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF6366F1) : colors.primary),
                           // Downloaded indicator
                           if (sermon.isDownloaded)
                             Icon(Icons.download_done_rounded,
@@ -264,7 +285,9 @@ class SermonCard extends StatelessWidget {
                         Text(
                           sermon.scriptureReference!,
                           style: TextStyle(
-                              color: colors.primary.withValues(alpha: 0.8),
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white54
+                                  : colors.primary.withValues(alpha: 0.8),
                               fontSize: 11,
                               fontStyle: FontStyle.italic),
                           maxLines: 1,
@@ -312,7 +335,7 @@ class SermonCard extends StatelessWidget {
                               ? Icons.delete_outline
                               : Icons.download_outlined,
                           color:
-                              sermon.isDownloaded ? Colors.red : colors.primary,
+                              sermon.isDownloaded ? Colors.red : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : colors.primary),
                         ),
                         title: Text(sermon.isDownloaded
                             ? 'Delete Download'

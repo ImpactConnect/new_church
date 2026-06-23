@@ -90,7 +90,9 @@ class _EventScreenState extends State<EventScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
+      backgroundColor: isDark ? Colors.transparent : null,
       body: CustomScrollView(
         slivers: <Widget>[
           SliverAppBar(
@@ -133,14 +135,21 @@ class _EventScreenState extends State<EventScreen> {
               padding: const EdgeInsets.all(16),
               child: TextField(
                 controller: _searchController,
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                 decoration: InputDecoration(
                   hintText: 'Search events...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
+                  prefixIcon: Icon(Icons.search, color: isDark ? Colors.white70 : Colors.grey),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey[300]!),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: isDark ? const Color(0xFF1E293B) : Colors.grey[100],
                 ),
                 onChanged: (value) {
                   setState(() => _searchQuery = value);
@@ -177,7 +186,7 @@ class _EventScreenState extends State<EventScreen> {
                                 .titleLarge
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).primaryColor,
+                                  color: isDark ? Colors.white : Theme.of(context).primaryColor,
                                 ),
                           ),
                         ),
@@ -209,7 +218,7 @@ class _EventScreenState extends State<EventScreen> {
                                 .titleLarge
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey[600],
+                                  color: isDark ? Colors.white70 : Colors.grey[600],
                                 ),
                           ),
                         ),
@@ -251,15 +260,16 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isPast) {
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.grey[200]!),
+          side: BorderSide(color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200]!),
         ),
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
@@ -277,28 +287,28 @@ class _EventCard extends StatelessWidget {
                         width: 90,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
+                          baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                          highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                           child: Container(
                             height: 90,
                             width: 90,
-                            color: Colors.white,
+                            color: isDark ? const Color(0xFF0F172A) : Colors.white,
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
                           height: 90,
                           width: 90,
-                          color: Colors.grey[100],
+                          color: isDark ? const Color(0xFF0F172A) : Colors.grey[100],
                           child: Icon(Icons.church,
-                              size: 24, color: Colors.grey[400]),
+                              size: 24, color: isDark ? Colors.white30 : Colors.grey[400]),
                         ),
                       )
                     : Container(
                         height: 90,
                         width: 90,
-                        color: Colors.grey[100],
+                        color: isDark ? const Color(0xFF0F172A) : Colors.grey[100],
                         child: Icon(Icons.church,
-                            size: 24, color: Colors.grey[400]),
+                            size: 24, color: isDark ? Colors.white30 : Colors.grey[400]),
                       ),
               ),
               Expanded(
@@ -310,9 +320,10 @@ class _EventCard extends StatelessWidget {
                     children: [
                       Text(
                         event.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black87,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -321,12 +332,12 @@ class _EventCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(Icons.calendar_today,
-                              size: 14, color: Colors.grey[500]),
+                              size: 14, color: isDark ? Colors.white60 : Colors.grey[500]),
                           const SizedBox(width: 6),
                           Text(
                             DateFormat('MMM d, y').format(event.effectiveDate),
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: isDark ? Colors.white60 : Colors.grey[600],
                               fontSize: 13,
                             ),
                           ),
@@ -345,9 +356,12 @@ class _EventCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       elevation: 4,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: Colors.white,
+      shadowColor: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: isDark ? Colors.white.withOpacity(0.08) : Colors.transparent),
+      ),
+      color: isDark ? const Color(0xFF1E293B) : Colors.white,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -364,25 +378,25 @@ class _EventCard extends StatelessWidget {
                       width: double.infinity,
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Shimmer.fromColors(
-                        baseColor: Colors.grey[300]!,
-                        highlightColor: Colors.grey[100]!,
+                        baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                        highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                         child: Container(
                           height: 220,
-                          color: Colors.white,
+                          color: isDark ? const Color(0xFF0F172A) : Colors.white,
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
                         height: 220,
-                        color: Colors.grey[200],
+                        color: isDark ? const Color(0xFF0F172A) : Colors.grey[200],
                         child: Icon(Icons.church,
-                            size: 48, color: Colors.grey[400]),
+                            size: 48, color: isDark ? Colors.white30 : Colors.grey[400]),
                       ),
                     )
                   : Container(
                       height: 220,
-                      color: Colors.grey[200],
+                      color: isDark ? const Color(0xFF0F172A) : Colors.grey[200],
                       child:
-                          Icon(Icons.church, size: 48, color: Colors.grey[400]),
+                          Icon(Icons.church, size: 48, color: isDark ? Colors.white30 : Colors.grey[400]),
                     ),
             ),
             Padding(
@@ -392,10 +406,11 @@ class _EventCard extends StatelessWidget {
                 children: [
                   Text(
                     event.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.5,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -405,21 +420,19 @@ class _EventCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .primaryColor
-                              .withValues(alpha: 0.1),
+                          color: isDark ? const Color(0xFF6366F1).withOpacity(0.2) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.calendar_month,
                                 size: 16,
-                                color: Theme.of(context).primaryColor),
+                                color: isDark ? const Color(0xFF818CF8) : Theme.of(context).primaryColor),
                             const SizedBox(width: 6),
                             Text(
                               DateFormat('MMM d, y').format(event.effectiveDate),
                               style: TextStyle(
-                                color: Theme.of(context).primaryColor,
+                                color: isDark ? const Color(0xFF818CF8) : Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -433,13 +446,13 @@ class _EventCard extends StatelessWidget {
                           child: Row(
                             children: [
                               Icon(Icons.location_on,
-                                  size: 16, color: Colors.grey[500]),
+                                  size: 16, color: isDark ? Colors.white60 : Colors.grey[500]),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   event.venue,
                                   style: TextStyle(
-                                      color: Colors.grey[600], fontSize: 13),
+                                      color: isDark ? Colors.white60 : Colors.grey[600], fontSize: 13),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -464,6 +477,7 @@ class _ShimmerEventList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -471,20 +485,21 @@ class _ShimmerEventList extends StatelessWidget {
       itemBuilder: (context, index) {
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: isDark ? Colors.white.withOpacity(0.08) : Colors.transparent)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Shimmer.fromColors(
-                baseColor: Colors.grey[300]!,
-                highlightColor: Colors.grey[100]!,
+                baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                 child: Container(
                   height: 200,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
                     borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(4)),
+                        const BorderRadius.vertical(top: Radius.circular(4)),
                   ),
                 ),
               ),
@@ -494,22 +509,22 @@ class _ShimmerEventList extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
+                      baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                      highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                       child: Container(
                         height: 20,
                         width: double.infinity,
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.grey[100]!,
+                      baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                      highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                       child: Container(
                         height: 16,
                         width: 150,
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF0F172A) : Colors.white,
                       ),
                     ),
                   ],

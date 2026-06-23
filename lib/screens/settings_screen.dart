@@ -9,6 +9,7 @@ import '../models/community_user.dart';
 import '../screens/community/community_login_screen.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'help_support_screen.dart';
+import 'contact_support_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -227,7 +228,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           title: const Text('Contact Support', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                           trailing: const Icon(Icons.chevron_right, size: 20),
-                          onTap: () => _launchURL('mailto:support@yourchurch.com'),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ContactSupportScreen(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

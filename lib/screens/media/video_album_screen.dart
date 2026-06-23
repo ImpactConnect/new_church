@@ -31,6 +31,7 @@ class VideoAlbumScreen extends StatelessWidget {
   }
 
   Widget _buildVideoCard(BuildContext context, VideoItem video) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final videoId = _extractYouTubeId(video.videoUrl);
     final thumb =
         videoId != null ? _youtubeThumbnail(videoId) : video.thumbnailUrl;
@@ -38,8 +39,22 @@ class VideoAlbumScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [
+                  Color(0xFF1E293B), // Slate 800
+                  Color(0xFF0F172A), // Slate 900
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: isDark ? null : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey.shade200,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -54,6 +69,7 @@ class VideoAlbumScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Row(
           children: [
+            // Thumbnail
             SizedBox(
               width: 140,
               height: 100,
@@ -63,9 +79,9 @@ class VideoAlbumScreen extends StatelessWidget {
                   CachedNetworkImage(
                     imageUrl: thumb,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: Colors.grey[200]),
+                    placeholder: (_, __) => Container(color: isDark ? Colors.white10 : Colors.grey[200]),
                     errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey[200],
+                      color: isDark ? Colors.white10 : Colors.grey[200],
                       child: const Icon(Icons.video_library,
                           color: Colors.grey, size: 32),
                     ),
@@ -86,6 +102,7 @@ class VideoAlbumScreen extends StatelessWidget {
                 ],
               ),
             ),
+            // Info
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -103,19 +120,19 @@ class VideoAlbumScreen extends StatelessWidget {
                     Row(
                       children: [
                         Icon(Icons.remove_red_eye_rounded,
-                            size: 14, color: Colors.grey[600]),
+                            size: 14, color: isDark ? Colors.white54 : Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text('${video.views} views',
                             style: TextStyle(
-                                color: Colors.grey[600], fontSize: 12)),
+                                color: isDark ? Colors.white70 : Colors.grey[600], fontSize: 12)),
                         const SizedBox(width: 12),
                         Icon(Icons.access_time_rounded,
-                            size: 14, color: Colors.grey[600]),
+                            size: 14, color: isDark ? Colors.white54 : Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text(
                             '${video.postedDate.day}/${video.postedDate.month}/${video.postedDate.year}',
                             style: TextStyle(
-                                color: Colors.grey[600], fontSize: 12)),
+                                color: isDark ? Colors.white70 : Colors.grey[600], fontSize: 12)),
                       ],
                     ),
                   ],
@@ -130,6 +147,7 @@ class VideoAlbumScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
     final firstVideoId =
         videos.isNotEmpty ? _extractYouTubeId(videos.first.videoUrl) : null;
@@ -140,10 +158,11 @@ class VideoAlbumScreen extends StatelessWidget {
             : (videos.isNotEmpty ? videos.first.thumbnailUrl : ''));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? Colors.transparent : Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            backgroundColor: Colors.transparent,
             expandedHeight: 250,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
@@ -181,7 +200,7 @@ class VideoAlbumScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Text(
                   description!,
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                  style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : Colors.grey.shade700),
                 ),
               ),
             ),

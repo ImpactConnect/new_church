@@ -222,9 +222,15 @@ service cloud.firestore {
 
     // Prayer and Testimonies
     match /prayer_testimonies/{doc} {
-      allow read: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
+    }
+
+    // Support Requests
+    match /support_requests/{doc} {
+      allow create: if true; // Anyone can submit a support request
+      allow read, update, delete: if isAdmin();
     }
 
     // Bible AI config: anyone can read, only admins can write

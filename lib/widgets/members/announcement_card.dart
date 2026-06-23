@@ -12,6 +12,8 @@ class AnnouncementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
       elevation: 1.5,
@@ -30,11 +32,11 @@ class AnnouncementCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(Icons.campaign_outlined,
-                        color: Theme.of(context).primaryColor, size: 20),
+                        color: primaryColor, size: 20),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -63,6 +65,8 @@ class AnnouncementCard extends StatelessWidget {
   }
 
   void _showDetail(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor;
     showDialog(
       context: context,
       builder: (_) => Dialog(
@@ -77,7 +81,7 @@ class AnnouncementCard extends StatelessWidget {
               Row(
                 children: [
                   Icon(Icons.campaign_outlined,
-                      color: Theme.of(context).primaryColor),
+                      color: primaryColor),
                   const SizedBox(width: 10),
                   const Text('Announcement',
                       style: TextStyle(

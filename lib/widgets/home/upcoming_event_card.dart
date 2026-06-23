@@ -11,6 +11,14 @@ class UpcomingEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = Theme.of(context).cardColor;
+    final border = Border.all(
+      color: isDark ? Colors.white.withOpacity(0.08) : Colors.transparent,
+      width: 1,
+    );
+    final shadowColor = isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withValues(alpha: 0.1);
+
     return StreamBuilder<List<Event>>(
       stream: EventService().getUpcomingEventsStream(limit: 3),
       builder: (context, snapshot) {
@@ -19,11 +27,22 @@ class UpcomingEventCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: isDark
+                  ? const LinearGradient(
+                      colors: [
+                        Color(0xFF1E293B),
+                        Color(0xFF0F172A),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: isDark ? null : cardBg,
               borderRadius: BorderRadius.circular(12),
+              border: border,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: shadowColor,
                   spreadRadius: 1,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
@@ -45,11 +64,22 @@ class UpcomingEventCard extends StatelessWidget {
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: isDark
+                  ? const LinearGradient(
+                      colors: [
+                        Color(0xFF1E293B),
+                        Color(0xFF0F172A),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: isDark ? null : cardBg,
               borderRadius: BorderRadius.circular(12),
+              border: border,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: shadowColor,
                   spreadRadius: 1,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
@@ -66,7 +96,7 @@ class UpcomingEventCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.event,
-                        color: Theme.of(context).primaryColor,
+                        color: isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor,
                         size: 24,
                       ),
                       const SizedBox(width: 8),
@@ -85,16 +115,16 @@ class UpcomingEventCard extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: 3,
                   separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
+                      Divider(height: 1, color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200]),
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
+                           Shimmer.fromColors(
+                            baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                            highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                             child: Container(
                               width: 48,
                               height: 48,
@@ -110,8 +140,8 @@ class UpcomingEventCard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Shimmer.fromColors(
-                                  baseColor: Colors.grey[300]!,
-                                  highlightColor: Colors.grey[100]!,
+                                  baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                                  highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                                   child: Container(
                                     height: 16,
                                     width: double.infinity,
@@ -120,8 +150,8 @@ class UpcomingEventCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 8),
                                 Shimmer.fromColors(
-                                  baseColor: Colors.grey[300]!,
-                                  highlightColor: Colors.grey[100]!,
+                                  baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                                  highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
                                   child: Container(
                                     height: 12,
                                     width: 150,
@@ -146,11 +176,22 @@ class UpcomingEventCard extends StatelessWidget {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: isDark
+                  ? const LinearGradient(
+                      colors: [
+                        Color(0xFF1E293B),
+                        Color(0xFF0F172A),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: isDark ? null : cardBg,
               borderRadius: BorderRadius.circular(12),
+              border: border,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: shadowColor,
                   spreadRadius: 1,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
@@ -160,7 +201,7 @@ class UpcomingEventCard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.event_busy, color: Colors.grey[400], size: 24),
+                Icon(Icons.event_busy, color: isDark ? Colors.white38 : Colors.grey[400], size: 24),
                 const SizedBox(height: 8),
                 const Text('No upcoming events'),
               ],
@@ -173,11 +214,22 @@ class UpcomingEventCard extends StatelessWidget {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: isDark
+                ? const LinearGradient(
+                    colors: [
+                      Color(0xFF1E293B),
+                      Color(0xFF0F172A),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isDark ? null : cardBg,
             borderRadius: BorderRadius.circular(12),
+            border: border,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.1),
+                color: shadowColor,
                 spreadRadius: 1,
                 blurRadius: 4,
                 offset: const Offset(0, 2),
@@ -197,7 +249,7 @@ class UpcomingEventCard extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.event,
-                          color: Theme.of(context).primaryColor,
+                          color: isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor,
                           size: 24,
                         ),
                         const SizedBox(width: 8),
@@ -217,11 +269,12 @@ class UpcomingEventCard extends StatelessWidget {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text(
+                      child: Text(
                         'View All',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
+                          color: isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor,
                         ),
                       ),
                     ),
@@ -232,7 +285,7 @@ class UpcomingEventCard extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: events.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
+                separatorBuilder: (context, index) => Divider(height: 1, color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200]),
                 itemBuilder: (context, index) {
                   final event = events[index];
 
@@ -256,9 +309,9 @@ class UpcomingEventCard extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .primaryColor
-                                  .withValues(alpha: 0.1),
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.08)
+                                  : Theme.of(context).primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
@@ -268,14 +321,14 @@ class UpcomingEventCard extends StatelessWidget {
                                   DateFormat('d').format(event.effectiveDate),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).primaryColor,
+                                    color: isDark ? Colors.white : Theme.of(context).primaryColor,
                                   ),
                                 ),
                                 Text(
                                   DateFormat('MMM').format(event.effectiveDate),
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Theme.of(context).primaryColor,
+                                    color: isDark ? Colors.white70 : Theme.of(context).primaryColor,
                                   ),
                                 ),
                               ],
@@ -299,7 +352,7 @@ class UpcomingEventCard extends StatelessWidget {
                                   children: [
                                     Icon(
                                       Icons.location_on,
-                                      color: Colors.grey[600],
+                                      color: isDark ? Colors.white54 : Colors.grey[600],
                                       size: 14,
                                     ),
                                     const SizedBox(width: 4),
@@ -310,7 +363,7 @@ class UpcomingEventCard extends StatelessWidget {
                                             : 'TBD',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey[600],
+                                          color: isDark ? Colors.white54 : Colors.grey[600],
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -319,7 +372,7 @@ class UpcomingEventCard extends StatelessWidget {
                                       const SizedBox(width: 12),
                                       Icon(
                                         Icons.access_time,
-                                        color: Colors.grey[600],
+                                        color: isDark ? Colors.white54 : Colors.grey[600],
                                         size: 14,
                                       ),
                                       const SizedBox(width: 4),
@@ -327,7 +380,7 @@ class UpcomingEventCard extends StatelessWidget {
                                         event.programmeTime,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey[600],
+                                          color: isDark ? Colors.white54 : Colors.grey[600],
                                         ),
                                       ),
                                     ],

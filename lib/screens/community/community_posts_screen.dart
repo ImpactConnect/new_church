@@ -76,25 +76,26 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: isDark ? Colors.transparent : const Color(0xFFF0F2F5),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: isDark ? Colors.transparent : Colors.white,
+        foregroundColor: isDark ? Colors.white : Colors.black,
         elevation: 0,
-        title: const Text('Community', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+        title: Text('Community', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: isDark ? Colors.white : Colors.black)),
         centerTitle: false,
       ),
       body: Column(
         children: [
           // Modern TabBar
           Container(
-            color: Colors.white,
+            color: isDark ? Colors.transparent : Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8).copyWith(bottom: 12),
             child: Container(
               height: 46,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200],
                 borderRadius: BorderRadius.circular(25),
               ),
               child: TabBar(
@@ -103,13 +104,13 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                 dividerColor: Colors.transparent,
                 indicator: BoxDecoration(
                   borderRadius: BorderRadius.circular(25),
-                  color: Theme.of(context).primaryColor,
+                  color: isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor,
                   boxShadow: [
-                    BoxShadow(color: Theme.of(context).primaryColor.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))
+                    BoxShadow(color: isDark ? const Color(0xFF6366F1).withOpacity(0.3) : Theme.of(context).primaryColor.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))
                   ],
                 ),
                 labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey[600],
+                unselectedLabelColor: isDark ? Colors.white60 : Colors.grey[600],
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 tabs: const [
                   Tab(text: 'Feeds'),
@@ -141,7 +142,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                         )
                       : null,
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Theme.of(context).cardColor,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -210,6 +211,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
   }
 
   Widget _buildFeedsTab(List<CommunityPost> posts) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
       padding: const EdgeInsets.only(bottom: 80), // Padding for FAB
       children: [
@@ -233,10 +235,10 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200],
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text("What's on your mind?", style: TextStyle(color: Colors.grey)),
+                      child: Text("What's on your mind?", style: TextStyle(color: isDark ? Colors.white54 : Colors.grey)),
                     ),
                   ),
                 ),
@@ -257,6 +259,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
   }
 
   Widget _buildFeedCard(CommunityPost post) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final DateTime postDate = post.createdAt.toDate();
     final String formattedDate = _formatPostDate(postDate);
     final theme = Theme.of(context);
@@ -319,13 +322,13 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.indigo.withValues(alpha: 0.1),
+                                      color: isDark ? Colors.white.withOpacity(0.12) : Colors.indigo.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'Article',
                                       style: TextStyle(
-                                        color: Colors.indigo,
+                                        color: isDark ? Colors.white70 : Colors.indigo,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -336,7 +339,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                             ),
                             Text(
                               formattedDate,
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              style: TextStyle(color: isDark ? Colors.white54 : Colors.grey[600], fontSize: 12),
                             ),
                           ],
                         ),
@@ -357,7 +360,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                   padding: const EdgeInsets.symmetric(horizontal: 12).copyWith(bottom: 6),
                   child: Text(
                     post.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.black87),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: isDark ? Colors.white : Colors.black87),
                   ),
                 ),
 
@@ -398,11 +401,11 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                   children: [
                     const Icon(Icons.thumb_up, size: 14, color: Colors.blue),
                     const SizedBox(width: 4),
-                    Text('${post.likesCount}', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                    Text('${post.likesCount}', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[700], fontSize: 13)),
                     const Spacer(),
-                    Icon(Icons.comment_outlined, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.comment_outlined, size: 14, color: isDark ? Colors.white54 : Colors.grey[600]),
                     const SizedBox(width: 4),
-                    Text('${post.commentsCount}', style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+                    Text('${post.commentsCount}', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[700], fontSize: 13)),
                   ],
                 ),
               ),
@@ -418,13 +421,13 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                     _buildFeedActionButton(
                       icon: hasLiked ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
                       label: 'Like',
-                      color: hasLiked ? Colors.blue : Colors.grey[700]!,
+                      color: hasLiked ? Colors.blue : (isDark ? Colors.white70 : Colors.grey[700]!),
                       onTap: () => _postService.likePost(post.id, widget.currentUser.id),
                     ),
                     _buildFeedActionButton(
                       icon: Icons.chat_bubble_outline,
                       label: 'Comment',
-                      color: Colors.grey[700]!,
+                      color: isDark ? Colors.white70 : Colors.grey[700]!,
                       onTap: () {
                          _showDetailsBottomSheet(post);
                       },
@@ -432,7 +435,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                     _buildFeedActionButton(
                       icon: Icons.share_outlined,
                       label: 'Share',
-                      color: Colors.grey[700]!,
+                      color: isDark ? Colors.white70 : Colors.grey[700]!,
                       onTap: () {},
                     ),
                   ],
@@ -463,6 +466,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
   }
 
   Widget _buildQuestionsTab(List<CommunityPost> questions) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (questions.isEmpty) {
       return const Center(child: Text("No questions asked yet. Be the first!", style: TextStyle(color: Colors.grey)));
     }
@@ -492,17 +496,17 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(post.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.indigo[800])),
+                      Text(post.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF818CF8) : Colors.indigo[800])),
                       const SizedBox(height: 6),
-                      Text(post.contentPreview, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey[800])),
+                      Text(post.contentPreview, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[800])),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.comment_outlined, size: 14, color: Colors.grey[600]),
+                          Icon(Icons.comment_outlined, size: 14, color: isDark ? Colors.white54 : Colors.grey[600]),
                           const SizedBox(width: 4),
-                          Text('${post.commentsCount} comments', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                          Text('${post.commentsCount} comments', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[600], fontSize: 12)),
                           const Spacer(),
-                          Text('Asked by ${post.authorName} • ${_formatPostDate(post.createdAt.toDate())}', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                          Text('Asked by ${post.authorName} • ${_formatPostDate(post.createdAt.toDate())}', style: TextStyle(color: isDark ? Colors.white54 : Colors.grey[500], fontSize: 12)),
                         ],
                       ),
                     ],
@@ -675,7 +679,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                 Expanded(
                                   child: Text(
                                     name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF111B21)),
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF111B21)),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -686,7 +690,11 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                     timeStr,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: lastMessage.isNotEmpty ? Theme.of(context).primaryColor : const Color(0xFF8696A0),
+                                      color: lastMessage.isNotEmpty
+                                          ? (Theme.of(context).brightness == Brightness.dark
+                                              ? const Color(0xFF818CF8)
+                                              : Theme.of(context).primaryColor)
+                                          : const Color(0xFF8696A0),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -696,8 +704,8 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                             const SizedBox(height: 6),
                             Text(
                               lastMsgText,
-                              style: const TextStyle(
-                                color: Color(0xFF667781),
+                              style: TextStyle(
+                                color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF667781),
                                 fontSize: 14,
                               ),
                               maxLines: 1,
@@ -723,6 +731,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
     final DateTime postDate = post.createdAt.toDate();
     final String formattedDate = _formatPostDate(postDate);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final hasLiked = post.likedBy.contains(widget.currentUser.id);
 
     // Dynamic UI styling based on type
@@ -770,9 +779,9 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(color: isDark ? typeColor.withOpacity(0.2) : typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                         child: Row(
-                          children: [
+                           children: [
                             Icon(typeIcon, size: 14, color: typeColor),
                             const SizedBox(width: 4),
                             Text(typeLabel, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: typeColor)),
@@ -780,7 +789,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                         ),
                       ),
                       const Spacer(),
-                      Text(formattedDate, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      Text(formattedDate, style: TextStyle(color: isDark ? Colors.white54 : Colors.grey[600], fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -801,7 +810,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                     children: [
                       CircleAvatar(radius: 12, backgroundColor: theme.primaryColor.withValues(alpha: 0.2), child: Text(post.authorName[0].toUpperCase(), style: const TextStyle(fontSize: 12))),
                       const SizedBox(width: 8),
-                      Text(post.authorName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[800])),
+                      Text(post.authorName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.grey[800])),
                       const Spacer(),
                       
                       // Interaction Buttons
@@ -809,27 +818,27 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                         onTap: () => _postService.likePost(post.id, widget.currentUser.id),
                         child: Row(
                           children: [
-                            Icon(hasLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: hasLiked ? Colors.red : Colors.grey[600]),
+                            Icon(hasLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: hasLiked ? Colors.red : (isDark ? Colors.white70 : Colors.grey[600])),
                             const SizedBox(width: 4),
-                            Text('${post.likesCount}', style: TextStyle(color: Colors.grey[700])),
+                            Text('${post.likesCount}', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[700])),
                           ],
                         ),
                       ),
                       const SizedBox(width: 16),
                       Row(
                         children: [
-                          Icon(Icons.comment_outlined, size: 18, color: Colors.grey[600]),
+                          Icon(Icons.comment_outlined, size: 18, color: isDark ? Colors.white70 : Colors.grey[600]),
                           const SizedBox(width: 4),
-                          Text('${post.commentsCount}', style: TextStyle(color: Colors.grey[700])),
+                          Text('${post.commentsCount}', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[700])),
                         ],
                       ),
                       if (post.type == PostType.article) ...[
                         const SizedBox(width: 16),
                         Row(
                           children: [
-                            Icon(Icons.visibility_outlined, size: 18, color: Colors.grey[600]),
+                            Icon(Icons.visibility_outlined, size: 18, color: isDark ? Colors.white70 : Colors.grey[600]),
                             const SizedBox(width: 4),
-                            Text('${post.viewsCount}', style: TextStyle(color: Colors.grey[700])),
+                            Text('${post.viewsCount}', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey[700])),
                           ],
                         ),
                       ],
@@ -992,7 +1001,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                 Expanded(
                                   child: Text(
                                     name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF111B21)),
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF111B21)),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1003,7 +1012,11 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                     timeStr,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: myUnreadCount > 0 ? Theme.of(context).primaryColor : const Color(0xFF8696A0),
+                                      color: myUnreadCount > 0
+                                          ? (Theme.of(context).brightness == Brightness.dark
+                                              ? const Color(0xFF818CF8)
+                                              : Theme.of(context).primaryColor)
+                                          : const Color(0xFF8696A0),
                                       fontWeight: myUnreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                                     ),
                                   ),
@@ -1018,7 +1031,9 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                   child: Text(
                                     lastMessage.isEmpty ? 'Say hi!' : lastMessage,
                                     style: TextStyle(
-                                      color: myUnreadCount > 0 ? const Color(0xFF111B21) : const Color(0xFF667781),
+                                      color: myUnreadCount > 0
+                                          ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF111B21))
+                                          : (Theme.of(context).brightness == Brightness.dark ? Colors.white60 : const Color(0xFF667781)),
                                       fontSize: 14,
                                       fontWeight: myUnreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                                     ),
@@ -1030,7 +1045,9 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).primaryColor,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? const Color(0xFF818CF8)
+                                          : Theme.of(context).primaryColor,
                                       shape: BoxShape.circle,
                                     ),
                                     child: Text(

@@ -4,7 +4,13 @@ import '../../models/community_user.dart';
 
 class PrayerTestimonyScreen extends StatefulWidget {
   final CommunityUser currentUser;
-  const PrayerTestimonyScreen({Key? key, required this.currentUser}) : super(key: key);
+  final String initialType; // 'prayer' or 'testimony'
+  
+  const PrayerTestimonyScreen({
+    Key? key, 
+    required this.currentUser,
+    required this.initialType,
+  }) : super(key: key);
 
   @override
   State<PrayerTestimonyScreen> createState() => _PrayerTestimonyScreenState();
@@ -12,8 +18,14 @@ class PrayerTestimonyScreen extends StatefulWidget {
 
 class _PrayerTestimonyScreenState extends State<PrayerTestimonyScreen> {
   final _contentController = TextEditingController();
-  String _selectedType = 'prayer';
+  late String _selectedType;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType = widget.initialType;
+  }
 
   Future<void> _submitRequest() async {
     final content = _contentController.text.trim();
@@ -92,7 +104,7 @@ class _PrayerTestimonyScreenState extends State<PrayerTestimonyScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Send Prayer/Testimony',
+                      _selectedType == 'prayer' ? 'Submit Prayer Request' : 'Submit Testimony',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color),
                     ),
                   ],
@@ -104,31 +116,13 @@ class _PrayerTestimonyScreenState extends State<PrayerTestimonyScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Select Type',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(value: 'prayer', label: Text('Prayer Request')),
-                          ButtonSegment(value: 'testimony', label: Text('Testimony')),
-                        ],
-                        selected: {_selectedType},
-                        onSelectionChanged: (Set<String> newSelection) {
-                          setState(() {
-                            _selectedType = newSelection.first;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
                       Text(
                         _selectedType == 'prayer' 
                             ? 'How can we pray for you?' 
-                            : 'Share your testimony',
+                            : 'Share your testimony with us',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: _contentController,
                         decoration: InputDecoration(

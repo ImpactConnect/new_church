@@ -34,7 +34,9 @@ class CelebrationCard extends StatelessWidget {
               Text(isBirthday ? 'Birthday Today!' : 'Wedding Anniversary'),
           trailing: Icon(
             isBirthday ? Icons.cake : Icons.celebration,
-            color: Theme.of(context).primaryColor,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFEC4899)
+                : Theme.of(context).primaryColor,
           ),
         ),
       ),

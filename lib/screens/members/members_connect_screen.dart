@@ -123,7 +123,9 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColorDark)),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Theme.of(context).primaryColorDark)),
             const SizedBox(height: 10),
             Consumer<MembersConnectProvider>(
               builder: (context, provider, _) {
@@ -183,7 +185,9 @@ class _MembersConnectViewState extends State<_MembersConnectView>
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColorDark)),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Theme.of(context).primaryColorDark)),
           const SizedBox(height: 8),
           GridView.count(
             padding: EdgeInsets.zero,
@@ -227,8 +231,8 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                     }
                   }),
               QuickActionButton(
-                  icon: Icons.volunteer_activism_outlined,
-                  label: 'Send Prayer/Testimony',
+                  icon: Icons.chat_bubble_outline,
+                  label: 'Submit Testimony',
                   color: Colors.deepOrange,
                   onTap: () async {
                     final authService = CommunityAuthService();
@@ -240,7 +244,7 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (_) => PrayerTestimonyScreen(currentUser: currentUser),
+                        builder: (_) => PrayerTestimonyScreen(currentUser: currentUser, initialType: 'testimony'),
                       );
                     } else {
                       Navigator.push(context, MaterialPageRoute(
@@ -251,7 +255,39 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                               context: context,
                               isScrollControlled: true,
                               backgroundColor: Colors.transparent,
-                              builder: (_) => PrayerTestimonyScreen(currentUser: user),
+                              builder: (_) => PrayerTestimonyScreen(currentUser: user, initialType: 'testimony'),
+                            );
+                          },
+                        ),
+                      ));
+                    }
+                  }),
+              QuickActionButton(
+                  icon: Icons.volunteer_activism_outlined,
+                  label: 'Prayer Request',
+                  color: Colors.pink,
+                  onTap: () async {
+                    final authService = CommunityAuthService();
+                    final currentUser = await authService.getCurrentUser();
+                    if (!mounted) return;
+                    
+                    if (currentUser != null) {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => PrayerTestimonyScreen(currentUser: currentUser, initialType: 'prayer'),
+                      );
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => CommunityLoginScreen(
+                          onLoginSuccess: (user) {
+                            Navigator.pop(context); // Pop login screen
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => PrayerTestimonyScreen(currentUser: user, initialType: 'prayer'),
                             );
                           },
                         ),
@@ -394,7 +430,10 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                           children: [
                             const SizedBox(width: 14),
                             Icon(Icons.search,
-                                color: theme.primaryColor, size: 22),
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white70
+                                    : theme.primaryColor,
+                                size: 22),
                             const SizedBox(width: 8),
                             Expanded(
                               child: TextField(
@@ -518,16 +557,22 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                 delegate: _SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    labelColor: theme.primaryColor,
+                    labelColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF818CF8)
+                        : theme.primaryColor,
                     unselectedLabelColor: Colors.grey,
-                    indicatorColor: theme.primaryColor,
+                    indicatorColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF818CF8)
+                        : theme.primaryColor,
                     indicatorWeight: 3,
                     tabs: const [
                       Tab(text: 'Announcements'),
                       Tab(text: 'Testimonies'),
                     ],
                   ),
-                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  backgroundColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF0F172A)
+                      : Theme.of(context).scaffoldBackgroundColor,
                 ),
               ),
             ];

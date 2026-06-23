@@ -52,7 +52,7 @@ class TestimonyCard extends StatelessWidget {
                         Text(
                           DateFormatter.formatDate(testimony.dateShared),
                           style: TextStyle(
-                            color: Colors.grey[600],
+                            color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.grey[600],
                             fontSize: 12,
                           ),
                         ),

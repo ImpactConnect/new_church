@@ -33,8 +33,11 @@ class ThemeProvider with ChangeNotifier {
         seedColor: const Color(0xFF0D1B2A),
         brightness: Brightness.light,
         primary: const Color(0xFF0D1B2A),
+        surface: Colors.white,
+        onSurface: const Color(0xFF0D1B2A),
       ),
       scaffoldBackgroundColor: const Color(0xFFF4F6F8),
+      cardColor: Colors.white,
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
@@ -48,6 +51,22 @@ class ThemeProvider with ChangeNotifier {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey[200]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF0D1B2A), width: 1.5),
+        ),
+      ),
     );
   }
 
@@ -59,9 +78,12 @@ class ThemeProvider with ChangeNotifier {
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF0D1B2A),
         brightness: Brightness.dark,
-        surface: const Color(0xFF1E1E1E),
+        surface: const Color(0xFF1F2937).withOpacity(0.55),
+        onSurface: Colors.white,
       ),
       scaffoldBackgroundColor: Colors.transparent,
+      cardColor: const Color(0xFF1E293B).withOpacity(0.5),
+      dialogBackgroundColor: const Color(0xFF1E293B),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
@@ -69,10 +91,29 @@ class ThemeProvider with ChangeNotifier {
         foregroundColor: Colors.white,
       ),
       cardTheme: CardThemeData(
-        elevation: 1,
-        color: const Color(0xFF1E1E1E),
+        elevation: 0,
+        color: const Color(0xFF1E293B).withOpacity(0.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF0F172A).withOpacity(0.4),
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintStyle: const TextStyle(color: Colors.white38),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
         ),
       ),
     );

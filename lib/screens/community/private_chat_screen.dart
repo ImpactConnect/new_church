@@ -430,6 +430,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
     return StreamBuilder<DocumentSnapshot>(
       stream: _firestore.collection('community_groups').doc(widget.chatId).snapshots(),
       builder: (context, groupSnap) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         String groupName = widget.otherUserName;
         String imageUrl = '';
         List<String> memberIds = [];
@@ -442,15 +443,15 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFE5DDD5), // WhatsApp beige wallpaper color
+          backgroundColor: isDark ? Colors.transparent : const Color(0xFFE5DDD5), // WhatsApp beige wallpaper color
           appBar: AppBar(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
+            backgroundColor: isDark ? Colors.transparent : Colors.white,
+            foregroundColor: isDark ? Colors.white : Colors.black,
             elevation: 1,
             titleSpacing: 0,
             leadingWidth: 40,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Color(0xFF008069)),
+              icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF008069)),
               onPressed: () => Navigator.pop(context),
             ),
             title: InkWell(
@@ -460,8 +461,8 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                   CircleAvatar(
                     radius: 18,
                     backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-                    backgroundColor: const Color(0xFFDFE5E7),
-                    child: imageUrl.isEmpty ? const Icon(Icons.group, size: 20, color: Colors.white) : null,
+                    backgroundColor: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFDFE5E7),
+                    child: imageUrl.isEmpty ? Icon(Icons.group, size: 20, color: isDark ? Colors.white60 : Colors.white) : null,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -470,7 +471,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                       children: [
                         Text(
                           groupName,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111B21)),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF111B21)),
                           overflow: TextOverflow.ellipsis,
                         ),
                         StreamBuilder<QuerySnapshot>(
@@ -489,7 +490,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                             }
                             return Text(
                               subtitle,
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF667781)),
+                              style: TextStyle(fontSize: 11, color: isDark ? Colors.white70 : const Color(0xFF667781)),
                               overflow: TextOverflow.ellipsis,
                             );
                           },
@@ -502,7 +503,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.info_outline, color: Color(0xFF008069)),
+                icon: Icon(Icons.info_outline, color: isDark ? Colors.white : const Color(0xFF008069)),
                 onPressed: _showGroupInfo,
               ),
             ],
@@ -569,7 +570,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                                 margin: const EdgeInsets.symmetric(vertical: 12),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.95),
+                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.white.withValues(alpha: 0.95),
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
@@ -581,9 +582,9 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                                 ),
                                 child: Text(
                                   _formatDividerDate(timestamp),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
-                                    color: Color(0xFF54656F),
+                                    color: isDark ? Colors.white70 : const Color(0xFF54656F),
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 0.5,
                                   ),
@@ -614,7 +615,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
               // Message Input Field
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                color: const Color(0xFFF0F2F5), // WhatsApp grey input tray
+                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF0F2F5), // WhatsApp grey input tray
                 child: SafeArea(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -625,12 +626,12 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                           padding: const EdgeInsets.all(8),
                           margin: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE5DDD5),
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFE5DDD5),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
-                              Container(width: 4, height: 40, color: const Color(0xFF008069)),
+                              Container(width: 4, height: 40, color: isDark ? const Color(0xFF818CF8) : const Color(0xFF008069)),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
@@ -638,7 +639,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                                   children: [
                                     Text(
                                       _replyingToMessage!['senderName'] ?? 'Unknown',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF008069), fontSize: 13),
+                                      style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF818CF8) : const Color(0xFF008069), fontSize: 13),
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
@@ -647,13 +648,13 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                                           : _replyingToMessage!['message'] ?? '',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: Colors.black54, fontSize: 13),
+                                      style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontSize: 13),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close, size: 20, color: Colors.black54),
+                                icon: Icon(Icons.close, size: 20, color: isDark ? Colors.white70 : Colors.black54),
                                 onPressed: _cancelReply,
                               ),
                             ],
@@ -665,14 +666,14 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isDark ? const Color(0xFF0F172A) : Colors.white,
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: Icon(_isEmojiVisible ? Icons.keyboard : Icons.insert_emoticon, color: const Color(0xFF667781)),
+                                    icon: Icon(_isEmojiVisible ? Icons.keyboard : Icons.insert_emoticon, color: isDark ? Colors.white70 : const Color(0xFF667781)),
                                     onPressed: () {
                                       if (_isEmojiVisible) {
                                         _focusNode.requestFocus();
@@ -688,16 +689,17 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                                       focusNode: _focusNode,
                                       maxLines: 4,
                                       minLines: 1,
-                                      style: const TextStyle(fontSize: 15, color: Color(0xFF111B21)),
-                                      decoration: const InputDecoration(
+                                      style: TextStyle(fontSize: 15, color: isDark ? Colors.white : const Color(0xFF111B21)),
+                                      decoration: InputDecoration(
                                         hintText: 'Type a message',
+                                        hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
                                         border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(vertical: 12),
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
                                       ),
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.attach_file, color: Color(0xFF667781)),
+                                    icon: Icon(Icons.attach_file, color: isDark ? Colors.white70 : const Color(0xFF667781)),
                                     onPressed: _showAttachmentOptions,
                                   ),
                                 ],
@@ -707,12 +709,12 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: _sendTextMessage,
-                            child: const Padding(
-                              padding: EdgeInsets.only(bottom: 4),
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
                               child: CircleAvatar(
                                 radius: 22,
-                                backgroundColor: Color(0xFF008069), // WhatsApp green send button
-                                child: Icon(Icons.send, color: Colors.white, size: 20),
+                                backgroundColor: isDark ? const Color(0xFF6366F1) : const Color(0xFF008069), // WhatsApp green send button
+                                child: const Icon(Icons.send, color: Colors.white, size: 20),
                               ),
                             ),
                           ),
@@ -724,9 +726,9 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                           height: 250,
                           child: EmojiPicker(
                             textEditingController: _messageController,
-                            config: const Config(
-                              emojiViewConfig: EmojiViewConfig(backgroundColor: Color(0xFFF0F2F5)),
-                              bottomActionBarConfig: BottomActionBarConfig(showBackspaceButton: true),
+                            config: Config(
+                              emojiViewConfig: EmojiViewConfig(backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF0F2F5)),
+                              bottomActionBarConfig: const BottomActionBarConfig(showBackspaceButton: true),
                             ),
                           ),
                         ),

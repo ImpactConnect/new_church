@@ -99,17 +99,18 @@ class _CommunityPostDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
       ),
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
         resizeToAvoidBottomInset: true,
         body: GestureDetector(
           onTap: () {
@@ -121,13 +122,13 @@ class _CommunityPostDetailsScreenState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  border: Border(bottom: BorderSide(color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200]!)),
                 ),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.keyboard_arrow_down, size: 28, color: Colors.black),
+                      icon: Icon(Icons.keyboard_arrow_down, size: 28, color: isDark ? Colors.white : Colors.black),
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(width: 8),
@@ -137,11 +138,11 @@ class _CommunityPostDetailsScreenState
                           : widget.post.type == PostType.question 
                               ? 'Question Details' 
                               : 'Article',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.share_outlined, color: Colors.black),
+                      icon: Icon(Icons.share_outlined, color: isDark ? Colors.white : Colors.black),
                       onPressed: _sharePost,
                     ),
                   ],
@@ -203,7 +204,7 @@ class _CommunityPostDetailsScreenState
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: Colors.grey[600],
+                                      color: isDark ? Colors.white60 : Colors.grey[600],
                                     ),
                               ),
                             ],
@@ -224,7 +225,7 @@ class _CommunityPostDetailsScreenState
                       const SizedBox(height: 16),
                       _buildInteractionBar(),
 
-                      const Divider(height: 32),
+                      Divider(height: 32, color: isDark ? Colors.white.withOpacity(0.08) : null),
 
                       // Comments Section
                       _buildCommentSection(),
@@ -244,15 +245,16 @@ class _CommunityPostDetailsScreenState
   }
 
   Widget _buildCommentInputBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.symmetric(
           horizontal: 16,
           vertical: MediaQuery.of(context).viewInsets.bottom > 0 ? 8 : 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, -2),
@@ -272,10 +274,12 @@ class _CommunityPostDetailsScreenState
                 child: TextField(
                   controller: _commentController,
                   focusNode: _commentFocusNode,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                   decoration: InputDecoration(
                     hintText: 'Write a comment...',
+                    hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
                     filled: true,
-                    fillColor: Colors.grey[100],
+                    fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey[100],
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                       borderSide: BorderSide.none,
@@ -342,6 +346,7 @@ class _CommunityPostDetailsScreenState
     IconData? activeIcon,
     bool isActive = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
@@ -351,7 +356,7 @@ class _CommunityPostDetailsScreenState
           children: [
             Icon(
               isActive ? activeIcon ?? icon : icon,
-              color: isActive ? Colors.red : Colors.grey[600],
+              color: isActive ? Colors.red : (isDark ? Colors.white60 : Colors.grey[600]),
               size: 24,
             ),
             if (count != null) ...[
@@ -359,7 +364,7 @@ class _CommunityPostDetailsScreenState
               Text(
                 count.toString(),
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: isDark ? Colors.white60 : Colors.grey[600],
                   fontSize: 14,
                 ),
               ),
@@ -371,6 +376,7 @@ class _CommunityPostDetailsScreenState
   }
 
   Widget _buildCommentSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -389,10 +395,10 @@ class _CommunityPostDetailsScreenState
             }
 
             if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
+              return Center(
                 child: Text(
                   'No comments yet',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
                 ),
               );
             }
@@ -401,7 +407,7 @@ class _CommunityPostDetailsScreenState
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: snapshot.data!.length,
-              separatorBuilder: (context, index) => const Divider(height: 16),
+              separatorBuilder: (context, index) => Divider(height: 16, color: isDark ? Colors.white.withOpacity(0.08) : null),
               itemBuilder: (context, index) {
                 final comment = snapshot.data![index];
                 return _buildCommentCard(comment);
@@ -414,9 +420,10 @@ class _CommunityPostDetailsScreenState
   }
 
   Widget _buildCommentCard(CommunityComment comment) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: isDark ? const Color(0xFF1E293B) : Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(12),
@@ -428,7 +435,7 @@ class _CommunityPostDetailsScreenState
               CircleAvatar(
                 radius: 16,
                 backgroundColor:
-                    Theme.of(context).primaryColor.withValues(alpha: 0.2),
+                    Theme.of(context).primaryColor.withOpacity(0.2),
                 child: Text(
                   comment.authorName[0].toUpperCase(),
                   style: TextStyle(
@@ -444,15 +451,16 @@ class _CommunityPostDetailsScreenState
                 children: [
                   Text(
                     comment.authorName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                   Text(
                     _formatCommentDate(comment.createdAt.toDate()),
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: isDark ? Colors.white60 : Colors.grey[600],
                       fontSize: 12,
                     ),
                   ),
@@ -463,8 +471,8 @@ class _CommunityPostDetailsScreenState
           const SizedBox(height: 8),
           Text(
             comment.content,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: isDark ? Colors.white.withOpacity(0.87) : Colors.black87,
               height: 1.4,
             ),
           ),

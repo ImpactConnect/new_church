@@ -77,40 +77,64 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: (index) => _onItemTapped(context, index),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-          tooltip: 'Home',
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [
+                  Color(0xFF1E293B), // Slate 800
+                  Color(0xFF0F172A), // Slate 900
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+            : null,
+        color: isDark ? null : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.08) : Colors.grey[200]!,
+            width: 0.5,
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.menu_book),
-          label: 'AI Bible',
-          tooltip: 'AI Bible',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.headphones),
-          label: 'Audio',
-          tooltip: 'Sermons',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_alt_outlined),
-          label: 'Members',
-          tooltip: 'Members Connect',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
-          tooltip: 'Settings',
-        ),
-      ],
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: Theme.of(context).primaryColor,
-      unselectedItemColor: Colors.grey[600],
-      showUnselectedLabels: true,
+      ),
+      child: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: (index) => _onItemTapped(context, index),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+            tooltip: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book),
+            label: 'AI Bible',
+            tooltip: 'AI Bible',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.headphones),
+            label: 'Audio',
+            tooltip: 'Sermons',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_alt_outlined),
+            label: 'Members',
+            tooltip: 'Members Connect',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+            tooltip: 'Settings',
+          ),
+        ],
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: isDark ? const Color(0xFF6366F1) : Theme.of(context).primaryColor,
+        unselectedItemColor: isDark ? Colors.white54 : Colors.grey[600],
+        showUnselectedLabels: true,
+      ),
     );
   }
 }

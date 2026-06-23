@@ -13,6 +13,7 @@ import 'members_connect_manager.dart';
 import 'library_manager.dart';
 import 'ai_config_manager.dart';
 import 'ai_prompts_manager.dart';
+import 'support_requests_manager.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -39,6 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     (icon: Icons.connect_without_contact_outlined, label: 'Members Connect'),
     (icon: Icons.auto_awesome_outlined, label: 'Bible AI Settings'),
     (icon: Icons.edit_note_outlined, label: 'Bible AI Prompts'),
+    (icon: Icons.support_agent_outlined, label: 'Support Requests'),
   ];
 
   Widget _buildContent() {
@@ -71,6 +73,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return const AiConfigManager();
       case 13:
         return const AiPromptsManager();
+      case 14:
+        return const SupportRequestsManager();
       default:
         return const Center(child: Text('Select an item'));
     }
