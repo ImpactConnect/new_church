@@ -92,7 +92,7 @@ class AskSpeakWithController extends _$AskSpeakWithController {
     state = conv;
   }
 
-  Future<void> sendMessage(String text) async {
+  Future<void> sendMessage(String text, {bool isVoiceMode = false}) async {
     if (state == null) return;
     
     final aiService = ref.read(speakWithAiServiceProvider);
@@ -131,6 +131,7 @@ class AskSpeakWithController extends _$AskSpeakWithController {
         userMessage: text,
         history: priorHistory,
         bibleVersionName: version.name,
+        isVoiceMode: isVoiceMode,
       );
 
       final aiResponse = ChatMessage(

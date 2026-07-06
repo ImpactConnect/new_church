@@ -38,6 +38,7 @@ class SttService {
         'Authorization': 'Bearer $openAiKey',
       })
       ..fields['model'] = 'whisper-1'
+      ..fields['language'] = 'en'
       ..files.add(await http.MultipartFile.fromPath('file', audioFilePath));
 
     final response = await request.send();
@@ -59,8 +60,8 @@ class SttService {
       return null;
     }
 
-    // Deepgram API setup (Placeholder, easy to adapt if needed)
-    final uri = Uri.parse('https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true');
+    // Deepgram API setup
+    final uri = Uri.parse('https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&language=en');
     final fileBytes = await http.MultipartFile.fromPath('file', audioFilePath);
     
     final response = await http.post(

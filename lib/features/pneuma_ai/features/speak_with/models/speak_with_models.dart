@@ -49,6 +49,9 @@ class BiblicalFigure {
   final FigureCorpus corpus;
   @JsonKey(defaultValue: false)
   final bool isCurated;
+  /// 'male' or 'female' — used to select the correct TTS voice.
+  @JsonKey(defaultValue: 'male')
+  final String gender;
 
   BiblicalFigure({
     required this.id,
@@ -67,6 +70,7 @@ class BiblicalFigure {
     required this.availableSourceTiers,
     required this.corpus,
     this.isCurated = false,
+    this.gender = 'male',
   });
 
   factory BiblicalFigure.fromJson(Map<String, dynamic> json) => _$BiblicalFigureFromJson(json);

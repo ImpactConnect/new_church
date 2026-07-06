@@ -4,13 +4,37 @@ import '../providers/voice_preferences_provider.dart';
 import '../services/tts_service.dart';
 import 'package:church_mobile/features/bible_ai/services/ai_config_service.dart';
 
-class VoicePreferencesScreen extends ConsumerWidget {
+class VoicePreferencesScreen extends ConsumerStatefulWidget {
   const VoicePreferencesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VoicePreferencesScreen> createState() => _VoicePreferencesScreenState();
+}
+
+class _VoicePreferencesScreenState extends ConsumerState<VoicePreferencesScreen> {
+  String _activeTtsProvider = 'flutter_tts';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProvider();
+  }
+
+  Future<void> _loadProvider() async {
+    final provider = await AiConfigService.getDefaultTtsProvider();
+    if (mounted) {
+      setState(() {
+        _activeTtsProvider = provider;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final prefs = ref.watch(voicePreferencesProvider);
     final colorScheme = Theme.of(context).colorScheme;
+
+    final isOpenAi = _activeTtsProvider == 'openai_tts';
 
     return Scaffold(
       appBar: AppBar(
@@ -32,7 +56,8 @@ class VoicePreferencesScreen extends ConsumerWidget {
           const SizedBox(height: 32),
 
           // Voice Selection
-          const Text('Nigerian Voice Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(isOpenAi ? 'OpenAI Voice Profile' : 'Regional Voice Profile', 
+               style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -44,17 +69,23 @@ class VoicePreferencesScreen extends ConsumerWidget {
               child: DropdownButton<String>(
                 isExpanded: true,
                 value: prefs.voiceId,
-                items: const [
-                  DropdownMenuItem(value: 'en-NG-1', child: Text('Nigerian Female (Standard)')),
-                  DropdownMenuItem(value: 'en-NG-2', child: Text('Nigerian Female (Neural)')),
-                  DropdownMenuItem(value: 'en-NG-3', child: Text('Nigerian Male (Standard)')),
-                  DropdownMenuItem(value: 'en-NG-4', child: Text('Nigerian Male (Neural)')),
-                  DropdownMenuItem(value: 'en-US-1', child: Text('American Female')),
-                  DropdownMenuItem(value: 'en-US-2', child: Text('American Male')),
-                  DropdownMenuItem(value: 'en-GB-1', child: Text('British Female')),
-                  DropdownMenuItem(value: 'en-GB-2', child: Text('British Male')),
-                  DropdownMenuItem(value: 'en-ZA-1', child: Text('South African Female')),
-                ],
+                items: isOpenAi 
+                  ? const [
+                      DropdownMenuItem(value: 'en-NG-1', child: Text('Voice 1 (Bright / Deep)')),
+                      DropdownMenuItem(value: 'en-NG-2', child: Text('Voice 2 (Warm / Resonant)')),
+                      DropdownMenuItem(value: 'en-NG-3', child: Text('Voice 3 (Neutral / Narrator)')),
+                    ]
+                  : const [
+                      DropdownMenuItem(value: 'en-NG-1', child: Text('Nigerian Female (Standard)')),
+                      DropdownMenuItem(value: 'en-NG-2', child: Text('Nigerian Female (Neural)')),
+                      DropdownMenuItem(value: 'en-NG-3', child: Text('Nigerian Male (Standard)')),
+                      DropdownMenuItem(value: 'en-NG-4', child: Text('Nigerian Male (Neural)')),
+                      DropdownMenuItem(value: 'en-US-1', child: Text('American Female')),
+                      DropdownMenuItem(value: 'en-US-2', child: Text('American Male')),
+                      DropdownMenuItem(value: 'en-GB-1', child: Text('British Female')),
+                      DropdownMenuItem(value: 'en-GB-2', child: Text('British Male')),
+                      DropdownMenuItem(value: 'en-ZA-1', child: Text('South African Female')),
+                    ],
                 onChanged: (val) {
                   if (val != null) {
                     ref.read(voicePreferencesProvider.notifier).setVoiceId(val);
@@ -116,11 +147,12 @@ class VoicePreferencesScreen extends ConsumerWidget {
                 try {
                   final ttsProvider = await AiConfigService.getDefaultTtsProvider();
                   await ref.read(ttsServiceProvider).speak(
-                        'This is a sample of what I will sound like when speaking to you.',
+                        'This is a sample of what I will sound like when speaking to you. The voice you hear is your selected profile.',
                         ttsProvider,
                         speed: prefs.speechSpeed,
                         pitch: prefs.speechPitch,
                         voiceId: prefs.voiceId,
+                        gender: 'male', // Test with male; change to female to preview female voice
                       );
                 } catch (e) {
                   debugPrint('Test voice failed: $e');

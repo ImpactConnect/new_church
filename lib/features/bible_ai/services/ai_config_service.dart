@@ -97,6 +97,15 @@ class AiConfigService {
     final voiceConfig = await getVoiceConfig();
     final ttsConfig = _deepCastMap(voiceConfig['tts']);
     if (provider == 'google_cloud') return ttsConfig['googleCloudApiKey'] as String?;
+    if (provider == 'openai_tts') {
+      final ttsKey = ttsConfig['openAiTtsApiKey'] as String?;
+      if (ttsKey != null && ttsKey.isNotEmpty) return ttsKey;
+      
+      // Fallback to general OpenAI API key if specific TTS key is not set
+      final providers = _deepCastMap(voiceConfig['providers'] ?? (await _getConfig())['providers']);
+      final openaiConfig = _deepCastMap(providers['openai']);
+      return openaiConfig['apiKey'] as String?;
+    }
     return null;
   }
 

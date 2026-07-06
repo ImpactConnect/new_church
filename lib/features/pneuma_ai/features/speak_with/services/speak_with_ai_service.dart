@@ -19,11 +19,12 @@ class SpeakWithAiService {
     required List<ChatMessage> history,
     required String bibleVersionName,
     BiblicalFigure? figureB,
+    bool isVoiceMode = false,
   }) async {
     // Use a direct persona system prompt.
     // We do NOT fetch from Firebase here because the stored prompt instructs
     // JSON output and conflicts with prose-based conversation.
-    final systemPrompt = _buildSystemPrompt(figure, mode, figureB);
+    final systemPrompt = _buildSystemPrompt(figure, mode, figureB, isVoiceMode);
 
     // Build the user prompt with actual figure data injected
     final userPrompt = _buildUserPrompt(
@@ -33,6 +34,7 @@ class SpeakWithAiService {
       userMessage: userMessage,
       history: history,
       bibleVersionName: bibleVersionName,
+      isVoiceMode: isVoiceMode,
     );
 
     // Call AI
@@ -55,6 +57,7 @@ class SpeakWithAiService {
     BiblicalFigure figure,
     ConversationMode mode,
     BiblicalFigure? figureB,
+    bool isVoiceMode,
   ) {
     final who = mode == ConversationMode.dual && figureB != null
         ? '${figure.name} and ${figureB.name}, two biblical figures'
@@ -78,8 +81,9 @@ class SpeakWithAiService {
         '- Structure your response using markdown (headings, bullet/number lists, paragraphs, bold text).\n'
         '- Do NOT output JSON, raw code blocks, or curly braces {}.\n'
         '- Do NOT prefix your response with your name. Just start speaking.\n'
-        '- Aim for 100-250 words per response. Be personal, warm, and rooted in scripture.\n'
-        '- Cite scriptures using their reference in parentheses, e.g. (John 3:16).';
+        '${isVoiceMode 
+            ? "- EXTREMELY CRITICAL: This is a VOICE interaction. Keep your response extremely short, conversational, and direct (maximum 1-3 short sentences).\n- DO NOT include Bible verse citations, chapter, or verse numbers in your response. Just speak the words naturally." 
+            : "- Aim for 100-250 words per response. Be personal, warm, and rooted in scripture.\n- Cite scriptures using their reference in parentheses, e.g. (John 3:16)."}';
   }
 
   /// Attempts to get the "message" field from a JSON response.
@@ -148,6 +152,7 @@ class SpeakWithAiService {
     required List<ChatMessage> history,
     required String bibleVersionName,
     BiblicalFigure? figureB,
+    required bool isVoiceMode,
   }) {
     // Build conversation history as plain text
     final historyText = history
@@ -191,7 +196,10 @@ class SpeakWithAiService {
           'When citing scripture, use the $bibleVersionName translation. ' +
           'You may reference ' +
           figureB.name +
-          ' where relevant. Keep your response to 100-250 words. ' +
+          ' where relevant. ' +
+          (isVoiceMode 
+              ? 'KEEP IT EXTREMELY SHORT (1-3 sentences maximum). ' 
+              : 'Keep your response to 100-250 words. ') +
           'Do NOT respond as JSON. Use markdown formatting (headings, bullet lists, bold text) to structure your response.\n' +
           'Respond as flowing, first-person prose.';
     }
@@ -214,7 +222,9 @@ class SpeakWithAiService {
         figure.name +
         ', speaking in first person. ' +
         'When citing scripture, use the $bibleVersionName translation. ' +
-        'Keep your response to 100-250 words. ' +
+        (isVoiceMode 
+            ? 'KEEP IT EXTREMELY SHORT (1-3 sentences maximum). ' 
+            : 'Keep your response to 100-250 words. ') +
         'Do NOT respond as JSON. Use markdown formatting (headings, bullet lists, bold text) to structure your response.\n' +
         'Respond as flowing, first-person prose grounded in scripture.';
   }

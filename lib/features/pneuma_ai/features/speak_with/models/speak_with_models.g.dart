@@ -33,6 +33,7 @@ BiblicalFigure _$BiblicalFigureFromJson(Map<String, dynamic> json) =>
           .toList(),
       corpus: FigureCorpus.fromJson(json['corpus'] as Map<String, dynamic>),
       isCurated: json['isCurated'] as bool? ?? false,
+      gender: json['gender'] as String? ?? 'male',
     );
 
 Map<String, dynamic> _$BiblicalFigureToJson(BiblicalFigure instance) =>
@@ -55,6 +56,7 @@ Map<String, dynamic> _$BiblicalFigureToJson(BiblicalFigure instance) =>
           .toList(),
       'corpus': instance.corpus.toJson(),
       'isCurated': instance.isCurated,
+      'gender': instance.gender,
     };
 
 const _$TestamentEnumMap = {

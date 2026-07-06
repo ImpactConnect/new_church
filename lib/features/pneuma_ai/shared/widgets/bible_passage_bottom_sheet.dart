@@ -307,11 +307,15 @@ class _BiblePassageBottomSheetState extends ConsumerState<BiblePassageBottomShee
                   const SizedBox(height: 20),
 
                   // Actions Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       // Copy & Share
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.copy),
@@ -336,6 +340,7 @@ class _BiblePassageBottomSheetState extends ConsumerState<BiblePassageBottomShee
                       ),
                       // AI Study Actions
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           OutlinedButton.icon(
                             onPressed: () {

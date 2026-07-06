@@ -19,8 +19,9 @@ class _AiConfigManagerState extends State<AiConfigManager> {
 
   // Voice Settings (TTS)
   String _selectedTtsProvider = 'flutter_tts';
-  final List<String> _ttsProviders = ['flutter_tts', 'google_cloud'];
+  final List<String> _ttsProviders = ['flutter_tts', 'openai_tts', 'google_cloud'];
   final _googleCloudTtsApiKeyController = TextEditingController();
+  final _openAiTtsApiKeyController = TextEditingController();
 
   // Voice Settings (STT)
   String _selectedSttProvider = 'whisper';
@@ -42,6 +43,7 @@ class _AiConfigManagerState extends State<AiConfigManager> {
     _apiKeyController.dispose();
     _modelNameController.dispose();
     _googleCloudTtsApiKeyController.dispose();
+    _openAiTtsApiKeyController.dispose();
     _whisperApiKeyController.dispose();
     _deepgramApiKeyController.dispose();
     super.dispose();
@@ -76,6 +78,7 @@ class _AiConfigManagerState extends State<AiConfigManager> {
             _selectedTtsProvider = 'flutter_tts';
           }
           _googleCloudTtsApiKeyController.text = ttsData['googleCloudApiKey'] ?? '';
+          _openAiTtsApiKeyController.text = ttsData['openAiTtsApiKey'] ?? '';
 
           _selectedSttProvider = sttData['defaultProvider'] ?? 'whisper';
           if (!_sttProviders.contains(_selectedSttProvider)) {
@@ -119,6 +122,7 @@ class _AiConfigManagerState extends State<AiConfigManager> {
           'tts': {
             'defaultProvider': _selectedTtsProvider,
             'googleCloudApiKey': _googleCloudTtsApiKeyController.text.trim(),
+            'openAiTtsApiKey': _openAiTtsApiKeyController.text.trim(),
           },
           'stt': {
             'defaultProvider': _selectedSttProvider,
@@ -267,15 +271,33 @@ class _AiConfigManagerState extends State<AiConfigManager> {
                 ),
                 const SizedBox(height: 24),
 
-                // Google Cloud TTS API Key Field
-                TextFormField(
-                  controller: _googleCloudTtsApiKeyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Google Cloud TTS API Key (Placeholder)',
-                    border: OutlineInputBorder(),
-                    helperText: 'Required if Google Cloud is selected.',
+                // TTS API Key fields — shown conditionally
+                if (_selectedTtsProvider == 'openai_tts') ...[
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _openAiTtsApiKeyController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'OpenAI API Key (for TTS)',
+                      border: OutlineInputBorder(),
+                      helperText: 'Your OpenAI key — also used for Whisper STT if configured.',
+                      prefixIcon: Icon(Icons.vpn_key_outlined),
+                    ),
                   ),
-                ),
+                ],
+                if (_selectedTtsProvider == 'google_cloud') ...[
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _googleCloudTtsApiKeyController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Google Cloud TTS API Key',
+                      border: OutlineInputBorder(),
+                      helperText: 'Required when Google Cloud is selected.',
+                      prefixIcon: Icon(Icons.vpn_key_outlined),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 32),
 
                 // STT Provider Dropdown
