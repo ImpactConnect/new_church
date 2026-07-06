@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'ai_prompts_manager.dart';
 
 class AiConfigManager extends StatefulWidget {
   const AiConfigManager({super.key});
@@ -16,6 +17,17 @@ class _AiConfigManagerState extends State<AiConfigManager> {
 
   final List<String> _providers = ['gemini', 'openai', 'anthropic'];
 
+  // Voice Settings (TTS)
+  String _selectedTtsProvider = 'flutter_tts';
+  final List<String> _ttsProviders = ['flutter_tts', 'google_cloud'];
+  final _googleCloudTtsApiKeyController = TextEditingController();
+
+  // Voice Settings (STT)
+  String _selectedSttProvider = 'whisper';
+  final List<String> _sttProviders = ['native', 'whisper', 'deepgram'];
+  final _whisperApiKeyController = TextEditingController();
+  final _deepgramApiKeyController = TextEditingController();
+
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -29,6 +41,9 @@ class _AiConfigManagerState extends State<AiConfigManager> {
   void dispose() {
     _apiKeyController.dispose();
     _modelNameController.dispose();
+    _googleCloudTtsApiKeyController.dispose();
+    _whisperApiKeyController.dispose();
+    _deepgramApiKeyController.dispose();
     super.dispose();
   }
 
@@ -50,6 +65,24 @@ class _AiConfigManagerState extends State<AiConfigManager> {
           final currentProviderConfig = providersData[_selectedProvider] as Map<String, dynamic>? ?? {};
           _apiKeyController.text = currentProviderConfig['apiKey'] ?? '';
           _modelNameController.text = currentProviderConfig['model'] ?? '';
+
+          // Load Voice Data
+          final voiceData = data['voice'] as Map<String, dynamic>? ?? {};
+          final ttsData = voiceData['tts'] as Map<String, dynamic>? ?? {};
+          final sttData = voiceData['stt'] as Map<String, dynamic>? ?? {};
+
+          _selectedTtsProvider = ttsData['defaultProvider'] ?? 'flutter_tts';
+          if (!_ttsProviders.contains(_selectedTtsProvider)) {
+            _selectedTtsProvider = 'flutter_tts';
+          }
+          _googleCloudTtsApiKeyController.text = ttsData['googleCloudApiKey'] ?? '';
+
+          _selectedSttProvider = sttData['defaultProvider'] ?? 'whisper';
+          if (!_sttProviders.contains(_selectedSttProvider)) {
+            _selectedSttProvider = 'whisper';
+          }
+          _whisperApiKeyController.text = sttData['whisperApiKey'] ?? '';
+          _deepgramApiKeyController.text = sttData['deepgramApiKey'] ?? '';
         });
       }
     } catch (e) {
@@ -82,6 +115,17 @@ class _AiConfigManagerState extends State<AiConfigManager> {
             'model': _modelNameController.text.trim(),
           }
         },
+        'voice': {
+          'tts': {
+            'defaultProvider': _selectedTtsProvider,
+            'googleCloudApiKey': _googleCloudTtsApiKeyController.text.trim(),
+          },
+          'stt': {
+            'defaultProvider': _selectedSttProvider,
+            'whisperApiKey': _whisperApiKeyController.text.trim(),
+            'deepgramApiKey': _deepgramApiKeyController.text.trim(),
+          }
+        },
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -109,12 +153,15 @@ class _AiConfigManagerState extends State<AiConfigManager> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Form(
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,6 +231,94 @@ class _AiConfigManagerState extends State<AiConfigManager> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 32),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                const Text(
+                  'Voice Settings (TTS & STT)',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Configure text-to-speech and speech-to-text providers for ScriptTalk.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+
+                // TTS Provider Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedTtsProvider,
+                  decoration: const InputDecoration(
+                    labelText: 'TTS Provider (Text to Speech)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _ttsProviders.map((provider) {
+                    return DropdownMenuItem(
+                      value: provider,
+                      child: Text(provider.toUpperCase().replaceAll('_', ' ')),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedTtsProvider = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Google Cloud TTS API Key Field
+                TextFormField(
+                  controller: _googleCloudTtsApiKeyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Google Cloud TTS API Key (Placeholder)',
+                    border: OutlineInputBorder(),
+                    helperText: 'Required if Google Cloud is selected.',
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // STT Provider Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedSttProvider,
+                  decoration: const InputDecoration(
+                    labelText: 'STT Provider (Speech to Text)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _sttProviders.map((provider) {
+                    return DropdownMenuItem(
+                      value: provider,
+                      child: Text(provider.toUpperCase()),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _selectedSttProvider = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Whisper API Key Field
+                TextFormField(
+                  controller: _whisperApiKeyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Whisper API Key',
+                    border: OutlineInputBorder(),
+                    helperText: 'Required if Whisper is selected.',
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Deepgram API Key Field
+                TextFormField(
+                  controller: _deepgramApiKeyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deepgram API Key',
+                    border: OutlineInputBorder(),
+                    helperText: 'Required if Deepgram is selected.',
+                  ),
+                ),
                 const SizedBox(height: 40),
 
                 // Save Button
@@ -212,6 +347,34 @@ class _AiConfigManagerState extends State<AiConfigManager> {
             ),
           ),
         ),
+      ),
+    ),
+          
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'AI System Prompts',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Configure the foundational instructions that guide the AI\'s behavior and responses.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const AiPromptsManager(),
+          const SizedBox(height: 48),
+        ],
       ),
     );
   }

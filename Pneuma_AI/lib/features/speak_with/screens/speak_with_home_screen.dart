@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/speak_with_models.dart';
 import '../providers/speak_with_providers.dart';
 import '../widgets/new_conversation_sheet.dart';
+import 'voice_preferences_screen.dart';
 
 class SpeakWithHomeScreen extends ConsumerStatefulWidget {
   const SpeakWithHomeScreen({super.key});
@@ -31,7 +32,21 @@ class _SpeakWithHomeScreenState extends ConsumerState<SpeakWithHomeScreen> {
     final recentAsync = ref.watch(savedConversationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ScriptTalk'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('ScriptTalk'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VoicePreferencesScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

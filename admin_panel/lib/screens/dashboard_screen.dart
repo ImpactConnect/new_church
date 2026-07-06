@@ -39,7 +39,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     (icon: Icons.notifications_outlined, label: 'Alerts'),
     (icon: Icons.connect_without_contact_outlined, label: 'Members Connect'),
     (icon: Icons.auto_awesome_outlined, label: 'Bible AI Settings'),
-    (icon: Icons.edit_note_outlined, label: 'Bible AI Prompts'),
     (icon: Icons.support_agent_outlined, label: 'Support Requests'),
   ];
 
@@ -72,8 +71,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 12:
         return const AiConfigManager();
       case 13:
-        return const AiPromptsManager();
-      case 14:
         return const SupportRequestsManager();
       default:
         return const Center(child: Text('Select an item'));

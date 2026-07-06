@@ -8,6 +8,7 @@ import '../../notes/presentation/widgets/add_to_note_dialog.dart';
 import '../../notes/data/models/linked_content_reference.dart';
 import '../providers/speak_with_providers.dart';
 import '../models/speak_with_models.dart';
+import 'speak_with_voice_mode_screen.dart';
 
 class SpeakWithConversationScreen extends ConsumerStatefulWidget {
   final String figureId;
@@ -315,6 +316,18 @@ class _SpeakWithConversationScreenState
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.mic_none),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SpeakWithVoiceModeScreen(figure: state.figureA),
+                ),
+              );
+            },
+            tooltip: 'Voice Mode',
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () => _showFigureInfo(context, state.figureA),

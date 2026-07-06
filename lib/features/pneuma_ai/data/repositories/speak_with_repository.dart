@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../../features/speak_with/models/speak_with_models.dart';
 
 /// Firestore-backed repository for storing and retrieving ScriptTalk conversations.
@@ -9,28 +10,48 @@ class SpeakWithRepository {
   String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
   CollectionReference get _col {
-    final uid = _uid;
-    if (uid == null) throw Exception('User not authenticated');
+    final uid = _uid ?? 'local_guest';
     return _db.collection('users').doc(uid).collection('speak_with_conversations');
   }
 
   Future<List<SpeakWithConversation>> getSavedConversations() async {
     try {
-      final snapshot = await _col.orderBy('lastMessageAt', descending: true).get();
+      final snapshot =
+          await _col.orderBy('lastMessageAt', descending: true).get();
       return snapshot.docs
           .map((d) {
             try {
-              return SpeakWithConversation.fromJson(
-                Map<String, dynamic>.from(d.data() as Map),
-              );
-            } catch (_) {
+              final raw = Map<String, dynamic>.from(d.data() as Map);
+              // Firestore returns Timestamp objects; convert to ISO strings
+              // so json_serializable DateTime.parse() can handle them.
+              _convertTimestamps(raw);
+              return SpeakWithConversation.fromJson(raw);
+            } catch (e) {
+              debugPrint('SpeakWithRepository: failed to parse doc ${d.id}: $e');
               return null;
             }
           })
           .whereType<SpeakWithConversation>()
           .toList();
     } catch (e) {
+      debugPrint('SpeakWithRepository.getSavedConversations error: $e');
       return [];
+    }
+  }
+
+  /// Recursively converts Firestore [Timestamp] values to ISO-8601 strings.
+  void _convertTimestamps(Map<String, dynamic> map) {
+    for (final key in map.keys.toList()) {
+      final val = map[key];
+      if (val is Timestamp) {
+        map[key] = val.toDate().toIso8601String();
+      } else if (val is Map<String, dynamic>) {
+        _convertTimestamps(val);
+      } else if (val is List) {
+        for (final item in val) {
+          if (item is Map<String, dynamic>) _convertTimestamps(item);
+        }
+      }
     }
   }
 

@@ -75,6 +75,43 @@ class AiConfigService {
     return provider;
   }
 
+  /// Get voice configuration object
+  static Future<Map<String, dynamic>> getVoiceConfig() async {
+    final config = await _getConfig();
+    final voice = config['voice'];
+    if (voice is Map) return Map<String, dynamic>.from(voice);
+    return {};
+  }
+
+  /// Get the configured STT API key
+  static Future<String?> getSttApiKey(String provider) async {
+    final voiceConfig = await getVoiceConfig();
+    final sttConfig = _deepCastMap(voiceConfig['stt']);
+    if (provider == 'whisper') return sttConfig['whisperApiKey'] as String?;
+    if (provider == 'deepgram') return sttConfig['deepgramApiKey'] as String?;
+    return null;
+  }
+
+  /// Get the configured TTS API key
+  static Future<String?> getTtsApiKey(String provider) async {
+    final voiceConfig = await getVoiceConfig();
+    final ttsConfig = _deepCastMap(voiceConfig['tts']);
+    if (provider == 'google_cloud') return ttsConfig['googleCloudApiKey'] as String?;
+    return null;
+  }
+
+  static Future<String> getDefaultSttProvider() async {
+    final voiceConfig = await getVoiceConfig();
+    final sttConfig = _deepCastMap(voiceConfig['stt']);
+    return sttConfig['defaultProvider'] as String? ?? 'whisper';
+  }
+
+  static Future<String> getDefaultTtsProvider() async {
+    final voiceConfig = await getVoiceConfig();
+    final ttsConfig = _deepCastMap(voiceConfig['tts']);
+    return ttsConfig['defaultProvider'] as String? ?? 'flutter_tts';
+  }
+
   /// Force refresh config from Firestore (useful after admin changes settings).
   static Future<void> refreshConfig() async {
     final data = await _fetchFromFirestore();

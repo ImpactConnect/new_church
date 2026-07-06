@@ -8,6 +8,7 @@ import 'package:church_mobile/features/pneuma_ai/features/notes/presentation/wid
 import 'package:church_mobile/features/pneuma_ai/features/notes/data/models/linked_content_reference.dart';
 import '../providers/speak_with_providers.dart';
 import '../models/speak_with_models.dart';
+import 'speak_with_voice_mode_screen.dart';
 
 class SpeakWithConversationScreen extends ConsumerStatefulWidget {
   final String figureId;
@@ -53,7 +54,9 @@ class _SpeakWithConversationScreenState
       return;
     }
 
-    // ── NEW conversation ─────────────────────────────────────────────
+    // ── NEW conversation — reset stale state first ────────────────────
+    ref.read(askSpeakWithControllerProvider.notifier).reset();
+
     final figures = await ref.read(curatedFiguresProvider.future);
 
     BiblicalFigure figureA;
@@ -65,6 +68,8 @@ class _SpeakWithConversationScreenState
                 (widget.figureName ?? widget.figureId).toLowerCase(),
       );
     } catch (_) {
+      // Figure not in curated list — use a fast custom figure.
+      // The AI system prompt will handle the persona correctly by name.
       figureA = _createCustomFigure(widget.figureName ?? widget.figureId);
     }
 
@@ -316,6 +321,18 @@ class _SpeakWithConversationScreenState
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.mic_none),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SpeakWithVoiceModeScreen(figure: state.figureA),
+                ),
+              );
+            },
+            tooltip: 'Voice Mode',
+          ),
+          IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: () => _showFigureInfo(context, state.figureA),
           ),
@@ -555,14 +572,19 @@ class _SpeakWithConversationScreenState
                 const SizedBox(height: 8),
                 ...figure.suggestedOpeningQuestions.map((q) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.help_outline, size: 14),
-                        label:
-                            Flexible(child: Text(q, textAlign: TextAlign.left)),
+                      child: OutlinedButton(
                         onPressed: () {
                           Navigator.pop(context);
                           _controller.text = q;
                         },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.help_outline, size: 14),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(q, textAlign: TextAlign.left)),
+                          ],
+                        ),
                       ),
                     )),
               ],

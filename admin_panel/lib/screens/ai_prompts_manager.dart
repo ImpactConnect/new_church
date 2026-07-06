@@ -86,72 +86,63 @@ class _AiPromptsManagerState extends State<AiPromptsManager> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI System Prompts'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadPrompts,
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _promptKeys.length,
-        itemBuilder: (context, index) {
-          final key = _promptKeys[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        key.replaceAll('_', ' ').toUpperCase(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: _promptKeys.length,
+      itemBuilder: (context, index) {
+        final key = _promptKeys[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      key.replaceAll('_', ' ').toUpperCase(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
-                      Switch(
-                        value: _activeStates[key] ?? false,
-                        onChanged: (val) {
-                          setState(() {
-                            _activeStates[key] = val;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _controllers[key],
-                    maxLines: 8,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter system prompt here...',
-                      border: OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _savePrompt(key),
-                      icon: const Icon(Icons.save),
-                      label: const Text('Save Prompt'),
+                    Switch(
+                      value: _activeStates[key] ?? false,
+                      onChanged: (val) {
+                        setState(() {
+                          _activeStates[key] = val;
+                        });
+                      },
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _controllers[key],
+                  maxLines: 8,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter system prompt here...',
+                    border: OutlineInputBorder(),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _savePrompt(key),
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save Prompt'),
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

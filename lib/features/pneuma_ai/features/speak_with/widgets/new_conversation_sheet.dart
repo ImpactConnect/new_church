@@ -38,10 +38,11 @@ const _preloadedCharacters = [
 
 /// Shows a dialog to create a new conversation
 void showNewConversationDialog(BuildContext context) {
-  showDialog(
+  showModalBottomSheet(
     context: context,
-    barrierDismissible: true,
+    isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.transparent,
     builder: (context) => const _NewConversationDialog(),
   );
 }
@@ -87,111 +88,119 @@ class _NewConversationDialogState
     final availableHeight =
         mediaQuery.size.height - mediaQuery.viewInsets.bottom;
 
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
+    return Padding(
       padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
-      child: Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: availableHeight * 0.92),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'New Conversation',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                const SizedBox(height: 20),
-                SegmentedButton<ConversationMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ConversationMode.author,
-                      label: Text('Author', style: TextStyle(fontSize: 11)),
-                      icon: Icon(Icons.history_edu, size: 16),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'New Conversation',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
                     ),
-                    ButtonSegment(
-                      value: ConversationMode.character,
-                      label: Text('Character', style: TextStyle(fontSize: 11)),
-                      icon: Icon(Icons.person, size: 16),
-                    ),
-                  ],
-                  selected: {_selectedMode},
-                  onSelectionChanged: (Set<ConversationMode> s) {
-                    setState(() {
-                      _selectedMode = s.first;
-                      _figureAController.clear();
-                    });
-                  },
-                ),
-                const SizedBox(height: 24),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<ConversationMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ConversationMode.author,
+                    label: Text('Author', style: TextStyle(fontSize: 11)),
+                    icon: Icon(Icons.history_edu, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: ConversationMode.character,
+                    label: Text('Character', style: TextStyle(fontSize: 11)),
+                    icon: Icon(Icons.person, size: 16),
+                  ),
+                ],
+                selected: {_selectedMode},
+                onSelectionChanged: (Set<ConversationMode> s) {
+                  setState(() {
+                    _selectedMode = s.first;
+                    _figureAController.clear();
+                  });
+                },
+              ),
+              const SizedBox(height: 20),
 
-                figuresAsync.when(
-                  data: (figures) {
-                    final curatedNames = figures.map((f) => f.name).toList();
-                    final combined = {
-                      ...curatedNames,
-                      ..._namesForMode,
-                    }.toList()..sort();
-                    return _FigureInputField(
-                      key: ValueKey('${_selectedMode.name}A'),
-                      controller: _figureAController,
-                      label: 'Select or type a name',
-                      names: combined,
-                      onChanged: (_) => setState(() {}),
-                    );
-                  },
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, error) => _FigureInputField(
+              figuresAsync.when(
+                data: (figures) {
+                  final curatedNames = figures.map((f) => f.name).toList();
+                  final combined = {
+                    ...curatedNames,
+                    ..._namesForMode,
+                  }.toList()..sort();
+                  return _FigureInputField(
                     key: ValueKey('${_selectedMode.name}A'),
                     controller: _figureAController,
-                    label: 'Type a biblical figure name',
-                    names: _namesForMode,
+                    label: 'Select or type a name',
+                    names: combined,
                     onChanged: (_) => setState(() {}),
+                  );
+                },
+                loading: () => const LinearProgressIndicator(),
+                error: (_, error) => _FigureInputField(
+                  key: ValueKey('${_selectedMode.name}A'),
+                  controller: _figureAController,
+                  label: 'Type a biblical figure name',
+                  names: _namesForMode,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Select from the list or type any biblical figure\'s name.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed:
+                    _canStart ? () => _startConversation(context, ref) : null,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Select from the list or type any biblical figure\'s name.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
+                child: const Text(
+                  'Start Conversation',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _canStart
-                      ? () => _startConversation(context, ref)
-                      : null,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Start Conversation',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

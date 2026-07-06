@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/speak_with_models.dart';
 import 'speak_with_conversation_screen.dart';
+import 'voice_preferences_screen.dart';
 import '../providers/speak_with_providers.dart';
 import '../widgets/new_conversation_sheet.dart';
 
@@ -32,7 +33,21 @@ class _SpeakWithHomeScreenState extends ConsumerState<SpeakWithHomeScreen> {
     final recentAsync = ref.watch(savedConversationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ScriptTalk'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('ScriptTalk'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const VoicePreferencesScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -279,7 +294,7 @@ class _SpeakWithHomeScreenState extends ConsumerState<SpeakWithHomeScreen> {
           icon: Icon(Icons.delete_outline, color: colorScheme.error),
           onPressed: () async {
             await ref
-                .read(speakWithRepositoryProvider)
+                .read(speakWithLocalRepoProvider)
                 .deleteConversation(session.id);
             ref.invalidate(savedConversationsProvider);
           },

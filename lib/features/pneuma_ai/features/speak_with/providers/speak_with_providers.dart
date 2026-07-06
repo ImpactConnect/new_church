@@ -1,15 +1,25 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../data/repositories/prompt_repository.dart';
-import '../../../data/repositories/speak_with_repository.dart';
+import '../../../data/repositories/speak_with_local_repository.dart';
+import '../../../data/repositories/speak_with_repository.dart'; // For curated figures only
 import 'package:church_mobile/features/bible_ai/features/bible/providers/bible_providers.dart';
 import '../services/speak_with_ai_service.dart';
 import '../models/speak_with_models.dart';
 
 part 'speak_with_providers.g.dart';
 
+// ── Local repository (Hive — offline, no auth) ──────────────────────────────
+final speakWithLocalRepoProvider = Provider<SpeakWithLocalRepository>(
+  (ref) => SpeakWithLocalRepository(),
+);
+
+// Keep the code-gen provider alive but point it to local repo
+// (the generated .g.dart references speakWithRepositoryProvider with
+//  SpeakWithRepository type — we shadow it with a manual provider below)
 @Riverpod(keepAlive: true)
 SpeakWithRepository speakWithRepository(SpeakWithRepositoryRef ref) {
-  return SpeakWithRepository();
+  return SpeakWithRepository(); // Used only for curated figures
 }
 
 @Riverpod(keepAlive: true)
@@ -55,9 +65,10 @@ Future<List<BiblicalFigure>> filteredFigures(FilteredFiguresRef ref) async {
   ).toList();
 }
 
+// savedConversations now reads from local Hive repo
 @riverpod
 Future<List<SpeakWithConversation>> savedConversations(SavedConversationsRef ref) async {
-  final repo = ref.watch(speakWithRepositoryProvider);
+  final repo = ref.watch(speakWithLocalRepoProvider);
   return repo.getSavedConversations();
 }
 
@@ -68,21 +79,24 @@ class AskSpeakWithController extends _$AskSpeakWithController {
 
   void setConversation(SpeakWithConversation conv) {
     state = conv;
-    // Save immediately so it appears in recent sessions list
-    ref.read(speakWithRepositoryProvider).saveConversation(conv);
+    // Save to local Hive storage
+    ref.read(speakWithLocalRepoProvider).saveConversation(conv);
     ref.invalidate(savedConversationsProvider);
   }
 
+  /// Clear state before starting a brand-new conversation.
+  void reset() => state = null;
+
   /// Resume an existing conversation WITHOUT saving a new record.
   void resumeConversation(SpeakWithConversation conv) {
-    state = conv; // Just load it into memory — don't create a duplicate entry
+    state = conv;
   }
 
   Future<void> sendMessage(String text) async {
     if (state == null) return;
     
     final aiService = ref.read(speakWithAiServiceProvider);
-    final repo = ref.read(speakWithRepositoryProvider);
+    final localRepo = ref.read(speakWithLocalRepoProvider);
     
     // Add User message
     final userMsg = ChatMessage(
@@ -104,9 +118,6 @@ class AskSpeakWithController extends _$AskSpeakWithController {
     );
 
     try {
-      // Pass all prior messages as history for chain-of-thought.
-      // Exclude the message just added (userMsg) so the AI sees the full
-      // conversation that preceded this turn.
       final priorHistory = state!.messages
           .where((m) => m.id != userMsg.id)
           .toList();
@@ -140,8 +151,7 @@ class AskSpeakWithController extends _$AskSpeakWithController {
         lastMessageAt: DateTime.now(),
       );
       
-      await repo.saveConversation(state!);
-      // Refresh the recent sessions list on the home screen
+      await localRepo.saveConversation(state!);
       ref.invalidate(savedConversationsProvider);
     } catch (e) {
       print('AskSpeakWithController Error: $e');

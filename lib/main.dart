@@ -50,6 +50,7 @@ import 'widgets/home_carousel.dart';
 import 'features/notes/data/models/standalone_note_model.dart';
 import 'features/notes/data/models/linked_content_reference.dart';
 import 'features/notes/data/models/note_tag_model.dart';
+import 'features/pneuma_ai/features/speak_with/providers/voice_preferences_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -106,6 +107,8 @@ Future<void> main() async {
   await Hive.initFlutter();
   await Hive.openBox<String>('bible_ai_cache');
   await pneuma_config.AppConfig.initHive();
+  // Open ScriptTalk local conversations box
+  await Hive.openBox<String>('speak_with_conversations');
 
   // Register adapters and open boxes for the new Notes feature
   if (!Hive.isAdapterRegistered(100)) {
@@ -135,6 +138,9 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
       child: MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
