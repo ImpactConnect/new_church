@@ -3,6 +3,22 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
+// Helper to get effective date of an event, matching Dart logic
+function getEffectiveDate(startDate, endDate, recurrence) {
+    // We use server's local time for evaluation, assuming server time aligns with the target audience (or adjusted if needed).
+    const now = new Date();
+    if (recurrence === 'daily') {
+        if (now > endDate || now > startDate) {
+            let next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startDate.getHours(), startDate.getMinutes());
+            if (now > next) {
+                next.setDate(next.getDate() + 1);
+            }
+            return next;
+        }
+    }
+    return startDate;
+}
+
 // 1. Instantly send notifications requested by the Admin Panel
 exports.sendPushNotification = functions.firestore
   .document('push_notifications/{docId}')
@@ -128,5 +144,86 @@ exports.processAdminTasks = functions.firestore
       }
     }
     
+    return null;
+});
+
+// 4. Runs every day at 8:00 AM to notify about today's events
+exports.dailyEventNotifications = functions.pubsub.schedule('0 8 * * *')
+  .timeZone('Africa/Lagos')
+  .onRun(async (context) => {
+    const eventsSnapshot = await admin.firestore().collection('events').get();
+    
+    // Get current date in Nigeria Time
+    const todayStr = new Date().toLocaleString("en-US", {timeZone: "Africa/Lagos"});
+    const today = new Date(todayStr);
+
+    let todaysEvents = [];
+    eventsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const startDate = data.startDate.toDate();
+      const endDate = data.endDate.toDate();
+      const effective = getEffectiveDate(startDate, endDate, data.recurrence || 'none');
+      
+      const effStr = effective.toLocaleString("en-US", {timeZone: "Africa/Lagos"});
+      const effDate = new Date(effStr);
+
+      if (effDate.getFullYear() === today.getFullYear() && 
+          effDate.getMonth() === today.getMonth() && 
+          effDate.getDate() === today.getDate()) {
+        todaysEvents.push(data);
+      }
+    });
+
+    for (let event of todaysEvents) {
+      const title = event.title || 'Event Today';
+      const time = event.programmeTime || '';
+      await admin.messaging().send({
+        notification: {
+            title: `📅 Happening Today: ${title}`,
+            body: `Don't forget about ${title} happening today${time ? ' at ' + time : ''}.`
+        },
+        topic: 'all'
+      });
+    }
+    return null;
+});
+
+// 5. Runs every 10 minutes to notify about events starting in the next 10-20 minutes
+exports.upcomingEventNotifications = functions.pubsub.schedule('*/10 * * * *')
+  .onRun(async (context) => {
+    const eventsSnapshot = await admin.firestore().collection('events').get();
+    const now = new Date();
+    // Look ahead 10-20 minutes from now
+    const targetStart = new Date(now.getTime() + 10 * 60000);
+    const targetEnd = new Date(now.getTime() + 20 * 60000);
+
+    let upcomingEvents = [];
+    eventsSnapshot.forEach(doc => {
+      const data = doc.data();
+      const startDate = data.startDate.toDate();
+      const endDate = data.endDate.toDate();
+      const effective = getEffectiveDate(startDate, endDate, data.recurrence || 'none');
+      
+      if (effective >= targetStart && effective < targetEnd) {
+        upcomingEvents.push({ id: doc.id, ...data });
+      }
+    });
+
+    for (let event of upcomingEvents) {
+      // Check if we already notified for this event instance
+      const cacheRef = admin.firestore().collection('notification_cache').doc(`${event.id}_${now.getFullYear()}${now.getMonth()}${now.getDate()}_${now.getHours()}`);
+      const cacheDoc = await cacheRef.get();
+      if (!cacheDoc.exists) {
+        const title = event.title || 'Upcoming Event';
+        await admin.messaging().send({
+          notification: {
+              title: `⏰ Starting Soon: ${title}`,
+              body: `${title} is starting in 10 minutes at ${event.venue || 'its venue'}.`
+          },
+          topic: 'all'
+        });
+        await cacheRef.set({ sentAt: admin.firestore.FieldValue.serverTimestamp() });
+      }
+    }
     return null;
 });

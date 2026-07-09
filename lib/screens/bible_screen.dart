@@ -306,76 +306,146 @@ class _BibleScreenState extends State<BibleScreen>
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  hintText: 'Search Bible...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.white70),
-                ),
-                style: const TextStyle(color: Colors.white),
-                onChanged: _performSearch,
-              )
-            : InkWell(
-                onTap: _showBookSelection,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        _currentBook?.name ?? 'Select Book',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              expandedHeight: 280.0,
+              floating: false,
+              pinned: true,
+              backgroundColor: const Color(0xFF1A1D2E), // Solid dark top part
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: _isSearching
+                  ? TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Search Bible...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(color: Colors.white70),
+                      ),
+                      style: const TextStyle(color: Colors.white),
+                      onChanged: _performSearch,
+                    )
+                  : InkWell(
+                      onTap: _showBookSelection,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _currentBook?.name ?? 'Select Book',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 16, color: Colors.white),
+                            ),
+                          ),
+                          if (_currentChapter != null) ...[
+                            const Text(' - ', style: TextStyle(color: Colors.white)),
+                            Text(
+                              'Ch ${_currentChapter!.number}',
+                              style: const TextStyle(fontSize: 16, color: Colors.white),
+                            ),
+                          ],
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_drop_down, size: 20, color: Colors.white),
+                        ],
                       ),
                     ),
-                    if (_currentChapter != null) ...[
-                      const Text(' - '),
-                      Text(
-                        'Ch ${_currentChapter!.number}',
-                        style: const TextStyle(fontSize: 16),
+              actions: [
+                IconButton(
+                  icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white),
+                  onPressed: () {
+                    setState(() {
+                      if (_isSearching) {
+                        _searchController.clear();
+                        _isSearching = false;
+                        _searchResults.clear();
+                      } else {
+                        _isSearching = true;
+                      }
+                    });
+                  },
+                ),
+              ],
+              bottom: TabBar(
+                controller: _tabController,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white70,
+                indicatorColor: Colors.white,
+                tabs: const [
+                  Tab(icon: Icon(Icons.book), text: 'Bible'),
+                  Tab(icon: Icon(Icons.bookmark), text: 'Bookmarks'),
+                  Tab(icon: Icon(Icons.highlight), text: 'Highlights'),
+                  Tab(icon: Icon(Icons.note), text: 'Notes'),
+                ],
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  children: [
+                    // Top half background (Dark)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 180,
+                      child: Container(color: const Color(0xFF1A1D2E)),
+                    ),
+                    // Bottom half background (Scaffold background)
+                    Positioned(
+                      top: 180,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: Container(color: Theme.of(context).scaffoldBackgroundColor),
+                    ),
+                    // The overlapping Card
+                    Positioned(
+                      top: 90,
+                      left: 16,
+                      right: 16,
+                      bottom: 50, // More bottom padding to clear the TabBar
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1D2E),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                'assets/images/bible_reading_plan.jpg',
+                                fit: BoxFit.cover,
+                              ),
+                              Container(color: Colors.black26),
+                            ],
+                          ),
+                        ),
                       ),
-                    ],
-                    const SizedBox(width: 4),
-                    const Icon(Icons.arrow_drop_down, size: 20),
+                    ),
                   ],
                 ),
               ),
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _searchController.clear();
-                  _isSearching = false;
-                  _searchResults.clear();
-                } else {
-                  _isSearching = true;
-                }
-              });
-            },
-          ),
-        ],
-        bottom: TabBar(
+            ),
+          ];
+        },
+        body: TabBarView(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.book), text: 'Bible'),
-            Tab(icon: Icon(Icons.bookmark), text: 'Bookmarks'),
-            Tab(icon: Icon(Icons.highlight), text: 'Highlights'),
-            Tab(icon: Icon(Icons.note), text: 'Notes'),
+          children: [
+            _isSearching ? _buildSearchResults() : _buildVerseList(),
+            _buildBookmarkedVerses(),
+            _buildHighlightedVerses(),
+            _buildVersesWithNotes(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _isSearching ? _buildSearchResults() : _buildVerseList(),
-          _buildBookmarkedVerses(),
-          _buildHighlightedVerses(),
-          _buildVersesWithNotes(),
-        ],
       ),
     );
   }

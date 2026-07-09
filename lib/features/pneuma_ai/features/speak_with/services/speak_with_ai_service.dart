@@ -62,8 +62,8 @@ class SpeakWithAiService {
     final who = mode == ConversationMode.dual && figureB != null
         ? '${figure.name} and ${figureB.name}, two biblical figures'
         : mode == ConversationMode.author
-        ? '${figure.name}, the biblical author'
-        : '${figure.name}, a biblical figure';
+            ? '${figure.name}, the biblical author'
+            : '${figure.name}, a biblical figure';
 
     return 'You are $who speaking in Illuminare\'s "Speak With" feature.\n'
         'IDENTITY: Your name is ${figure.name}. You are ONLY ${figure.name}. Never pretend to be or become any other person.\n'
@@ -81,9 +81,7 @@ class SpeakWithAiService {
         '- Structure your response using markdown (headings, bullet/number lists, paragraphs, bold text).\n'
         '- Do NOT output JSON, raw code blocks, or curly braces {}.\n'
         '- Do NOT prefix your response with your name. Just start speaking.\n'
-        '${isVoiceMode 
-            ? "- EXTREMELY CRITICAL: This is a VOICE interaction. Keep your response extremely short, conversational, and direct (maximum 1-3 short sentences).\n- DO NOT include Bible verse citations, chapter, or verse numbers in your response. Just speak the words naturally." 
-            : "- Aim for 100-250 words per response. Be personal, warm, and rooted in scripture.\n- Cite scriptures using their reference in parentheses, e.g. (John 3:16)."}';
+        '${isVoiceMode ? "- EXTREMELY CRITICAL: This is a VOICE interaction. Keep your response extremely short, conversational, and direct (maximum 100 words).\n- DO NOT include Bible verse citations, chapter, or verse numbers in your response. Just speak the words naturally." : "- Aim for 100-250 words per response. Be personal, warm, and rooted in scripture.\n- Cite scriptures using their reference in parentheses, e.g. (John 3:16)."}';
   }
 
   /// Attempts to get the "message" field from a JSON response.
@@ -101,9 +99,9 @@ class SpeakWithAiService {
       try {
         final jsonMap = jsonDecode(cleaned) as Map<String, dynamic>;
         // Try common field names for the message
-        final msg =
-            (jsonMap['message'] ?? jsonMap['response'] ?? jsonMap['text'])
-                as String?;
+        final msg = (jsonMap['message'] ??
+            jsonMap['response'] ??
+            jsonMap['text']) as String?;
         if (msg != null && msg.isNotEmpty) return msg.trim();
       } catch (_) {
         // JSON parse failed — fall through to text extraction
@@ -155,16 +153,13 @@ class SpeakWithAiService {
     required bool isVoiceMode,
   }) {
     // Build conversation history as plain text
-    final historyText = history
-        .map((e) {
-          final role = e.isUser ? 'User' : figure.name;
-          return '$role: ${e.message}';
-        })
-        .join('\n');
+    final historyText = history.map((e) {
+      final role = e.isUser ? 'User' : figure.name;
+      return '$role: ${e.message}';
+    }).join('\n');
 
     // Build corpus context
-    final corpus =
-        'Scripture: ' +
+    final corpus = 'Scripture: ' +
         figure.corpus.tier1Scripture +
         '\nPersonality: ' +
         figure.corpus.personalityProfile +
@@ -197,8 +192,8 @@ class SpeakWithAiService {
           'You may reference ' +
           figureB.name +
           ' where relevant. ' +
-          (isVoiceMode 
-              ? 'KEEP IT EXTREMELY SHORT (1-3 sentences maximum). ' 
+          (isVoiceMode
+              ? 'KEEP IT EXTREMELY SHORT (1-3 sentences maximum). '
               : 'Keep your response to 100-250 words. ') +
           'Do NOT respond as JSON. Use markdown formatting (headings, bullet lists, bold text) to structure your response.\n' +
           'Respond as flowing, first-person prose.';
@@ -222,8 +217,8 @@ class SpeakWithAiService {
         figure.name +
         ', speaking in first person. ' +
         'When citing scripture, use the $bibleVersionName translation. ' +
-        (isVoiceMode 
-            ? 'KEEP IT EXTREMELY SHORT (1-3 sentences maximum). ' 
+        (isVoiceMode
+            ? 'KEEP IT EXTREMELY SHORT (1-3 sentences maximum). '
             : 'Keep your response to 100-250 words. ') +
         'Do NOT respond as JSON. Use markdown formatting (headings, bullet lists, bold text) to structure your response.\n' +
         'Respond as flowing, first-person prose grounded in scripture.';
@@ -236,7 +231,7 @@ class SpeakWithAiService {
 
     final userPrompt =
         'Build a complete 4-tier persona for the biblical figure: ' +
-        figureName;
+            figureName;
 
     final responseText = await _aiService.getAiResponse(
       systemPrompt: prompt,
@@ -278,14 +273,12 @@ class SpeakWithAiService {
       suggestedOpeningQuestions: List<String>.from(
         json['suggestedOpeningQuestions'] ?? [],
       ),
-      availableSourceTiers:
-          (json['availableSourceTiers'] as List<dynamic>?)
+      availableSourceTiers: (json['availableSourceTiers'] as List<dynamic>?)
               ?.map((e) => _parseSourceTier(e.toString()))
               .toList() ??
           [SourceTier.scripture],
       corpus: FigureCorpus(
-        tier1Scripture:
-            'Direct Words: ' +
+        tier1Scripture: 'Direct Words: ' +
             ((json['tier1_scripture']?['directWords'] as String?) ?? '') +
             '\nOthers Said: ' +
             ((json['tier1_scripture']?['othersSaid'] as String?) ?? '') +
@@ -296,8 +289,7 @@ class SpeakWithAiService {
         tier2Historical: json['tier2_historical'] as String?,
         tier3Cultural: json['tier3_cultural'] as String?,
         tier4Theological: json['tier4_theological'] as String?,
-        knownRelationships:
-            (json['knownRelationships'] as List<dynamic>?)
+        knownRelationships: (json['knownRelationships'] as List<dynamic>?)
                 ?.map(
                   (e) => FigureRelationship(
                     person: e['person'] as String,

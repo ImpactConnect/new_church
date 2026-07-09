@@ -29,6 +29,8 @@ import 'screens/event_details_screen.dart';
 import 'screens/event_screen.dart';
 import 'models/event.dart' as app_event;
 import 'screens/hymn_screen.dart';
+import 'screens/donations_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/library/library_screen.dart';
 import 'screens/live_stream_screen.dart';
 import 'screens/media/gallery_screen.dart';
@@ -51,6 +53,7 @@ import 'features/notes/data/models/standalone_note_model.dart';
 import 'features/notes/data/models/linked_content_reference.dart';
 import 'features/notes/data/models/note_tag_model.dart';
 import 'features/pneuma_ai/features/speak_with/providers/voice_preferences_provider.dart';
+import 'features/home_template/screens/home_template_switcher.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,10 +85,8 @@ Future<void> main() async {
       await FirebaseFirestore.instance.collection('test').limit(1).get();
       print('Firestore connection successful');
 
-      // Run data migrations
-      print('Running data migrations...');
-      await DataMigration.migrateCarouselItems();
-      print('Data migrations completed');
+      // Data migrations should be handled server-side or by admin panel, 
+      // not on the client app startup to prevent permission errors.
     } catch (e) {
       print('Error connecting to Firestore: $e');
       ToastUtils.showToast('Error connecting to database');
@@ -224,7 +225,7 @@ class MyApp extends StatelessWidget {
               return child ?? const SizedBox.shrink();
             },
             routes: {
-              '/home': (context) => const HomePage(),
+              '/home': (context) => const HomeTemplateSwitcher(),
               '/bible': (context) => const BibleAiEntryScreen(),
               '/notes': (context) => const StandaloneNotesScreen(),
               '/sermons': (context) => SermonScreen(
@@ -240,6 +241,8 @@ class MyApp extends StatelessWidget {
               '/members': (context) => const MembersConnectScreen(),
               '/videos': (context) => const VideoScreen(),
               '/gallery': (context) => const GalleryScreen(),
+              '/donations': (context) => const DonationsScreen(),
+              '/settings': (context) => const SettingsScreen(),
             },
             onGenerateRoute: (settings) {
               final uri = Uri.parse(settings.name ?? '');
@@ -304,7 +307,7 @@ class MyApp extends StatelessWidget {
 
               // If no matching route is found
               return MaterialPageRoute(
-                builder: (context) => const HomePage(),
+                builder: (context) => const HomeTemplateSwitcher(),
               );
             },
             onUnknownRoute: (settings) {
@@ -362,7 +365,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          MaterialPageRoute(builder: (_) => const HomeTemplateSwitcher()),
         );
       }
     } catch (e) {
@@ -515,7 +518,7 @@ class _HomePageState extends State<HomePage> {
       'icon': Icons.monetization_on,
       'label': 'Donation',
       'color': Colors.green,
-      'route': null,
+      'route': (BuildContext context) => const DonationsScreen(),
     },
     {
       'icon': Icons.note_alt,

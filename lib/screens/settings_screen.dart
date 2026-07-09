@@ -10,6 +10,8 @@ import '../screens/community/community_login_screen.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'help_support_screen.dart';
 import 'contact_support_screen.dart';
+import '../features/home_template/repositories/home_template_repository.dart';
+import '../features/home_template/models/home_template_config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -122,6 +124,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     // Profile Header Card
                     _buildProfileHeader(isDark, accentColor),
+
+                    // T30 Extra Nav items (Only visible if T30 template active)
+                    _buildT30ExtraNav(isDark, accentColor),
 
                     // Appearance Settings
                     _buildCardSection(
@@ -553,6 +558,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildT30ExtraNav(bool isDark, Color accentColor) {
+    return StreamBuilder<String>(
+      stream: HomeTemplateRepository.instance.activeTemplateIdStream,
+      builder: (context, snap) {
+        if (snap.data == HomeTemplateId.bannerCards) {
+          final items = [
+            {'label': 'Radio', 'icon': Icons.radio, 'route': null, 'color': Colors.blue},
+            {'label': 'Library', 'icon': Icons.local_library, 'route': '/library', 'color': Colors.brown},
+            {'label': 'Hymns', 'icon': Icons.music_note, 'route': '/hymns', 'color': Colors.indigo},
+            {'label': 'Donations', 'icon': Icons.monetization_on, 'route': '/donations', 'color': Colors.green},
+            {'label': 'Blog', 'icon': Icons.rss_feed, 'route': '/blog', 'color': Colors.orange},
+          ];
+
+          return _buildCardSection(
+            title: 'EXPLORE MORE',
+            children: [
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 5,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                mainAxisSpacing: 0,
+                crossAxisSpacing: 0,
+                childAspectRatio: 0.75,
+                children: items.map((item) {
+                  return InkWell(
+                    onTap: () {
+                      if (item['route'] != null) {
+                        Navigator.pushNamed(context, item['route'] as String);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Coming Soon!')),
+                        );
+                      }
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: (item['color'] as Color).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            item['icon'] as IconData,
+                            color: item['color'] as Color,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          item['label'] as String,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 }

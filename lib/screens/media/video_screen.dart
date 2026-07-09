@@ -188,7 +188,7 @@ class _VideoScreenState extends State<VideoScreen> {
 
               return NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                  SliverToBoxAdapter(child: _buildHeroSection()),
+                  _buildSliverAppBar(context),
                   SliverToBoxAdapter(child: _buildSearchBar()),
                   SliverPersistentHeader(
                     pinned: true,
@@ -577,66 +577,94 @@ class _VideoScreenState extends State<VideoScreen> {
 
   // ─── Hero ────────────────────────────────────────────────────────────────
 
-  Widget _buildHeroSection() {
-    return Stack(
-      children: [
-        Image.asset(
-          'assets/images/video_header.jpg',
-          width: double.infinity,
-          height: 220,
-          fit: BoxFit.cover,
-        ),
-        Container(
-          width: double.infinity,
-          height: 220,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.black87, Colors.transparent],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 280.0,
+      floating: false,
+      pinned: true,
+      backgroundColor: const Color(0xFF1A1D2E), // Solid dark top part
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
+      title: const Text('Video Library', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          children: [
+            // Top half background (Dark)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 180,
+              child: Container(color: const Color(0xFF1A1D2E)),
             ),
-          ),
-        ),
-        Positioned(
-          top: 16,
-          left: 16,
-          child: SafeArea(
-            child: CircleAvatar(
-              backgroundColor: Colors.white24,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+            // Bottom half background (Scaffold background)
+            Positioned(
+              top: 180,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(color: Theme.of(context).scaffoldBackgroundColor),
             ),
-          ),
-        ),
-        Positioned(
-          bottom: 20,
-          left: 16,
-          right: 16,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Video Library',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
+            // The overlapping Card
+            Positioned(
+              top: 90,
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1D2E),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/images/video_header.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.black87, Colors.transparent],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 16,
+                        left: 16,
+                        right: 16,
+                        child: Text(
+                          'Sermons, worship sessions & ministry highlights',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Sermons, worship sessions & ministry highlights',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

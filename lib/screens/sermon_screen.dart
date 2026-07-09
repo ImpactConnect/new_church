@@ -377,17 +377,71 @@ class _SermonScreenState extends State<SermonScreen>
   }
 
   Widget _buildSliverAppBar() {
+    final theme = Theme.of(context);
     return SliverAppBar(
-      expandedHeight: 220,
+      expandedHeight: 280,
       floating: false,
       pinned: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFF1A1D2E), // Solid dark top part
       elevation: 0,
-      iconTheme: const IconThemeData(color: Colors.black),
+      iconTheme: const IconThemeData(color: Colors.white),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.cast, color: Colors.white),
+          onPressed: () {}, // Placeholder for cast
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
-        background: Image.asset(
-          'assets/images/sermon_hero.jpg',
-          fit: BoxFit.cover,
+        background: Stack(
+          children: [
+            // Top half background (Dark)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 180,
+              child: Container(
+                color: const Color(0xFF1A1D2E),
+              ),
+            ),
+            // Bottom half background (Scaffold background)
+            Positioned(
+              top: 180,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                color: theme.scaffoldBackgroundColor,
+              ),
+            ),
+            // The overlapping Card
+            Positioned(
+              top: 90, // below status bar and app bar icons
+              left: 16,
+              right: 16,
+              bottom: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE1F3F7), // matches the image background
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    'assets/images/sermon_hero.jpg',
+                    fit: BoxFit.contain, // perfectly bounds the graphic
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

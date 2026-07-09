@@ -46,10 +46,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // App Settings (like YouTube API keys)
+    // App Settings (like YouTube API keys and active home template)
     match /app_settings/{doc} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // Homepage templates and their tiles
+    match /home_templates/{templateId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /tiles/{tileId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
 
     // Videos: anyone can read; admins write; authenticated users can increment views/likes
@@ -83,6 +94,12 @@ service cloud.firestore {
 
     // Events: anyone can read
     match /events/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Donations: anyone can read
+    match /donations/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }

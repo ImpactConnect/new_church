@@ -34,7 +34,7 @@ class EventService {
       }
 
       // Sort upcoming events by start date (ascending)
-      upcomingEvents.sort((a, b) => a.startDate.compareTo(b.startDate));
+      upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
       // Sort past events by end date (descending)
       pastEvents.sort((a, b) => b.endDate.compareTo(a.endDate));
 
@@ -57,15 +57,19 @@ class EventService {
 
   // Get upcoming events stream
   Stream<List<Event>> getUpcomingEventsStream({int limit = 3}) {
+    final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
     return _firestore
         .collection(_collection)
         .where('endDate',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime.now()))
-        .orderBy('endDate')
-        .limit(limit)
+            isGreaterThanOrEqualTo: Timestamp.fromDate(threeMonthsAgo))
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList());
+        .map((snapshot) {
+      final events =
+          snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+      final upcomingEvents = events.where((e) => e.isUpcoming).toList();
+      upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+      return upcomingEvents.take(limit).toList();
+    });
   }
 
   // Search events locally to avoid case sensitivity issues
@@ -97,7 +101,7 @@ class EventService {
       }
 
       // Sort upcoming events by start date (ascending)
-      upcomingEvents.sort((a, b) => a.startDate.compareTo(b.startDate));
+      upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
       // Sort past events by end date (descending)
       pastEvents.sort((a, b) => b.endDate.compareTo(a.endDate));
 

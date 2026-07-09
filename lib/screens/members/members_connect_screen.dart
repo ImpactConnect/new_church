@@ -370,37 +370,78 @@ class _MembersConnectViewState extends State<_MembersConnectView>
             return [
               // ── Hero AppBar ───────────────────────────────────────────
               SliverAppBar(
-                expandedHeight: 210.0,
+                expandedHeight: 280.0,
                 floating: false,
                 pinned: true,
-                stretch: true,
-                elevation: innerBoxIsScrolled ? 4.0 : 0.0,
-                backgroundColor: theme.primaryColor,
+                backgroundColor: const Color(0xFF1A1D2E), // Solid dark top part
+                elevation: 0,
+                iconTheme: const IconThemeData(color: Colors.white),
+                title: const Text('Members Connect', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 flexibleSpace: FlexibleSpaceBar(
-                  title: const Text('Members Connect',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          shadows: [
-                            Shadow(color: Colors.black54, blurRadius: 4)
-                          ])),
-                  background: Stack(fit: StackFit.expand, children: [
-                    Image.asset('assets/images/members_hero.jpg',
-                        fit: BoxFit.cover),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            theme.primaryColorDark.withOpacity(0.88),
-                          ],
+                  background: Stack(
+                    children: [
+                      // Top half background (Dark)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 180,
+                        child: Container(color: const Color(0xFF1A1D2E)),
+                      ),
+                      // Bottom half background (Scaffold background)
+                      Positioned(
+                        top: 180,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(color: theme.scaffoldBackgroundColor),
+                      ),
+                      // The overlapping Card
+                      Positioned(
+                        top: 90,
+                        left: 16,
+                        right: 16,
+                        bottom: 16,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1D2E),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.asset(
+                                  'assets/images/members_hero.jpg',
+                                  fit: BoxFit.cover,
+                                ),
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        theme.primaryColorDark.withOpacity(0.88),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ]),
+                    ],
+                  ),
                 ),
               ),
 
