@@ -565,7 +565,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return StreamBuilder<String>(
       stream: HomeTemplateRepository.instance.activeTemplateIdStream,
       builder: (context, snap) {
-        if (snap.data == HomeTemplateId.bannerCards) {
+        final activeId = snap.data;
+        if (activeId == HomeTemplateId.bannerCards || activeId == HomeTemplateId.bannerStyle) {
           final items = [
             {'label': 'Radio', 'icon': Icons.radio, 'route': null, 'color': Colors.blue},
             {'label': 'Library', 'icon': Icons.local_library, 'route': '/library', 'color': Colors.brown},

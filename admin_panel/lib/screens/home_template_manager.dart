@@ -70,6 +70,7 @@ class _HomeTemplateManagerState extends State<HomeTemplateManager>
   static const _templates = [
     {'id': 'classic', 'name': 'Classic (Grid Style)'},
     {'id': 'banner_cards', 'name': 'Banner Cards (T30 Style)'},
+    {'id': 'banner_style', 'name': 'Banner Style'},
   ];
 
   @override
@@ -200,7 +201,7 @@ class _TemplateTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isBannerCards = templateId == 'banner_cards';
+    final hasTiles = templateId == 'banner_cards' || templateId == 'banner_style';
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -245,8 +246,8 @@ class _TemplateTab extends StatelessWidget {
         ),
         const SizedBox(height: 24),
 
-        // Only banner_cards has editable tiles
-        if (isBannerCards) ...[
+        // Templates with editable tiles
+        if (hasTiles) ...[
           _TileManagerSection(templateId: templateId),
         ] else ...[
           const Card(
@@ -584,7 +585,9 @@ class _TileFormDialogState extends State<_TileFormDialog> {
         await templateRef.set({
           'name': widget.templateId == 'banner_cards'
               ? 'Banner Cards (T30 Style)'
-              : 'Classic',
+              : widget.templateId == 'banner_style'
+                  ? 'Banner Style'
+                  : 'Classic',
           'isActive': true,
           'createdAt': FieldValue.serverTimestamp(),
         });

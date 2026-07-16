@@ -5,6 +5,7 @@ import '../../services/book_service.dart';
 import '../../widgets/library/book_card.dart';
 import '../../widgets/library/book_grid.dart';
 import '../../widgets/library/filter_section.dart';
+import '../../widgets/hero_header_widget.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({Key? key}) : super(key: key);
@@ -177,39 +178,14 @@ class _LibraryScreenState extends State<LibraryScreen>
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 280.0,
               pinned: true,
-              stretch: true,
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              backgroundColor: const Color(0xFF161622),
               iconTheme: const IconThemeData(color: Colors.white),
-              flexibleSpace: FlexibleSpaceBar(
-                title: const Text('Library', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                centerTitle: false,
-                titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      'assets/images/library_bg.jpg',
-                      fit: BoxFit.cover,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.5),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.8),
-                          ],
-                          stops: const [0.0, 0.5, 1.0],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              title: const Text('Library', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              centerTitle: true,
+            ),
+            const SliverToBoxAdapter(
+              child: HeroHeaderWidget(imagePath: 'assets/images/library_bg.jpg'),
             ),
               
             // Search and Filter Bar

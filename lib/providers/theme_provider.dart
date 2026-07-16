@@ -78,21 +78,21 @@ class ThemeProvider with ChangeNotifier {
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF0D1B2A),
         brightness: Brightness.dark,
-        surface: const Color(0xFF1F2937).withOpacity(0.55),
+        surface: const Color(0xFF1E293B),
         onSurface: Colors.white,
       ),
-      scaffoldBackgroundColor: Colors.transparent,
-      cardColor: const Color(0xFF1E293B).withOpacity(0.5),
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      cardColor: const Color(0xFF1E293B),
       dialogBackgroundColor: const Color(0xFF1E293B),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         centerTitle: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Color(0xFF0F172A),
         foregroundColor: Colors.white,
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: const Color(0xFF1E293B).withOpacity(0.5),
+        color: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
@@ -100,7 +100,7 @@ class ThemeProvider with ChangeNotifier {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF0F172A).withOpacity(0.4),
+        fillColor: const Color(0xFF1E293B),
         labelStyle: const TextStyle(color: Colors.white70),
         hintStyle: const TextStyle(color: Colors.white38),
         border: OutlineInputBorder(

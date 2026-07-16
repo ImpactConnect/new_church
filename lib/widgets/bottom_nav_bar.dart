@@ -84,8 +84,9 @@ class BottomNavBar extends StatelessWidget {
     return StreamBuilder<String>(
       stream: HomeTemplateRepository.instance.activeTemplateIdStream,
       builder: (context, snap) {
-        if (snap.data == HomeTemplateId.bannerCards) {
-          return const BannerCardsBottomNav();
+        final activeId = snap.data;
+        if (activeId == HomeTemplateId.bannerCards || activeId == HomeTemplateId.bannerStyle) {
+          return BannerCardsBottomNav(templateId: activeId!);
         }
 
         final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -153,7 +154,9 @@ class BottomNavBar extends StatelessWidget {
 }
 
 class BannerCardsBottomNav extends StatelessWidget {
-  const BannerCardsBottomNav({Key? key}) : super(key: key);
+  const BannerCardsBottomNav({Key? key, this.templateId = 'banner_cards'}) : super(key: key);
+
+  final String templateId;
 
   static const _defaultNavItems = [
     {'label': 'Home', 'icon': 'home', 'route': '/home'},
@@ -187,7 +190,7 @@ class BannerCardsBottomNav extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('home_templates')
-          .doc('banner_cards')
+          .doc(templateId)
           .snapshots(),
       builder: (context, snap) {
         final data = snap.data?.data() as Map<String, dynamic>?;

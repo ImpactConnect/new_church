@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../models/devotional.dart';
 import '../services/devotional_service.dart';
 import 'devotional_detail_screen.dart';
+import '../widgets/hero_header_widget.dart';
 
 class DevotionalScreen extends StatefulWidget {
   const DevotionalScreen({Key? key}) : super(key: key);
@@ -74,30 +75,11 @@ class _DevotionalScreenState extends State<DevotionalScreen>
   }
 
   Widget _buildHeroSection() {
-    return SliverAppBar(
-      expandedHeight: 200,
-      floating: false,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
+    return SliverToBoxAdapter(
+      child: HeroHeaderWidget(
+        imagePath: 'assets/images/devotional_header.jpg',
+        child: Stack(
           children: [
-            Image.asset(
-              'assets/images/devotional_header.jpg',
-              fit: BoxFit.cover,
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.7),
-                    Colors.black.withValues(alpha: 0.3),
-                  ],
-                ),
-              ),
-            ),
             const Positioned(
               bottom: 16,
               left: 16,
@@ -126,10 +108,6 @@ class _DevotionalScreenState extends State<DevotionalScreen>
             ),
           ],
         ),
-      ),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
       ),
     );
   }
@@ -527,6 +505,13 @@ class _DevotionalScreenState extends State<DevotionalScreen>
               onRefresh: _loadInitialData,
               child: NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) => [
+                  SliverAppBar(
+                    pinned: true,
+                    backgroundColor: const Color(0xFF161622),
+                    iconTheme: const IconThemeData(color: Colors.white),
+                    title: const Text('Devotional', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    centerTitle: true,
+                  ),
                   _buildHeroSection(),
                   _buildSearchBar(),
                   if (_searchResults.isEmpty) _buildTabBar(),

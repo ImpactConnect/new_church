@@ -204,26 +204,6 @@ class MyApp extends StatelessWidget {
               FlutterQuillLocalizations.delegate,
             ],
             home: const SplashScreen(),
-            builder: (context, child) {
-              final isDark = Theme.of(context).brightness == Brightness.dark;
-              if (isDark) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF0A0E17), // Deepest dark midnight blue
-                        Color(0xFF121B2D), // Rich dark navy
-                        Color(0xFF1B283F), // Lighter slate blue at the top
-                      ],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                    ),
-                  ),
-                  child: child,
-                );
-              }
-              return child ?? const SizedBox.shrink();
-            },
             routes: {
               '/home': (context) => const HomeTemplateSwitcher(),
               '/bible': (context) => const BibleAiEntryScreen(),
@@ -380,8 +360,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -391,6 +372,7 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 250,
               height: 250,
               fit: BoxFit.contain,
+              color: isDark ? Colors.white : null,
             ),
             const SizedBox(height: 20),
             CircularProgressIndicator(

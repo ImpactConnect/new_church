@@ -3,6 +3,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../../models/blog_post.dart';
 import '../../services/blog_service.dart';
 import 'blog_detail_screen.dart';
+import '../../widgets/hero_header_widget.dart';
 
 class BlogListScreen extends StatefulWidget {
   const BlogListScreen({Key? key}) : super(key: key);
@@ -36,39 +37,18 @@ class _BlogListScreenState extends State<BlogListScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // Hero Section with Back Button
           SliverAppBar(
-            expandedHeight: 200,
-            floating: false,
             pinned: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
+            backgroundColor: const Color(0xFF161622),
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text(
+              'Blog',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Blog'),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    'assets/images/blog_header.jpg',
-                    fit: BoxFit.cover,
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            centerTitle: true,
+          ),
+          const SliverToBoxAdapter(
+            child: HeroHeaderWidget(imagePath: 'assets/images/blog_header.jpg'),
           ),
 
           // Search Bar

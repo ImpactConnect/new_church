@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/donation_model.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../widgets/hero_header_widget.dart';
 
 class DonationsScreen extends StatelessWidget {
   const DonationsScreen({super.key});
@@ -13,13 +14,6 @@ class DonationsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Give'),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
-        iconTheme: theme.iconTheme,
-        titleTextStyle: theme.textTheme.titleLarge,
-      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('donations')
@@ -27,36 +21,65 @@ class DonationsScreen extends StatelessWidget {
             .orderBy('sortOrder')
             .snapshots(),
         builder: (context, snapshot) {
+          Widget sliverContent;
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            sliverContent = SliverFillRemaining(
+                child: Center(
+                    child: Text('Error: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.red))));
+          } else if (snapshot.connectionState == ConnectionState.waiting) {
+            sliverContent = const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()));
+          } else {
+            final docs = snapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              sliverContent = SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    'No donation options available right now.',
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              );
+            } else {
+              sliverContent = SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.85,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final model = DonationModel.fromFirestore(docs[index]);
+                      return _DonationCard(donation: model);
+                    },
+                    childCount: docs.length,
+                  ),
+                ),
+              );
+            }
           }
 
-          final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) {
-            return Center(
-              child: Text(
-                'No donation options available right now.',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          return CustomScrollView(
+            slivers: [
+              const SliverAppBar(
+                pinned: true,
+                backgroundColor: Color(0xFF161622),
+                iconTheme: IconThemeData(color: Colors.white),
+                title: Text('Give',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+                centerTitle: true,
               ),
-            );
-          }
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 0.85,
-            ),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final model = DonationModel.fromFirestore(docs[index]);
-              return _DonationCard(donation: model);
-            },
+              const SliverToBoxAdapter(
+                child: HeroHeaderWidget(
+                    imagePath: 'assets/images/donations.png'),
+              ),
+              sliverContent,
+            ],
           );
         },
       ),

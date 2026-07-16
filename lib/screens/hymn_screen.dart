@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'hymn_detail_screen.dart';
+import '../widgets/hero_header_widget.dart';
 
 class Hymn {
   Hymn({
@@ -139,40 +140,20 @@ class _HymnScreenState extends State<HymnScreen>
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
-            expandedHeight: 200.0,
-            floating: false,
             pinned: true,
-            backgroundColor: Theme.of(context).primaryColor,
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                'Hymnal',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    'assets/images/hymnal_header.jpg',
-                    fit: BoxFit.cover,
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.3),
-                          Colors.black.withValues(alpha: 0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+            backgroundColor: const Color(0xFF161622),
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text(
+              'Hymnal',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            centerTitle: true,
+          ),
+          const SliverToBoxAdapter(
+            child: HeroHeaderWidget(imagePath: 'assets/images/hymnal_header.jpg'),
           ),
           SliverPersistentHeader(
             pinned: true,

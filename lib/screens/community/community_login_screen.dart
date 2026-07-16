@@ -136,6 +136,7 @@ class _CommunityLoginScreenState extends State<CommunityLoginScreen> {
                     Image.asset(
                       'assets/images/logo.png',
                       height: 80,
+                      color: isDark ? Colors.white : null,
                     ),
                     const SizedBox(height: 24),
                     Text(

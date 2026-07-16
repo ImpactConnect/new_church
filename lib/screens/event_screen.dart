@@ -7,6 +7,7 @@ import 'event_details_screen.dart';
 import '../models/event.dart' as app_event;
 import '../services/event_service.dart';
 import '../utils/toast_utils.dart';
+import '../widgets/hero_header_widget.dart';
 
 class EventScreen extends StatefulWidget {
   const EventScreen({Key? key}) : super(key: key);
@@ -96,39 +97,20 @@ class _EventScreenState extends State<EventScreen> {
       body: CustomScrollView(
         slivers: <Widget>[
           SliverAppBar(
-            expandedHeight: 200,
             pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset(
-                    'assets/images/events_header.jpg',
-                    fit: BoxFit.cover,
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.4),
-                          Colors.black.withValues(alpha: 0.6),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+            backgroundColor: const Color(0xFF161622),
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text(
+              'Events',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              title: const Text(
-                'Events',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              centerTitle: true,
             ),
+            centerTitle: true,
+          ),
+          const SliverToBoxAdapter(
+            child: HeroHeaderWidget(imagePath: 'assets/images/events_header.jpg'),
           ),
           SliverToBoxAdapter(
             child: Padding(
