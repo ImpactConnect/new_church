@@ -68,4 +68,5 @@ class HomeTemplateId {
   HomeTemplateId._();
   static const String classic = 'classic'; // current grid-based home
   static const String bannerCards = 'banner_cards'; // T30-style stacked tiles
+  static const String modernFeed = 'modern_feed'; // 3rd template placeholder
 }

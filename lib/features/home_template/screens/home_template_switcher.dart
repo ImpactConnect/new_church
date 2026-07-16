@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../main.dart';
 import 'banner_cards_home_page.dart';
+import 'modern_feed_home_page.dart';
 import '../models/home_template_config.dart';
 import '../repositories/home_template_repository.dart';
 
@@ -26,6 +27,8 @@ class HomeTemplateSwitcher extends StatelessWidget {
         switch (templateId) {
           case HomeTemplateId.bannerCards:
             return const BannerCardsHomePage();
+          case HomeTemplateId.modernFeed:
+            return const ModernFeedHomePage();
           case HomeTemplateId.classic:
           default:
             return const HomePage();
