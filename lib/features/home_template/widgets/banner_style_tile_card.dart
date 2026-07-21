@@ -17,10 +17,16 @@ class BannerStyleTileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 220.0,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 220.0,
+              width: double.infinity,
+              clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           boxShadow: [
@@ -117,8 +123,22 @@ class BannerStyleTileCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+      if (tile.showExternalText && tile.externalText != null && tile.externalText!.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(top: 12.0, left: 4.0, bottom: 8.0),
+          child: Text(
+            tile.externalText!,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+    ],
+  ),
+),
+);
+}
 
   Color _parseHex(String? hexString, Color defaultColor) {
     if (hexString == null || hexString.trim().isEmpty) return defaultColor;

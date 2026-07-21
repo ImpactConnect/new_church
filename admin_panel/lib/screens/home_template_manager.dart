@@ -500,6 +500,8 @@ class _TileFormDialogState extends State<_TileFormDialog> {
   bool _showGradient = true;
   String _gradientAlignment = 'centerLeft';
   String _buttonAlignment = 'bottomLeft';
+  bool _showExternalText = false;
+  late TextEditingController _externalTextCtrl;
 
   String? _imageUrl;
   bool _uploading = false;
@@ -520,6 +522,8 @@ class _TileFormDialogState extends State<_TileFormDialog> {
     _showGradient = data?['showGradient'] as bool? ?? true;
     _gradientAlignment = data?['gradientAlignment'] as String? ?? 'centerLeft';
     _buttonAlignment = data?['buttonAlignment'] as String? ?? 'bottomLeft';
+    _showExternalText = data?['showExternalText'] as bool? ?? false;
+    _externalTextCtrl = TextEditingController(text: data?['externalText'] ?? '');
     _imageUrl = data?['imageUrl'] as String?;
   }
 
@@ -529,6 +533,7 @@ class _TileFormDialogState extends State<_TileFormDialog> {
     _subtitleCtrl.dispose();
     _actionLabelCtrl.dispose();
     _backgroundColorCtrl.dispose();
+    _externalTextCtrl.dispose();
     super.dispose();
   }
 
@@ -633,6 +638,8 @@ class _TileFormDialogState extends State<_TileFormDialog> {
         'showGradient': _showGradient,
         'gradientAlignment': _gradientAlignment,
         'buttonAlignment': _buttonAlignment,
+        'showExternalText': _showExternalText,
+        'externalText': _externalTextCtrl.text.trim().isEmpty ? null : _externalTextCtrl.text.trim(),
         'sortOrder': sortOrder,
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -862,6 +869,28 @@ class _TileFormDialogState extends State<_TileFormDialog> {
                   onChanged: (v) => setState(() => _showTitle = v),
                   contentPadding: EdgeInsets.zero,
                 ),
+                if (widget.templateId == 'banner_style') ...[
+                  SwitchListTile(
+                    title: const Text('Add Text Outside Banner'),
+                    subtitle: const Text('Displays text below the banner image'),
+                    value: _showExternalText,
+                    onChanged: (v) => setState(() => _showExternalText = v),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  if (_showExternalText) ...[
+                    const SizedBox(height: 8),
+                    _buildSectionLabel('External Text'),
+                    const SizedBox(height: 4),
+                    TextFormField(
+                      controller: _externalTextCtrl,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'e.g. Connect Card',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ],
                 SwitchListTile(
                   title: const Text('Show Gradient Overlay'),
                   subtitle: const Text('For Standard Layout only'),

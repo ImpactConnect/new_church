@@ -17,6 +17,8 @@ class HomeTileModel {
   final bool showGradient;
   final String gradientAlignment;
   final String buttonAlignment;
+  final bool showExternalText;
+  final String? externalText;
 
   const HomeTileModel({
     required this.id,
@@ -33,6 +35,8 @@ class HomeTileModel {
     this.showGradient = true,
     this.gradientAlignment = 'centerLeft',
     this.buttonAlignment = 'bottomLeft',
+    this.showExternalText = false,
+    this.externalText,
   });
 
   factory HomeTileModel.fromFirestore(DocumentSnapshot doc) {
@@ -52,6 +56,8 @@ class HomeTileModel {
       showGradient: data['showGradient'] as bool? ?? true,
       gradientAlignment: data['gradientAlignment'] as String? ?? 'centerLeft',
       buttonAlignment: data['buttonAlignment'] as String? ?? 'bottomLeft',
+      showExternalText: data['showExternalText'] as bool? ?? false,
+      externalText: data['externalText'] as String?,
     );
   }
 
@@ -69,6 +75,8 @@ class HomeTileModel {
         'showGradient': showGradient,
         'gradientAlignment': gradientAlignment,
         'buttonAlignment': buttonAlignment,
+        'showExternalText': showExternalText,
+        'externalText': externalText,
       };
 
   HomeTileModel copyWith({
@@ -85,6 +93,8 @@ class HomeTileModel {
     bool? showGradient,
     String? gradientAlignment,
     String? buttonAlignment,
+    bool? showExternalText,
+    String? externalText,
   }) {
     return HomeTileModel(
       id: id,
@@ -101,6 +111,8 @@ class HomeTileModel {
       showGradient: showGradient ?? this.showGradient,
       gradientAlignment: gradientAlignment ?? this.gradientAlignment,
       buttonAlignment: buttonAlignment ?? this.buttonAlignment,
+      showExternalText: showExternalText ?? this.showExternalText,
+      externalText: externalText ?? this.externalText,
     );
   }
 }
