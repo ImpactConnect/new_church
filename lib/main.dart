@@ -207,6 +207,7 @@ class MyApp extends StatelessWidget {
             routes: {
               '/home': (context) => const HomeTemplateSwitcher(),
               '/bible': (context) => const BibleAiEntryScreen(),
+              '/pneuma_ai': (context) => const PneumaAiHubScreen(),
               '/notes': (context) => const StandaloneNotesScreen(),
               '/sermons': (context) => SermonScreen(
                     sermonService: MyApp.of(context).sermonService,

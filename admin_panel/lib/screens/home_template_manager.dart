@@ -38,6 +38,7 @@ enum TileLayoutStyle {
 const _kRouteOptions = [
   {'label': 'Home', 'value': '/home'},
   {'label': 'Bible / AI Bible', 'value': '/bible'},
+  {'label': 'Pneuma AI', 'value': '/pneuma_ai'},
   {'label': 'Sermons', 'value': '/sermons'},
   {'label': 'Devotionals', 'value': '/devotional'},
   {'label': 'Live Stream', 'value': '/live'},
