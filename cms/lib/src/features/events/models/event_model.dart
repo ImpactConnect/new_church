@@ -22,16 +22,25 @@ class EventModel extends Equatable {
   final String? departmentId;
 
   factory EventModel.fromFirestore(Map<String, dynamic> data, String id) {
+    final rawDate = data['dateTime'] ?? data['date'] ?? data['createdAt'];
+    DateTime dt = DateTime.now();
+    if (rawDate != null) {
+      if (rawDate is DateTime) {
+        dt = rawDate;
+      } else if (rawDate.runtimeType.toString().contains('Timestamp')) {
+        dt = (rawDate as dynamic).toDate();
+      } else {
+        dt = DateTime.tryParse(rawDate.toString()) ?? DateTime.now();
+      }
+    }
     return EventModel(
       id: id,
       title: data['title'] as String? ?? '',
-      description: data['description'] as String? ?? '',
-      dateTime: data['dateTime'] != null
-          ? DateTime.tryParse(data['dateTime'].toString()) ?? DateTime.now()
-          : DateTime.now(),
-      location: data['location'] as String? ?? '',
-      category: data['category'] as String? ?? 'Sunday Service',
-      headcount: (data['headcount'] as num?)?.toInt() ?? 0,
+      description: data['description'] as String? ?? data['body'] as String? ?? '',
+      dateTime: dt,
+      location: data['location'] as String? ?? 'Main Auditorium',
+      category: data['category'] as String? ?? (data['type'] == 'recurring' ? 'Sunday Service' : 'Special Event'),
+      headcount: (data['headcount'] as num?)?.toInt() ?? (data['totalCount'] as num?)?.toInt() ?? 0,
       departmentId: data['departmentId'] as String?,
     );
   }

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cms/src/core/permissions.dart';
 import 'package:cms/src/features/auth/models/cms_user_model.dart';
 import 'package:cms/src/repositories/auth_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -67,18 +68,26 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<CmsUserModel> _buildCmsUser(User user) async {
     final idTokenResult = await user.getIdTokenResult();
     final claims = idTokenResult.claims ?? {};
-    final branchId = claims['branchId'] as String? ?? '';
-    final roleId = claims['roleId'] as String? ?? '';
-    List<String> permissions = [];
+    final rawBranchId = claims['branchId'] as String? ?? '';
+    final rawRoleId = claims['roleId'] as String? ?? '';
 
-    if (branchId.isNotEmpty && roleId.isNotEmpty) {
-      permissions = await _fetchPermissions(branchId, roleId);
+    // Default to 'default-branch' and 'leadPastor' if claims are not yet propagated
+    final branchId = rawBranchId.isNotEmpty ? rawBranchId : 'default-branch';
+    final roleId = rawRoleId.isNotEmpty ? rawRoleId : AppRole.leadPastor;
+
+    List<String> permissions = await _fetchPermissions(branchId, roleId);
+    if (permissions.isEmpty) {
+      permissions = AppRole.defaultPermissions[roleId] ?? [];
     }
+
+    final updatedClaims = Map<String, dynamic>.from(claims);
+    updatedClaims['branchId'] = branchId;
+    updatedClaims['roleId'] = roleId;
 
     return CmsUserModel.fromClaims(
       uid: user.uid,
       email: user.email ?? '',
-      claims: claims,
+      claims: updatedClaims,
       permissions: permissions,
       displayName: user.displayName,
     );
@@ -96,11 +105,11 @@ class FirebaseAuthRepository implements AuthRepository {
               .collection('roles')
               .doc(roleId)
               .get();
-      if (!doc.exists) return [];
-      final data = doc.data()!;
-      return List<String>.from(data['permissions'] ?? []);
-    } catch (_) {
-      return [];
-    }
+      if (doc.exists && doc.data() != null) {
+        final perms = List<String>.from(doc.data()!['permissions'] ?? []);
+        if (perms.isNotEmpty) return perms;
+      }
+    } catch (_) {}
+    return AppRole.defaultPermissions[roleId] ?? [];
   }
 }

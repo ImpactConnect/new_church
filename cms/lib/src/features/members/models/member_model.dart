@@ -9,6 +9,7 @@ class MemberModel extends Equatable {
     required this.gender,
     required this.joinDate,
     required this.memberStatus,
+    this.email,
     this.dob,
     this.maritalStatus,
     this.departmentIds = const [],
@@ -21,6 +22,7 @@ class MemberModel extends Equatable {
   final String firstName;
   final String lastName;
   final String phone;
+  final String? email;
   final String gender; // 'male' | 'female'
   final DateTime joinDate;
   final String memberStatus; // 'active' | 'inactive' | 'transferred'
@@ -39,6 +41,7 @@ class MemberModel extends Equatable {
       firstName: data['firstName'] as String? ?? '',
       lastName: data['lastName'] as String? ?? '',
       phone: data['phone'] as String? ?? '',
+      email: data['email'] as String?,
       gender: data['gender'] as String? ?? '',
       joinDate: _parseDate(data['joinDate']) ?? DateTime.now(),
       memberStatus: data['memberStatus'] as String? ?? 'active',
@@ -55,6 +58,7 @@ class MemberModel extends Equatable {
     'firstName': firstName,
     'lastName': lastName,
     'phone': phone,
+    if (email != null) 'email': email,
     'gender': gender,
     'joinDate': joinDate.toIso8601String(),
     'memberStatus': memberStatus,
@@ -70,6 +74,7 @@ class MemberModel extends Equatable {
     String? firstName,
     String? lastName,
     String? phone,
+    String? email,
     String? gender,
     DateTime? joinDate,
     String? memberStatus,
@@ -83,6 +88,7 @@ class MemberModel extends Equatable {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
+      email: email ?? this.email,
       gender: gender ?? this.gender,
       joinDate: joinDate ?? this.joinDate,
       memberStatus: memberStatus ?? this.memberStatus,

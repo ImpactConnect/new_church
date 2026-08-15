@@ -12,9 +12,8 @@ Future<void> main() async {
     options: CmsFirebaseOptions.currentPlatform,
   );
 
-  // SESSION persistence: token is never stored to disk.
-  // The user must sign in again each time they open the app/browser.
-  await FirebaseAuth.instance.setPersistence(Persistence.SESSION);
+  // LOCAL persistence: token is stored securely to keep user signed in until explicit logout.
+  await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
 
   runApp(
     const ProviderScope(

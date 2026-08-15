@@ -56,18 +56,7 @@ class AppRole {
 
   /// Default permission sets used to seed Firestore on first setup.
   static const Map<String, List<String>> defaultPermissions = {
-    leadPastor: [
-      AppPermission.manageMembers,
-      AppPermission.manageRoles,
-      AppPermission.manageEvents,
-      AppPermission.manageDepartments,
-      AppPermission.approveAnnouncement,
-      AppPermission.approveBudget,
-      AppPermission.approveExpenditure,
-      AppPermission.viewFinancialReports,
-      AppPermission.viewNonFinancialReports,
-      AppPermission.sendNotifications,
-    ],
+    leadPastor: AppPermission.all,
     secretary: [
       AppPermission.manageMembers,
       AppPermission.recordAttendance,

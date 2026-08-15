@@ -115,7 +115,7 @@ class ReportsScreen extends ConsumerWidget {
                                 BarChartData(
                                   alignment: BarChartAlignment.spaceAround,
                                   maxY: (totalIncome > totalExp ? totalIncome : totalExp) * 1.2 + 100,
-                                  barTouchData: BarTouchDataEnabled(false),
+                                  barTouchData: BarTouchData(enabled: false),
                                   titlesData: FlTitlesData(
                                     show: true,
                                     bottomTitles: AxisTitles(

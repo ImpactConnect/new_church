@@ -224,22 +224,22 @@ class _BudgetApprovalItem extends StatelessWidget {
               const StatusBadge('pending'),
               const SizedBox(width: 10),
               Text(
-                budget.title,
+                budget.category,
                 style: const TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
               ),
               const Spacer(),
               Text(
-                '₦${budget.totalAmount.toStringAsFixed(2)}',
+                '₦${budget.requestedAmount.toStringAsFixed(2)}',
                 style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w700, color: CmsTheme.accent),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('Fiscal Year: ${budget.fiscalYear}', style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+          Text('Fiscal Period: ${budget.fiscalPeriod}', style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
           const SizedBox(height: 12),
           Row(
             children: [
-              Text('Requested by ${budget.requestedByName}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted)),
+              Text('Requested by ${budget.requestedBy}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted)),
               if (isRequester) ...[
                 const SizedBox(width: 12),
                 Container(

@@ -11,6 +11,7 @@ import 'package:cms/src/features/roles/screens/role_list_screen.dart';
 import 'package:cms/src/features/audit/screens/audit_log_screen.dart';
 import 'package:cms/src/features/branches/screens/branch_settings_screen.dart';
 import 'package:cms/src/features/events/screens/event_list_screen.dart';
+import 'package:cms/src/features/events/screens/attendance_report_screen.dart';
 import 'package:cms/src/features/announcements/screens/announcement_list_screen.dart';
 import 'package:cms/src/features/correspondence/screens/correspondence_screen.dart';
 import 'package:cms/src/features/approval/screens/approval_queue_screen.dart';
@@ -113,35 +114,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.income,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.recordIncome,
+              anyOf: [AppPermission.recordIncome, AppPermission.viewFinancialReports],
               child: IncomeListScreen(),
             ),
           ),
           GoRoute(
             path: AppRoutes.giving,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.recordIncome,
+              anyOf: [AppPermission.recordIncome, AppPermission.viewFinancialReports],
               child: GivingListScreen(),
             ),
           ),
           GoRoute(
             path: AppRoutes.budgets,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.createBudgetRequest,
+              anyOf: [AppPermission.createBudgetRequest, AppPermission.approveBudget, AppPermission.viewFinancialReports],
               child: BudgetListScreen(),
             ),
           ),
           GoRoute(
             path: AppRoutes.expenditures,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.createExpenditureRequest,
+              anyOf: [AppPermission.createExpenditureRequest, AppPermission.approveExpenditure, AppPermission.viewFinancialReports],
               child: ExpenditureListScreen(),
             ),
           ),
           GoRoute(
             path: AppRoutes.disbursements,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.recordDisbursement,
+              anyOf: [AppPermission.recordDisbursement, AppPermission.viewFinancialReports],
               child: DisbursementListScreen(),
             ),
           ),
@@ -174,8 +175,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.attendance,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.recordAttendance,
-              child: Placeholder(),
+              anyOf: [AppPermission.recordAttendance, AppPermission.viewNonFinancialReports, AppPermission.manageEvents],
+              child: AttendanceReportScreen(),
             ),
           ),
         ],
@@ -184,17 +185,23 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// A widget that checks if the current user has [required] permission.
+/// A widget that checks if the current user has [required] or [anyOf] permissions.
 /// Renders [child] if authorized; a 403 message otherwise.
 class _PermissionGate extends ConsumerWidget {
-  const _PermissionGate({required this.required, required this.child});
-  final String required;
+  const _PermissionGate({this.required, this.anyOf, required this.child});
+  final String? required;
+  final List<String>? anyOf;
   final Widget child;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(cmsUserProvider).valueOrNull;
-    if (user == null || !user.can(required)) {
+    bool allowed = false;
+    if (user != null) {
+      if (required != null && user.can(required!)) allowed = true;
+      if (anyOf != null && anyOf!.any((p) => user.can(p))) allowed = true;
+    }
+    if (!allowed) {
       return const Scaffold(
         body: Center(
           child: Text(

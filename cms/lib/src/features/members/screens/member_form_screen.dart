@@ -25,6 +25,7 @@ class _MemberFormScreenState extends ConsumerState<MemberFormScreen> {
   late final TextEditingController _firstNameCtrl;
   late final TextEditingController _lastNameCtrl;
   late final TextEditingController _phoneCtrl;
+  late final TextEditingController _emailCtrl;
   String _gender = 'male';
   String _maritalStatus = 'single';
   String _status = 'active';
@@ -42,6 +43,7 @@ class _MemberFormScreenState extends ConsumerState<MemberFormScreen> {
     _firstNameCtrl = TextEditingController(text: m?.firstName ?? '');
     _lastNameCtrl = TextEditingController(text: m?.lastName ?? '');
     _phoneCtrl = TextEditingController(text: m?.phone ?? '');
+    _emailCtrl = TextEditingController(text: m?.email ?? '');
     _gender = m?.gender ?? 'male';
     _maritalStatus = m?.maritalStatus ?? 'single';
     _status = m?.memberStatus ?? 'active';
@@ -55,6 +57,7 @@ class _MemberFormScreenState extends ConsumerState<MemberFormScreen> {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     super.dispose();
   }
 
@@ -68,6 +71,7 @@ class _MemberFormScreenState extends ConsumerState<MemberFormScreen> {
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         phone: _phoneCtrl.text.trim(),
+        email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
         gender: _gender,
         joinDate: _joinDate,
         memberStatus: _status,
@@ -140,7 +144,13 @@ class _MemberFormScreenState extends ConsumerState<MemberFormScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _field('Phone Number', _phoneCtrl, keyboard: TextInputType.phone),
+              Row(
+                children: [
+                  Expanded(child: _field('Phone Number', _phoneCtrl, keyboard: TextInputType.phone)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _field('Email Address', _emailCtrl, keyboard: TextInputType.emailAddress)),
+                ],
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [

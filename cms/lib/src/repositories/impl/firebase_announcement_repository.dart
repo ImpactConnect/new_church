@@ -14,7 +14,7 @@ class FirebaseAnnouncementRepository implements AnnouncementRepository {
 
   @override
   Stream<List<AnnouncementModel>> watchAnnouncements(String branchId, {String? status}) {
-    Query<Map<String, dynamic>> query = _col(branchId).orderBy('createdAt', descending: true);
+    Query<Map<String, dynamic>> query = _col(branchId);
     if (status != null) {
       query = query.where('status', isEqualTo: status);
     }

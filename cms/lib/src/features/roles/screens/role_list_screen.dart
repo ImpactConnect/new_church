@@ -32,7 +32,7 @@ class RoleListScreen extends ConsumerWidget {
     final assignedAsync = ref.watch(_membersWithRolesProvider(branchId));
     final canManage = user?.can(AppPermission.manageRoles) ?? false;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,6 +69,51 @@ class RoleListScreen extends ConsumerWidget {
                 ),
             ],
           ),
+          const SizedBox(height: 20),
+          // Demo Accounts Banner
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: CmsTheme.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: CmsTheme.accent.withValues(alpha: 0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.badge_outlined, color: CmsTheme.accent, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Demo Staff Logins & Credentials',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: CmsTheme.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Use the pre-configured credentials below to test different roles and permission levels:',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 20,
+                  runSpacing: 8,
+                  children: [
+                    _loginChip('Lead Pastor', 'lead@churchmobile.com', 'password123'),
+                    _loginChip('Secretary', 'secretary@churchmobile.com', 'password123'),
+                    _loginChip('Finance Dept', 'finance@churchmobile.com', 'password123'),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 28),
           // Role catalog cards
           rolesAsync.when(
@@ -86,91 +131,134 @@ class RoleListScreen extends ConsumerWidget {
             style: TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: assignedAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: CmsTheme.danger))),
-              data: (members) {
-                if (members.isEmpty) {
-                  return const CmsEmptyState(
-                    icon: Icons.admin_panel_settings_outlined,
-                    title: 'No role assignments yet',
-                    subtitle: 'Use "Assign Role" to give members access to the system.',
-                  );
-                }
-                return rolesAsync.when(
-                  loading: () => const CircularProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
-                  data: (roles) {
-                    final roleMap = {for (final r in roles) r.id: r};
-                    return ListView.separated(
-                      itemCount: members.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: CmsTheme.border),
-                      itemBuilder: (_, i) {
-                        final m = members[i];
-                        final role = m.roleId != null ? roleMap[m.roleId] : null;
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          leading: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: CmsTheme.accent.withValues(alpha: 0.15),
-                            child: Text(
-                              m.firstName.isNotEmpty ? m.firstName[0].toUpperCase() : '?',
-                              style: const TextStyle(color: CmsTheme.accent, fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          title: Text(
-                            m.fullName,
-                            style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500, color: CmsTheme.textPrimary),
-                          ),
-                          subtitle: Text(
-                            m.phone,
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (role != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: CmsTheme.accent.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: CmsTheme.accent.withValues(alpha: 0.3)),
-                                  ),
-                                  child: Text(
-                                    role.displayName,
-                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.accent),
-                                  ),
-                                ),
-                              if (canManage) ...[
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.person_remove_outlined, size: 18, color: CmsTheme.danger),
-                                  tooltip: 'Remove role',
-                                  onPressed: () async {
-                                    final ok = await showConfirmDialog(
-                                      context,
-                                      title: 'Remove Role',
-                                      message: 'Remove ${m.fullName}\'s role assignment?',
-                                      confirmLabel: 'Remove',
-                                      danger: true,
-                                    );
-                                    if (ok) {
-                                      await ref.read(roleRepositoryProvider).removeRole(branchId, m.id);
-                                    }
-                                  },
-                                ),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+          assignedAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(child: CircularProgressIndicator()),
             ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text('Error: $e', style: const TextStyle(color: CmsTheme.danger)),
+            ),
+            data: (members) {
+              if (members.isEmpty) {
+                return const CmsEmptyState(
+                  icon: Icons.admin_panel_settings_outlined,
+                  title: 'No role assignments yet',
+                  subtitle: 'Use "Assign Role" to give members access to the system.',
+                );
+              }
+              return rolesAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (roles) {
+                  final roleMap = {for (final r in roles) r.id: r};
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: members.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1, color: CmsTheme.border),
+                    itemBuilder: (_, i) {
+                      final m = members[i];
+                      final role = m.roleId != null ? roleMap[m.roleId] : null;
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        leading: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: CmsTheme.accent.withValues(alpha: 0.15),
+                          child: Text(
+                            m.firstName.isNotEmpty ? m.firstName[0].toUpperCase() : '?',
+                            style: const TextStyle(color: CmsTheme.accent, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        title: Text(
+                          m.fullName,
+                          style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w500, color: CmsTheme.textPrimary),
+                        ),
+                        subtitle: Text(
+                          m.phone,
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (role != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: CmsTheme.accent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: CmsTheme.accent.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  role.displayName,
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.accent),
+                                ),
+                              ),
+                            if (canManage) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.person_remove_outlined, size: 18, color: CmsTheme.danger),
+                                tooltip: 'Remove role',
+                                onPressed: () async {
+                                  final ok = await showConfirmDialog(
+                                    context,
+                                    title: 'Remove Role',
+                                    message: 'Remove ${m.fullName}\'s role assignment?',
+                                    confirmLabel: 'Remove',
+                                    danger: true,
+                                  );
+                                  if (ok) {
+                                    await ref.read(roleRepositoryProvider).assignRole(
+                                      branchId, m.id, '',
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _loginChip(String roleName, String email, String password) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: CmsTheme.surfaceElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CmsTheme.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: CmsTheme.accent.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              roleName,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.bold, color: CmsTheme.accent),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SelectableText(
+            '$email ($password)',
+            style: const TextStyle(fontFamily: 'RobotoMono', fontSize: 12, color: CmsTheme.textPrimary),
           ),
         ],
       ),
@@ -368,3 +456,4 @@ class _RoleAssignDialogState extends State<_RoleAssignDialog> {
     );
   }
 }
+

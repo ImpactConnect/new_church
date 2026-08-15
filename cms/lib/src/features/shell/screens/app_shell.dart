@@ -139,7 +139,9 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       path: AppRoutes.departments,
                       current: location,
                     ),
-                  if (user.can(AppPermission.recordAttendance))
+                  if (user.can(AppPermission.recordAttendance) ||
+                      user.can(AppPermission.viewNonFinancialReports) ||
+                      user.can(AppPermission.manageEvents))
                     _NavItem(
                       icon: Icons.how_to_reg_outlined,
                       label: 'Attendance',
@@ -170,14 +172,16 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       current: location,
                     ),
                   const _SectionLabel('Finance'),
-                  if (user.can(AppPermission.recordIncome))
+                  if (user.can(AppPermission.recordIncome) ||
+                      user.can(AppPermission.viewFinancialReports))
                     _NavItem(
                       icon: Icons.trending_up_outlined,
                       label: 'Income',
                       path: AppRoutes.income,
                       current: location,
                     ),
-                  if (user.can(AppPermission.recordIncome))
+                  if (user.can(AppPermission.recordIncome) ||
+                      user.can(AppPermission.viewFinancialReports))
                     _NavItem(
                       icon: Icons.volunteer_activism_outlined,
                       label: 'Giving',
@@ -185,7 +189,8 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       current: location,
                     ),
                   if (user.can(AppPermission.createBudgetRequest) ||
-                      user.can(AppPermission.approveBudget))
+                      user.can(AppPermission.approveBudget) ||
+                      user.can(AppPermission.viewFinancialReports))
                     _NavItem(
                       icon: Icons.account_balance_wallet_outlined,
                       label: 'Budgets',
@@ -193,14 +198,16 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       current: location,
                     ),
                   if (user.can(AppPermission.createExpenditureRequest) ||
-                      user.can(AppPermission.approveExpenditure))
+                      user.can(AppPermission.approveExpenditure) ||
+                      user.can(AppPermission.viewFinancialReports))
                     _NavItem(
                       icon: Icons.receipt_long_outlined,
                       label: 'Expenditures',
                       path: AppRoutes.expenditures,
                       current: location,
                     ),
-                  if (user.can(AppPermission.recordDisbursement))
+                  if (user.can(AppPermission.recordDisbursement) ||
+                      user.can(AppPermission.viewFinancialReports))
                     _NavItem(
                       icon: Icons.payments_outlined,
                       label: 'Disbursements',

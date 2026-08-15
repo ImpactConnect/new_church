@@ -48,15 +48,21 @@ class _DisbursementListScreenState extends ConsumerState<DisbursementListScreen>
         elevation: 0,
         title: const Text('Disbursements Ledger', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16)),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Expenditure selector dropdown
             expendituresAsync.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text('Error loading expenditures: $e', style: const TextStyle(color: CmsTheme.danger)),
+              loading: () => const SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text('Error loading expenditures: $e', style: const TextStyle(color: CmsTheme.danger)),
+              ),
               data: (expenditures) {
                 if (expenditures.isEmpty) {
                   return const CmsEmptyState(
@@ -123,8 +129,14 @@ class _DisbursementListScreenState extends ConsumerState<DisbursementListScreen>
                       builder: (context, ref, _) {
                         final disbAsync = ref.watch(_disbursementsForExpenditureProvider((branchId, current.id)));
                         return disbAsync.when(
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: CmsTheme.danger))),
+                          loading: () => const SizedBox(
+                            height: 150,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          error: (e, _) => Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text('Error: $e', style: const TextStyle(color: CmsTheme.danger)),
+                          ),
                           data: (items) {
                             if (items.isEmpty) {
                               return const CmsEmptyState(
@@ -132,31 +144,34 @@ class _DisbursementListScreenState extends ConsumerState<DisbursementListScreen>
                                 title: 'No disbursements recorded for this expenditure yet',
                               );
                             }
-                            return CmsCard(
-                              padding: EdgeInsets.zero,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: DataTable2(
-                                  columnSpacing: 16,
-                                  horizontalMargin: 20,
-                                  minWidth: 700,
-                                  headingRowColor: WidgetStateProperty.all(CmsTheme.surfaceElevated),
-                                  columns: const [
-                                    DataColumn2(label: Text('Date', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.S),
-                                    DataColumn2(label: Text('Recipient Name', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M),
-                                    DataColumn2(label: Text('Purpose / Notes', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.L),
-                                    DataColumn2(label: Text('Disbursed Amount', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M, numeric: true),
-                                    DataColumn2(label: Text('Disbursed By', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M),
-                                  ],
-                                  rows: items.map((d) => DataRow2(
-                                    cells: [
-                                      DataCell(Text('${d.date.day}/${d.date.month}/${d.date.year}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary))),
-                                      DataCell(Text(d.recipientName, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w500, color: CmsTheme.textPrimary))),
-                                      DataCell(Text(d.purpose, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary))),
-                                      DataCell(Text('₦${d.amountDisbursed.toStringAsFixed(2)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: CmsTheme.accent))),
-                                      DataCell(Text(d.disbursedBy, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted))),
+                            return SizedBox(
+                              height: 380,
+                              child: CmsCard(
+                                padding: EdgeInsets.zero,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: DataTable2(
+                                    columnSpacing: 16,
+                                    horizontalMargin: 20,
+                                    minWidth: 700,
+                                    headingRowColor: WidgetStateProperty.all(CmsTheme.surfaceElevated),
+                                    columns: const [
+                                      DataColumn2(label: Text('Date', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.S),
+                                      DataColumn2(label: Text('Recipient Name', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M),
+                                      DataColumn2(label: Text('Purpose / Notes', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.L),
+                                      DataColumn2(label: Text('Disbursed Amount', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M, numeric: true),
+                                      DataColumn2(label: Text('Disbursed By', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M),
                                     ],
-                                  )).toList(),
+                                    rows: items.map((d) => DataRow2(
+                                      cells: [
+                                        DataCell(Text('${d.date.day}/${d.date.month}/${d.date.year}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary))),
+                                        DataCell(Text(d.recipientName, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w500, color: CmsTheme.textPrimary))),
+                                        DataCell(Text(d.purpose, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary))),
+                                        DataCell(Text('₦${d.amountDisbursed.toStringAsFixed(2)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: CmsTheme.accent))),
+                                        DataCell(Text(d.disbursedBy, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted))),
+                                      ],
+                                    )).toList(),
+                                  ),
                                 ),
                               ),
                             );
