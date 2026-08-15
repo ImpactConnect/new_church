@@ -19,6 +19,9 @@ abstract class MemberRepository {
     String status,
   );
 
+  /// Hard delete a member document (Secretary only).
+  Future<void> deleteMember(String branchId, String memberId);
+
   /// Batch import from CSV/Excel — caller provides validated list.
   Future<void> importMembers(
     String branchId,
@@ -26,3 +29,4 @@ abstract class MemberRepository {
     String importBatchId,
   );
 }
+

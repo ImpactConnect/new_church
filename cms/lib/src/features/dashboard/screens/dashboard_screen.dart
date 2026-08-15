@@ -122,6 +122,9 @@ class _RoleDashboard extends ConsumerWidget {
           // Live Stat Grid
           _StatGrid(user: user),
           const SizedBox(height: 32),
+          // Weekly Celebrations Card
+          const _WeeklyCelebrationsCard(),
+          const SizedBox(height: 32),
           // Quick actions
           _QuickActions(user: user),
           const SizedBox(height: 32),
@@ -418,4 +421,212 @@ class _ActionChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WeeklyCelebrationsCard extends ConsumerWidget {
+  const _WeeklyCelebrationsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final branchId = ref.watch(currentBranchIdProvider);
+    final membersAsync = ref.watch(_dashboardMembersProvider(branchId));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: CmsTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: CmsTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: CmsTheme.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.cake_outlined, size: 20, color: CmsTheme.accent),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Birthday & Marriage Anniversary Celebrations of the Week',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: CmsTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          membersAsync.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (_, __) => const Text(
+              'Unable to load celebrations',
+              style: TextStyle(color: CmsTheme.danger, fontFamily: 'Inter', fontSize: 13),
+            ),
+            data: (members) {
+              final items = _getCelebrationsThisWeek(members);
+              if (items.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.event_available, size: 18, color: CmsTheme.textMuted),
+                      SizedBox(width: 8),
+                      Text(
+                        'No birthdays or marriage anniversaries recorded for this week.',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          color: CmsTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const Divider(height: 16, color: CmsTheme.border),
+                itemBuilder: (_, i) {
+                  final item = items[i];
+                  final isBirthday = item.type == 'Birthday';
+                  return Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: isBirthday
+                            ? CmsTheme.accent.withValues(alpha: 0.15)
+                            : CmsTheme.success.withValues(alpha: 0.15),
+                        child: Icon(
+                          isBirthday ? Icons.cake_outlined : Icons.favorite_border,
+                          size: 16,
+                          color: isBirthday ? CmsTheme.accent : CmsTheme.success,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.memberName,
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: CmsTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatCelebrationDate(item.celebrationDate),
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: CmsTheme.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (isBirthday ? CmsTheme.accent : CmsTheme.success)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: (isBirthday ? CmsTheme.accent : CmsTheme.success)
+                                .withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          item.type,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isBirthday ? CmsTheme.accent : CmsTheme.success,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_CelebrationItem> _getCelebrationsThisWeek(List<MemberModel> members) {
+    final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    final sunday = monday.add(const Duration(days: 6, hours: 23, minutes: 59));
+
+    final items = <_CelebrationItem>[];
+
+    for (final m in members) {
+      if (m.dob != null) {
+        final bdayThisYear = DateTime(now.year, m.dob!.month, m.dob!.day);
+        if (bdayThisYear.isAfter(monday.subtract(const Duration(seconds: 1))) &&
+            bdayThisYear.isBefore(sunday.add(const Duration(seconds: 1)))) {
+          items.add(_CelebrationItem(
+            memberName: m.fullName,
+            type: 'Birthday',
+            celebrationDate: bdayThisYear,
+          ));
+        }
+      }
+      if (m.weddingDate != null && (m.maritalStatus ?? '').toLowerCase() == 'married') {
+        final annivThisYear = DateTime(now.year, m.weddingDate!.month, m.weddingDate!.day);
+        if (annivThisYear.isAfter(monday.subtract(const Duration(seconds: 1))) &&
+            annivThisYear.isBefore(sunday.add(const Duration(seconds: 1)))) {
+          items.add(_CelebrationItem(
+            memberName: m.fullName,
+            type: 'Marriage Anniversary',
+            celebrationDate: annivThisYear,
+          ));
+        }
+      }
+    }
+
+    items.sort((a, b) => a.celebrationDate.compareTo(b.celebrationDate));
+    return items;
+  }
+
+  String _formatCelebrationDate(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final weekdayName = weekdays[d.weekday - 1];
+    final monthName = months[d.month - 1];
+    return '$weekdayName, ${d.day} $monthName';
+  }
+}
+
+class _CelebrationItem {
+  final String memberName;
+  final String type;
+  final DateTime celebrationDate;
+
+  _CelebrationItem({
+    required this.memberName,
+    required this.type,
+    required this.celebrationDate,
+  });
 }

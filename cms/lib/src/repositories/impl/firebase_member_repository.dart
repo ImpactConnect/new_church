@@ -47,6 +47,11 @@ class FirebaseMemberRepository implements MemberRepository {
   }
 
   @override
+  Future<void> deleteMember(String branchId, String memberId) async {
+    await _col(branchId).doc(memberId).delete();
+  }
+
+  @override
   Future<void> importMembers(
     String branchId,
     List<MemberModel> members,

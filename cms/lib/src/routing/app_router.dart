@@ -82,14 +82,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.members,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.manageMembers,
+              anyOf: [AppPermission.manageMembers, AppPermission.viewNonFinancialReports],
               child: MemberListScreen(),
             ),
           ),
           GoRoute(
             path: AppRoutes.departments,
             builder: (context, state) => const _PermissionGate(
-              required: AppPermission.manageDepartments,
+              anyOf: [AppPermission.manageDepartments, AppPermission.viewNonFinancialReports],
               child: DepartmentListScreen(),
             ),
           ),

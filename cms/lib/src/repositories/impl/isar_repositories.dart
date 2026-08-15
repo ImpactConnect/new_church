@@ -44,6 +44,9 @@ class IsarMemberRepository implements MemberRepository {
     String status,
   ) => _delegate.updateMemberStatus(branchId, memberId, status);
   @override
+  Future<void> deleteMember(String branchId, String memberId) =>
+      _delegate.deleteMember(branchId, memberId);
+  @override
   Future<void> importMembers(
     String branchId,
     List<MemberModel> members,

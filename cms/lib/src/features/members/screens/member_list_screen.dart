@@ -6,6 +6,7 @@ import 'package:cms/src/core/permissions.dart';
 import 'package:cms/src/core/theme.dart';
 import 'package:cms/src/core/widgets.dart';
 import 'package:cms/src/features/members/models/member_model.dart';
+import 'package:cms/src/features/members/screens/member_detail_screen.dart';
 import 'package:cms/src/features/members/screens/member_form_screen.dart';
 import 'package:cms/src/features/members/screens/member_import_screen.dart';
 
@@ -24,6 +25,9 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
   final _searchCtrl = TextEditingController();
   String _searchQuery = '';
   String _statusFilter = 'all';
+  String _genderFilter = 'all';
+  String _maritalFilter = 'all';
+  String _ageGroupFilter = 'all';
   String _sortColumn = 'lastName';
   bool _sortAsc = true;
 
@@ -78,18 +82,91 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
           ),
           const SizedBox(height: 24),
           // Filters row
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               CmsSearchField(
                 controller: _searchCtrl,
-                hint: 'Search by name or phone…',
+                hint: 'Search name, phone, profession…',
                 onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
               ),
-              const SizedBox(width: 12),
-              _StatusFilterChip(
-                selected: _statusFilter,
-                onChanged: (v) => setState(() => _statusFilter = v),
+              _FilterDropdown(
+                label: 'Status',
+                value: _statusFilter,
+                items: const {
+                  'all': 'All',
+                  'active': 'Active',
+                  'inactive': 'Inactive',
+                  'transferred': 'Transferred',
+                },
+                onChanged: (v) => setState(() => _statusFilter = v ?? 'all'),
               ),
+              _FilterDropdown(
+                label: 'Gender',
+                value: _genderFilter,
+                items: const {
+                  'all': 'All',
+                  'male': 'Male',
+                  'female': 'Female',
+                },
+                onChanged: (v) => setState(() => _genderFilter = v ?? 'all'),
+              ),
+              _FilterDropdown(
+                label: 'Marital',
+                value: _maritalFilter,
+                items: const {
+                  'all': 'All',
+                  'single': 'Single',
+                  'married': 'Married',
+                  'widowed': 'Widowed',
+                  'divorced': 'Divorced',
+                },
+                onChanged: (v) => setState(() => _maritalFilter = v ?? 'all'),
+              ),
+              _FilterDropdown(
+                label: 'Age Group',
+                value: _ageGroupFilter,
+                items: const {
+                  'all': 'All',
+                  '1-10': '1-10 yrs',
+                  '11-18': '11-18 yrs',
+                  '19-40': '19-40 yrs',
+                  '41-59': '41-59 yrs',
+                  '60+': '60+ yrs',
+                },
+                onChanged: (v) => setState(() => _ageGroupFilter = v ?? 'all'),
+              ),
+              if (_hasActiveFilters)
+                InkWell(
+                  onTap: _clearFilters,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: CmsTheme.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: CmsTheme.danger.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.filter_alt_off, size: 14, color: CmsTheme.danger),
+                        SizedBox(width: 4),
+                        Text(
+                          'Clear',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: CmsTheme.danger,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -194,7 +271,7 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
     return DataRow2(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => MemberFormScreen(member: m)),
+        MaterialPageRoute(builder: (_) => MemberDetailScreen(member: m)),
       ),
       cells: [
         DataCell(
@@ -260,11 +337,11 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.edit_outlined, color: CmsTheme.textSecondary),
-              title: const Text('Edit Member', style: TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter')),
+              leading: const Icon(Icons.person_outline, color: CmsTheme.textSecondary),
+              title: const Text('View Details', style: TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter')),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => MemberFormScreen(member: m)));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => MemberDetailScreen(member: m)));
               },
             ),
             if (m.memberStatus == 'active')
@@ -298,10 +375,35 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
     if (_statusFilter != 'all') {
       list = list.where((m) => m.memberStatus == _statusFilter).toList();
     }
+    if (_genderFilter != 'all') {
+      list = list
+          .where((m) => m.gender.toLowerCase() == _genderFilter.toLowerCase())
+          .toList();
+    }
+    if (_maritalFilter != 'all') {
+      list = list
+          .where((m) => (m.maritalStatus ?? '').toLowerCase() == _maritalFilter.toLowerCase())
+          .toList();
+    }
+    if (_ageGroupFilter != 'all') {
+      list = list.where((m) {
+        final age = _calculateAge(m.dob);
+        if (age == null) return false;
+        return switch (_ageGroupFilter) {
+          '1-10' => age >= 1 && age <= 10,
+          '11-18' => age >= 11 && age <= 18,
+          '19-40' => age >= 19 && age <= 40,
+          '41-59' => age >= 41 && age <= 59,
+          '60+' => age >= 60,
+          _ => true,
+        };
+      }).toList();
+    }
     if (_searchQuery.isNotEmpty) {
       list = list.where((m) =>
         m.fullName.toLowerCase().contains(_searchQuery) ||
-        m.phone.contains(_searchQuery)
+        m.phone.contains(_searchQuery) ||
+        (m.profession != null && m.profession!.toLowerCase().contains(_searchQuery))
       ).toList();
     }
     list.sort((a, b) {
@@ -313,6 +415,34 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
       return _sortAsc ? cmp : -cmp;
     });
     return list;
+  }
+
+  int? _calculateAge(DateTime? dob) {
+    if (dob == null) return null;
+    final today = DateTime.now();
+    int age = today.year - dob.year;
+    if (today.month < dob.month || (today.month == dob.month && today.day < dob.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  bool get _hasActiveFilters =>
+      _searchQuery.isNotEmpty ||
+      _statusFilter != 'all' ||
+      _genderFilter != 'all' ||
+      _maritalFilter != 'all' ||
+      _ageGroupFilter != 'all';
+
+  void _clearFilters() {
+    setState(() {
+      _searchCtrl.clear();
+      _searchQuery = '';
+      _statusFilter = 'all';
+      _genderFilter = 'all';
+      _maritalFilter = 'all';
+      _ageGroupFilter = 'all';
+    });
   }
 
   void _setSort(String col, bool asc) => setState(() {
@@ -354,53 +484,51 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 }
 
-class _StatusFilterChip extends StatelessWidget {
-  const _StatusFilterChip({
-    required this.selected,
+
+
+class _FilterDropdown extends StatelessWidget {
+  const _FilterDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
     required this.onChanged,
   });
-  final String selected;
-  final ValueChanged<String> onChanged;
+
+  final String label;
+  final String value;
+  final Map<String, String> items;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final option in ['all', 'active', 'inactive', 'transferred'])
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: ChoiceChip(
-              label: Text(
-                _label(option),
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: selected == option
-                      ? Colors.white
-                      : CmsTheme.textSecondary,
-                ),
-              ),
-              selected: selected == option,
-              selectedColor: CmsTheme.accent,
-              backgroundColor: CmsTheme.surfaceElevated,
-              side: BorderSide(
-                color: selected == option
-                    ? CmsTheme.accent
-                    : CmsTheme.border,
-              ),
-              onSelected: (_) => onChanged(option),
-            ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: CmsTheme.surfaceElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CmsTheme.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          dropdownColor: CmsTheme.surfaceElevated,
+          isDense: true,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: CmsTheme.textPrimary,
           ),
-      ],
+          icon: const Icon(Icons.arrow_drop_down, color: CmsTheme.textSecondary, size: 18),
+          items: items.entries.map((e) {
+            return DropdownMenuItem<String>(
+              value: e.key,
+              child: Text('$label: ${e.value}'),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
-
-  String _label(String s) => switch (s) {
-    'all' => 'All',
-    'active' => 'Active',
-    'inactive' => 'Inactive',
-    'transferred' => 'Transferred',
-    _ => s,
-  };
 }
