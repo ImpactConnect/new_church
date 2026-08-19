@@ -45,8 +45,10 @@ class _DepartmentDetailScreenState
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(cmsUserProvider).valueOrNull;
-    final canManage = user?.can(AppPermission.manageDepartments) ?? false;
+    final canManage = (user?.can(AppPermission.manageDepartments) ?? false) &&
+        user?.roleId != AppRole.leadPastor;
     final allMembersAsync = ref.watch(_deptMembersProvider(widget.branchId));
+
 
     return Scaffold(
       backgroundColor: CmsTheme.bg,

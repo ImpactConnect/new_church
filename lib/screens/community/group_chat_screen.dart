@@ -234,19 +234,19 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: StreamBuilder<DocumentSnapshot>(
-                stream: _firestore.collection('community_groups').doc(widget.groupId).snapshots(),
+                stream: _firestore.collection('branches').doc('default-branch').collection('departments').doc(widget.groupId).snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
                   final name = data['name'] ?? widget.groupName;
-                  final desc = data['description'] ?? '';
-                  final imageUrl = data['imageUrl'] ?? '';
-                  final memberIds = List<String>.from(data['members'] ?? []);
+                  final desc = data['departmentType'] ?? data['description'] ?? '';
+                  final imageUrl = data['imageUrl'] ?? data['photoUrl'] ?? '';
+                  final memberIds = List<String>.from(data['memberIds'] ?? data['members'] ?? []);
 
                   return StreamBuilder<QuerySnapshot>(
-                    stream: _firestore.collection('members').snapshots(),
+                    stream: _firestore.collection('branches').doc('default-branch').collection('members').snapshots(),
                     builder: (context, memberSnap) {
                       if (!memberSnap.hasData) {
                         return const Center(child: CircularProgressIndicator());
@@ -428,7 +428,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: _firestore.collection('community_groups').doc(widget.groupId).snapshots(),
+      stream: _firestore.collection('branches').doc('default-branch').collection('departments').doc(widget.groupId).snapshots(),
       builder: (context, groupSnap) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         String groupName = widget.groupName;
@@ -438,8 +438,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         if (groupSnap.hasData && groupSnap.data!.exists) {
           final data = groupSnap.data!.data() as Map<String, dynamic>? ?? {};
           groupName = data['name'] ?? widget.groupName;
-          imageUrl = data['imageUrl'] ?? '';
-          memberIds = List<String>.from(data['members'] ?? []);
+          imageUrl = data['imageUrl'] ?? data['photoUrl'] ?? '';
+          memberIds = List<String>.from(data['memberIds'] ?? data['members'] ?? []);
         }
 
         return Scaffold(
@@ -475,7 +475,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         StreamBuilder<QuerySnapshot>(
-                          stream: _firestore.collection('members').snapshots(),
+                          stream: _firestore.collection('branches').doc('default-branch').collection('members').snapshots(),
                           builder: (context, memberSnap) {
                             String subtitle = 'Tap for group info';
                             if (memberSnap.hasData) {

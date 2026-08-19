@@ -316,3 +316,219 @@ Future<bool> showConfirmDialog(
     ),
   ) ?? false;
 }
+
+// ─── Finance Widgets ──────────────────────────────────────────────────────────
+
+/// Renders a list of [{field, from, to}] maps as a clean before→after diff.
+/// Used in Finance Notifications and approval detail views.
+class DiffViewer extends StatelessWidget {
+  const DiffViewer({super.key, required this.changes});
+  final List<Map<String, dynamic>> changes;
+
+  @override
+  Widget build(BuildContext context) {
+    if (changes.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: CmsTheme.warning.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CmsTheme.warning.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.edit_note_outlined, size: 14, color: CmsTheme.warning),
+              const SizedBox(width: 6),
+              Text(
+                'Changes made by approver',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: CmsTheme.warning,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...changes.map((c) {
+            final field = (c['field'] as String? ?? '').toUpperCase();
+            final from = c['from'];
+            final to = c['to'];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: Text(
+                      field,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: CmsTheme.textMuted,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    from is num
+                        ? '₦${(from as num).toStringAsFixed(2)}'
+                        : '$from',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: CmsTheme.danger,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6),
+                    child: Icon(Icons.arrow_forward, size: 12, color: CmsTheme.textMuted),
+                  ),
+                  Text(
+                    to is num
+                        ? '₦${(to as num).toStringAsFixed(2)}'
+                        : '$to',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: CmsTheme.success,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+/// Progress bar showing disbursed vs approved amount for an expenditure.
+class DisbursementBalanceBar extends StatelessWidget {
+  const DisbursementBalanceBar({
+    super.key,
+    required this.approved,
+    required this.disbursed,
+  });
+
+  final double approved;
+  final double disbursed;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = approved > 0 ? (disbursed / approved).clamp(0.0, 1.0) : 0.0;
+    final remaining = approved - disbursed;
+    final Color barColor = progress >= 1.0
+        ? CmsTheme.success
+        : progress > 0.6
+            ? CmsTheme.warning
+            : CmsTheme.accent;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '₦${disbursed.toStringAsFixed(2)} of ₦${approved.toStringAsFixed(2)} disbursed',
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: CmsTheme.textSecondary,
+              ),
+            ),
+            Text(
+              '₦${remaining.toStringAsFixed(2)} remaining',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: remaining > 0 ? CmsTheme.accent : CmsTheme.textMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 6,
+            backgroundColor: CmsTheme.border,
+            valueColor: AlwaysStoppedAnimation<Color>(barColor),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Shows a dialog prompting the user to enter a rejection reason.
+/// Returns the typed reason, or null if cancelled.
+Future<String?> showRejectionReasonDialog(BuildContext context) async {
+  final ctrl = TextEditingController();
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: CmsTheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: CmsTheme.border),
+      ),
+      title: const Text(
+        'Rejection Reason',
+        style: TextStyle(
+          fontFamily: 'Inter',
+          color: CmsTheme.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Provide a reason for rejection. This will be sent as a notification to the requester.',
+              style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              maxLines: 3,
+              autofocus: true,
+              style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+              decoration: const InputDecoration(hintText: 'Enter reason…'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel', style: TextStyle(color: CmsTheme.textSecondary)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: CmsTheme.danger),
+          onPressed: () {
+            final v = ctrl.text.trim();
+            if (v.isNotEmpty) Navigator.pop(ctx, v);
+          },
+          child: const Text('Confirm Rejection'),
+        ),
+      ],
+    ),
+  );
+  ctrl.dispose();
+  return result;
+}
+

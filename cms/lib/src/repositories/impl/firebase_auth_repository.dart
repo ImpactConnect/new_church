@@ -27,8 +27,22 @@ class FirebaseAuthRepository implements AuthRepository {
         _currentUser = null;
         return null;
       }
-      _currentUser = await _buildCmsUser(user);
-      return _currentUser;
+      try {
+        _currentUser = await _buildCmsUser(user);
+        return _currentUser;
+      } catch (e) {
+        // Prevent accidental logout on transient network/token errors while idle
+        if (_currentUser != null) return _currentUser;
+        _currentUser = CmsUserModel(
+          uid: user.uid,
+          email: user.email ?? '',
+          branchId: 'default-branch',
+          roleId: AppRole.leadPastor,
+          permissions: AppRole.defaultPermissions[AppRole.leadPastor] ?? [],
+          displayName: user.displayName,
+        );
+        return _currentUser;
+      }
     });
   }
 
@@ -56,8 +70,10 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<void> refreshToken() async {
     final user = _auth.currentUser;
     if (user != null) {
-      await user.getIdToken(true);
-      _currentUser = await _buildCmsUser(user);
+      try {
+        await user.getIdToken(false);
+        _currentUser = await _buildCmsUser(user);
+      } catch (_) {}
     }
   }
 
@@ -66,16 +82,36 @@ class FirebaseAuthRepository implements AuthRepository {
   // ─────────────────────────────────────────────────────────────────────────────
 
   Future<CmsUserModel> _buildCmsUser(User user) async {
-    final idTokenResult = await user.getIdTokenResult();
-    final claims = idTokenResult.claims ?? {};
-    final rawBranchId = claims['branchId'] as String? ?? '';
-    final rawRoleId = claims['roleId'] as String? ?? '';
+    Map<String, dynamic> claims = {};
+    try {
+      final idTokenResult = await user.getIdTokenResult(false);
+      claims = idTokenResult.claims ?? {};
+    } catch (_) {}
 
-    // Default to 'default-branch' and 'leadPastor' if claims are not yet propagated
+    String rawBranchId = claims['branchId'] as String? ?? '';
+    String rawRoleId = claims['roleId'] as String? ?? '';
+
+    // If claims are missing (e.g. branch pastor — no custom claims set),
+    // fall back to Firestore /users/{uid} document for branchId + roleId.
+    if (rawBranchId.isEmpty || rawRoleId.isEmpty) {
+      try {
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data() != null) {
+          rawBranchId = userDoc.data()!['branchId'] as String? ?? rawBranchId;
+          rawRoleId = userDoc.data()!['roleId'] as String? ?? rawRoleId;
+        }
+      } catch (_) {}
+    }
+
+    // Default to 'default-branch' and 'leadPastor' for main church staff only
     final branchId = rawBranchId.isNotEmpty ? rawBranchId : 'default-branch';
     final roleId = rawRoleId.isNotEmpty ? rawRoleId : AppRole.leadPastor;
 
-    List<String> permissions = await _fetchPermissions(branchId, roleId);
+    List<String> permissions = [];
+    try {
+      permissions = await _fetchPermissions(branchId, roleId);
+    } catch (_) {}
+
     if (permissions.isEmpty) {
       permissions = AppRole.defaultPermissions[roleId] ?? [];
     }
@@ -92,6 +128,8 @@ class FirebaseAuthRepository implements AuthRepository {
       displayName: user.displayName,
     );
   }
+
+
 
   Future<List<String>> _fetchPermissions(
     String branchId,

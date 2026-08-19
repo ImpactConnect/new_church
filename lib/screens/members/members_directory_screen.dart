@@ -28,8 +28,14 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
   @override
   void initState() {
     super.initState();
-    _sub = FirebaseFirestore.instance.collection('members').orderBy('name').snapshots().listen((snap) {
+    _sub = FirebaseFirestore.instance
+        .collection('branches')
+        .doc('default-branch')
+        .collection('members')
+        .snapshots()
+        .listen((snap) {
       final members = snap.docs.map((d) => Member.fromFirestore(d)).toList();
+      members.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       if (mounted) {
         setState(() {
           _allMembers = members;

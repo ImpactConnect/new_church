@@ -126,8 +126,14 @@ final assetRepositoryProvider = Provider<AssetRepository>((ref) {
   return FirebaseAssetRepository(firestore: db);
 });
 
-// ── Convenience: current branch ID ───────────────────────────────────────────
+// ── Convenience: current & selected branch ID ─────────────────────────────────
 
 final currentBranchIdProvider = Provider<String>((ref) {
-  return ref.watch(cmsUserProvider).valueOrNull?.branchId ?? '';
+  return ref.watch(cmsUserProvider).valueOrNull?.branchId ?? 'default-branch';
 });
+
+final selectedBranchIdProvider = StateProvider<String>((ref) {
+  final user = ref.watch(cmsUserProvider).valueOrNull;
+  return user?.branchId ?? 'default-branch';
+});
+

@@ -284,7 +284,7 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
                 child: GestureDetector(
                   onTap: () async {
                     try {
-                      final doc = await FirebaseFirestore.instance.collection('members').doc(post.authorId).get();
+                      final doc = await FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').doc(post.authorId).get();
                       if (doc.exists && mounted) {
                         final member = Member.fromFirestore(doc);
                         showDialog(
@@ -522,55 +522,40 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
 
   Widget _buildGroupsTab() {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('members').doc(widget.currentUser.memberId).snapshots(),
+      stream: FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').doc(widget.currentUser.memberId).snapshots(),
       builder: (context, memberSnap) {
         if (memberSnap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         
         final memberData = memberSnap.data?.data() as Map<String, dynamic>? ?? {};
+        final List<dynamic> mDeptIds = memberData['departmentIds'] ?? [];
         final List<dynamic> mGroups = memberData['churchGroups'] ?? (memberData['churchGroup'] != null && memberData['churchGroup'].toString().isNotEmpty ? [memberData['churchGroup']] : []);
 
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
-              .collection('community_groups')
+              .collection('branches')
+              .doc('default-branch')
+              .collection('departments')
               .snapshots(),
           builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                const Text(
-                  'You do not belong to any groups yet.',
-                  style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Ask your administrator to assign you to a group.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              ],
-            ),
-          );
-        }
+            final docs = snapshot.data?.docs ?? [];
 
-        final groups = snapshot.data!.docs.where((doc) {
-          final groupData = doc.data() as Map<String, dynamic>;
-          final name = groupData['name'] as String? ?? '';
-          final memberIds = List<String>.from(groupData['members'] ?? []);
-          
-          final isInChurchGroup = mGroups.contains(name);
-          final isManuallyAdded = memberIds.contains(widget.currentUser.memberId);
-          
-          return isInChurchGroup || isManuallyAdded;
-        }).toList();
+            final groups = docs.where((doc) {
+              final groupData = doc.data() as Map<String, dynamic>;
+              final name = groupData['name'] as String? ?? '';
+              final memberIds = List<String>.from(groupData['memberIds'] ?? groupData['members'] ?? []);
+              
+              final isMember = memberIds.contains(widget.currentUser.memberId);
+              final isDeptId = mDeptIds.contains(doc.id);
+              final isInChurchGroup = mGroups.contains(name);
+              
+              return isMember || isDeptId || isInChurchGroup;
+            }).toList();
 
         if (groups.isEmpty) {
           return Center(

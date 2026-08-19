@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class BudgetModel extends Equatable {
@@ -9,10 +10,14 @@ class BudgetModel extends Equatable {
     required this.status,
     required this.requestedBy,
     this.departmentId,
+    this.requestedDescription,
     this.approvedAmount,
+    this.approvedCategory,
+    this.approvedDescription,
     this.approvedBy,
     this.approvedAt,
     this.changesSummary = const [],
+    this.rejectionReason,
   });
 
   final String id;
@@ -22,12 +27,22 @@ class BudgetModel extends Equatable {
   final String status; // 'pending' | 'approved' | 'rejected'
   final String requestedBy;
   final String? departmentId;
+  final String? requestedDescription;
   final double? approvedAmount;
+  final String? approvedCategory;
+  final String? approvedDescription;
   final String? approvedBy;
   final DateTime? approvedAt;
   final List<Map<String, dynamic>> changesSummary;
+  final String? rejectionReason;
 
   factory BudgetModel.fromFirestore(Map<String, dynamic> data, String id) {
+    DateTime? parseDate(dynamic v) {
+      if (v == null) return null;
+      if (v is Timestamp) return v.toDate();
+      return DateTime.tryParse(v.toString());
+    }
+
     return BudgetModel(
       id: id,
       fiscalPeriod: data['fiscalPeriod'] as String? ?? '',
@@ -36,14 +51,16 @@ class BudgetModel extends Equatable {
       status: data['status'] as String? ?? 'pending',
       requestedBy: data['requestedBy'] as String? ?? '',
       departmentId: data['departmentId'] as String?,
+      requestedDescription: data['requestedDescription'] as String?,
       approvedAmount: (data['approvedAmount'] as num?)?.toDouble(),
+      approvedCategory: data['approvedCategory'] as String?,
+      approvedDescription: data['approvedDescription'] as String?,
       approvedBy: data['approvedBy'] as String?,
-      approvedAt: data['approvedAt'] != null
-          ? DateTime.tryParse(data['approvedAt'].toString())
-          : null,
+      approvedAt: parseDate(data['approvedAt']),
       changesSummary: List<Map<String, dynamic>>.from(
         data['changesSummary'] ?? [],
       ),
+      rejectionReason: data['rejectionReason'] as String?,
     );
   }
 
@@ -54,10 +71,14 @@ class BudgetModel extends Equatable {
     'status': status,
     'requestedBy': requestedBy,
     if (departmentId != null) 'departmentId': departmentId,
+    if (requestedDescription != null) 'requestedDescription': requestedDescription,
     if (approvedAmount != null) 'approvedAmount': approvedAmount,
+    if (approvedCategory != null) 'approvedCategory': approvedCategory,
+    if (approvedDescription != null) 'approvedDescription': approvedDescription,
     if (approvedBy != null) 'approvedBy': approvedBy,
     if (approvedAt != null) 'approvedAt': approvedAt!.toIso8601String(),
     'changesSummary': changesSummary,
+    if (rejectionReason != null) 'rejectionReason': rejectionReason,
   };
 
   @override
@@ -81,6 +102,7 @@ class ExpenditureRequestModel extends Equatable {
     this.changesSummary = const [],
     this.approvedBy,
     this.approvedAt,
+    this.rejectionReason,
   });
 
   final String id;
@@ -98,11 +120,18 @@ class ExpenditureRequestModel extends Equatable {
   final List<Map<String, dynamic>> changesSummary;
   final String? approvedBy;
   final DateTime? approvedAt;
+  final String? rejectionReason;
 
   factory ExpenditureRequestModel.fromFirestore(
     Map<String, dynamic> data,
     String id,
   ) {
+    DateTime? parseDate(dynamic v) {
+      if (v == null) return null;
+      if (v is Timestamp) return v.toDate();
+      return DateTime.tryParse(v.toString());
+    }
+
     return ExpenditureRequestModel(
       id: id,
       amount: (data['amount'] as num?)?.toDouble() ?? 0,
@@ -120,9 +149,8 @@ class ExpenditureRequestModel extends Equatable {
         data['changesSummary'] ?? [],
       ),
       approvedBy: data['approvedBy'] as String?,
-      approvedAt: data['approvedAt'] != null
-          ? DateTime.tryParse(data['approvedAt'].toString())
-          : null,
+      approvedAt: parseDate(data['approvedAt']),
+      rejectionReason: data['rejectionReason'] as String?,
     );
   }
 
@@ -141,6 +169,7 @@ class ExpenditureRequestModel extends Equatable {
     'changesSummary': changesSummary,
     if (approvedBy != null) 'approvedBy': approvedBy,
     if (approvedAt != null) 'approvedAt': approvedAt!.toIso8601String(),
+    if (rejectionReason != null) 'rejectionReason': rejectionReason,
   };
 
   @override
@@ -327,4 +356,67 @@ class GivingModel extends Equatable {
 
   @override
   List<Object?> get props => [id, memberId, type, amount];
+}
+
+/// Notification model — created when a budget/expenditure is approved/rejected.
+/// Path: /branches/{branchId}/financeNotifications/{notificationId}
+class FinanceNotificationModel extends Equatable {
+  const FinanceNotificationModel({
+    required this.id,
+    required this.recipientUid,
+    required this.type,
+    required this.referenceId,
+    required this.message,
+    required this.createdAt,
+    this.changesSummary = const [],
+    this.read = false,
+  });
+
+  final String id;
+  final String recipientUid;
+
+  /// 'budget-approved' | 'budget-approved-with-changes' | 'budget-rejected'
+  /// | 'expenditure-approved' | 'expenditure-approved-with-changes' | 'expenditure-rejected'
+  final String type;
+  final String referenceId;  // budgetId or requestId
+  final String message;
+  final List<Map<String, dynamic>> changesSummary;
+  final bool read;
+  final DateTime createdAt;
+
+  factory FinanceNotificationModel.fromFirestore(
+    Map<String, dynamic> data,
+    String id,
+  ) {
+    DateTime parseDate(dynamic v) {
+      if (v is Timestamp) return v.toDate();
+      return DateTime.tryParse(v.toString()) ?? DateTime.now();
+    }
+
+    return FinanceNotificationModel(
+      id: id,
+      recipientUid: data['recipientUid'] as String? ?? '',
+      type: data['type'] as String? ?? '',
+      referenceId: data['referenceId'] as String? ?? '',
+      message: data['message'] as String? ?? '',
+      changesSummary: List<Map<String, dynamic>>.from(
+        data['changesSummary'] ?? [],
+      ),
+      read: data['read'] as bool? ?? false,
+      createdAt: parseDate(data['createdAt']),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+    'recipientUid': recipientUid,
+    'type': type,
+    'referenceId': referenceId,
+    'message': message,
+    'changesSummary': changesSummary,
+    'read': read,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
+
+  @override
+  List<Object?> get props => [id, type, referenceId, read];
 }

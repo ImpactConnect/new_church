@@ -124,4 +124,55 @@ class IsarFinanceRepository implements FinanceRepository {
     String branchId,
     String expenditureId,
   ) => _delegate.watchDisbursements(branchId, expenditureId);
+
+  // ── New methods added to interface ─────────────────────────────────────────
+  @override
+  Future<void> approveBudgetWithEdits(
+    String branchId,
+    String budgetId,
+    String approvedBy,
+    String approvedByName, {
+    required double approvedAmount,
+    required String approvedCategory,
+    required String approvedDescription,
+  }) => _delegate.approveBudgetWithEdits(
+    branchId, budgetId, approvedBy, approvedByName,
+    approvedAmount: approvedAmount,
+    approvedCategory: approvedCategory,
+    approvedDescription: approvedDescription,
+  );
+
+  @override
+  Future<void> approveExpenditureWithEdits(
+    String branchId,
+    String requestId,
+    String approvedBy,
+    String approvedByName, {
+    required double approvedAmount,
+    required String approvedCategory,
+    required String approvedDescription,
+  }) => _delegate.approveExpenditureWithEdits(
+    branchId, requestId, approvedBy, approvedByName,
+    approvedAmount: approvedAmount,
+    approvedCategory: approvedCategory,
+    approvedDescription: approvedDescription,
+  );
+
+  @override
+  Stream<List<BudgetModel>> watchApprovedBudgets(String branchId) =>
+      _delegate.watchApprovedBudgets(branchId);
+
+  @override
+  Stream<List<ExpenditureModel>> watchApprovedExpenditures(String branchId) =>
+      _delegate.watchApprovedExpenditures(branchId);
+
+  @override
+  Stream<List<FinanceNotificationModel>> watchNotifications(
+    String branchId,
+    String uid,
+  ) => _delegate.watchNotifications(branchId, uid);
+
+  @override
+  Future<void> markNotificationRead(String branchId, String notificationId) =>
+      _delegate.markNotificationRead(branchId, notificationId);
 }

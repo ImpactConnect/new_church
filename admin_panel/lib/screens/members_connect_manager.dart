@@ -104,61 +104,6 @@ class _MembersTabState extends State<_MembersTab> {
     super.dispose();
   }
 
-  void _showAddMember(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 700,
-          height: 600,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Add Member', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const Divider(),
-              const Expanded(child: AddMemberForm()),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showBulkUpload(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 500,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Upload Bulk Members', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const Divider(),
-              const CsvUploadPanel(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showMemberDetails(BuildContext context, DocumentSnapshot doc) {
     showDialog(
       context: context,
@@ -244,25 +189,23 @@ class _MembersTabState extends State<_MembersTab> {
                 style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16)),
               ),
               const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () => _showBulkUpload(context),
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Bulk Upload'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueGrey,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
                 ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () => _showAddMember(context),
-                icon: const Icon(Icons.person_add),
-                label: const Text('Add Member'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Members are managed via the CMS',
+                      style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -273,19 +216,28 @@ class _MembersTabState extends State<_MembersTab> {
         // Member List
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('members').orderBy('name').snapshots(),
+            stream: FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) return const Center(child: Text('Error loading members'));
               if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-              var docs = snapshot.data!.docs;
+              var docs = snapshot.data!.docs.toList();
               
+              // Sort by name
+              docs.sort((a, b) {
+                final da = a.data() as Map<String, dynamic>;
+                final db = b.data() as Map<String, dynamic>;
+                final na = (da['name'] ?? '${da['firstName'] ?? ''} ${da['lastName'] ?? ''}').toString().trim().toLowerCase();
+                final nb = (db['name'] ?? '${db['firstName'] ?? ''} ${db['lastName'] ?? ''}').toString().trim().toLowerCase();
+                return na.compareTo(nb);
+              });
+
               if (_searchQuery.isNotEmpty) {
                 docs = docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  final name = (data['name'] ?? '').toString().toLowerCase();
+                  final name = (data['name'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}').toString().toLowerCase();
                   final email = (data['email'] ?? '').toString().toLowerCase();
-                  final phone = (data['phoneNumber'] ?? '').toString().toLowerCase();
+                  final phone = (data['phone'] ?? data['phoneNumber'] ?? '').toString().toLowerCase();
                   final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
                   final groupsStr = groupsList.join(', ').toLowerCase();
                   return name.contains(_searchQuery) ||
@@ -312,9 +264,14 @@ class _MembersTabState extends State<_MembersTab> {
                 itemCount: docs.length,
                 itemBuilder: (context, i) {
                   final data = docs[i].data() as Map<String, dynamic>;
-                  final name = data['name'] ?? 'Unknown';
+                  String name = (data['name'] as String?)?.trim() ?? '';
+                  if (name.isEmpty) {
+                    name = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+                  }
+                  if (name.isEmpty) name = 'Unknown';
+
                   final email = data['email'] ?? '—';
-                  final phone = data['phoneNumber'] ?? '';
+                  final phone = data['phone'] ?? data['phoneNumber'] ?? '';
                   final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
                   final group = groupsList.join(', ');
                   
@@ -392,12 +349,18 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
   void initState() {
     super.initState();
     final data = widget.memberDoc.data() as Map<String, dynamic>? ?? {};
-    _nameCtrl = TextEditingController(text: data['name'] ?? '');
-    _phoneCtrl = TextEditingController(text: data['phoneNumber'] ?? '');
-    _addressCtrl = TextEditingController(text: data['address'] ?? '');
-    _occupationCtrl = TextEditingController(text: data['occupation'] ?? '');
+    String name = (data['name'] as String?)?.trim() ?? '';
+    if (name.isEmpty) {
+      name = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+    }
+    _nameCtrl = TextEditingController(text: name);
+    _phoneCtrl = TextEditingController(text: data['phone'] ?? data['phoneNumber'] ?? '');
+    _addressCtrl = TextEditingController(text: data['residentAddress'] ?? data['address'] ?? '');
+    _occupationCtrl = TextEditingController(text: data['profession'] ?? data['occupation'] ?? '');
     if (data['churchGroups'] != null) {
       _selectedGroups = List<String>.from(data['churchGroups']);
+    } else if (data['departmentIds'] != null) {
+      _selectedGroups = List<String>.from(data['departmentIds']);
     } else if (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty) {
       _selectedGroups = [data['churchGroup']];
     }
@@ -425,10 +388,19 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
   Future<void> _saveChanges() async {
     setState(() => _saving = true);
     try {
-      await FirebaseFirestore.instance.collection('members').doc(widget.memberDoc.id).update({
+      final parts = _nameCtrl.text.trim().split(RegExp(r'\s+'));
+      final firstName = parts.isNotEmpty ? parts.first : '';
+      final lastName = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+      await FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').doc(widget.memberDoc.id).update({
         'name': _nameCtrl.text.trim(),
+        'firstName': firstName,
+        'lastName': lastName,
+        'phone': _phoneCtrl.text.trim(),
         'phoneNumber': _phoneCtrl.text.trim(),
+        'residentAddress': _addressCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
+        'profession': _occupationCtrl.text.trim(),
         'occupation': _occupationCtrl.text.trim(),
         'churchGroups': _selectedGroups,
         'gender': _genderCtrl.text.trim(),
@@ -480,7 +452,7 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
             onPressed: () async {
               Navigator.pop(ctx); // close alert
               Navigator.pop(context); // close details dialog
-              await FirebaseFirestore.instance.collection('members').doc(widget.memberDoc.id).delete();
+              await FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').doc(widget.memberDoc.id).delete();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Delete'),
@@ -896,7 +868,7 @@ class _ManageOfficialsDialogState extends State<_ManageOfficialsDialog> {
           width: 400,
           height: 400,
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance.collection('members').orderBy('name').snapshots(),
+            stream: FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').snapshots(),
             builder: (context, snap) {
               if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
               if (!snap.hasData) return const Center(child: CircularProgressIndicator());
@@ -905,9 +877,16 @@ class _ManageOfficialsDialogState extends State<_ManageOfficialsDialog> {
                 itemCount: docs.length,
                 itemBuilder: (_, i) {
                   final data = docs[i].data() as Map<String, dynamic>;
+                  String name = (data['name'] as String?)?.trim() ?? '';
+                  if (name.isEmpty) {
+                    name = '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+                  }
+                  if (name.isEmpty) name = 'Unknown';
+                  final phone = data['phone'] ?? data['phoneNumber'] ?? '';
+
                   return ListTile(
-                    title: Text(data['name'] ?? ''),
-                    subtitle: Text(data['phoneNumber'] ?? ''),
+                    title: Text(name),
+                    subtitle: Text(phone),
                     onTap: () {
                       setState(() {
                         _selectedMember = data;
@@ -1423,57 +1402,21 @@ class _PastorsDeskTabState extends State<_PastorsDeskTab> {
 }
 
 // ─── GROUPS MANAGER TAB ──────────────────────────────────────────────────────
+
+
 class _GroupsManagerTab extends StatefulWidget {
   const _GroupsManagerTab();
+
   @override
   State<_GroupsManagerTab> createState() => _GroupsManagerTabState();
 }
 
 class _GroupsManagerTabState extends State<_GroupsManagerTab> {
-  void _showGroupFormDialog(String? groupId, DocumentSnapshot? groupToEdit) {
+  void _showGroupDetailsDialog(String groupId, DocumentSnapshot groupDoc) {
     showDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => _GroupFormDialog(groupId: groupId, groupToEdit: groupToEdit),
+      builder: (_) => _AdminGroupDetailsDialog(groupId: groupId, groupDoc: groupDoc),
     );
-  }
-
-  Future<void> _deleteGroup(String groupId, String groupName) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Group'),
-        content: Text('Are you sure you want to delete group "$groupName"? All messages will be lost.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await FirebaseFirestore.instance.collection('community_groups').doc(groupId).delete();
-      final messagesSnap = await FirebaseFirestore.instance.collection('group_messages').where('groupId', isEqualTo: groupId).get();
-      final batch = FirebaseFirestore.instance.batch();
-      for (var doc in messagesSnap.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group deleted successfully')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
   }
 
   @override
@@ -1487,31 +1430,62 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Communication Groups', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text('Manage discussion channels and member access.', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                ],
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Communication Groups',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text(
+                      'Groups and member assignments are managed by the Secretary in the CMS.',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showGroupFormDialog(null, null),
-                icon: const Icon(Icons.add),
-                label: const Text('Add Group'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: Colors.blue[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Managed by Secretary in CMS',
+                      style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          // Groups List
+          const SizedBox(height: 20),
+
+          // Groups List from CMS Departments
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('community_groups').orderBy('createdAt', descending: true).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('branches')
+                  .doc('default-branch')
+                  .collection('departments')
+                  .orderBy('name')
+                  .snapshots(),
               builder: (context, snap) {
-                if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
-                if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                if (snap.hasError) {
+                  return Center(child: Text('Error: ${snap.error}'));
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
                 final docs = snap.data!.docs;
                 if (docs.isEmpty) {
                   return Center(
@@ -1520,11 +1494,15 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
                       children: [
                         Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
                         const SizedBox(height: 16),
-                        const Text('No groups created yet.', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+                        const Text('No groups created by Secretary yet.',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey)),
                         const SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: () => _showGroupFormDialog(null, null),
-                          child: const Text('Create Your First Group'),
+                        const Text(
+                          'The Secretary can create departments and add members in the CMS.',
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
                         ),
                       ],
                     ),
@@ -1533,8 +1511,8 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
 
                 return GridView.builder(
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 400,
-                    mainAxisExtent: 180,
+                    maxCrossAxisExtent: 380,
+                    mainAxisExtent: 190,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
                   ),
@@ -1542,17 +1520,19 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
                   itemBuilder: (_, i) {
                     final d = docs[i].data() as Map<String, dynamic>;
                     final groupId = docs[i].id;
-                    final name = d['name'] ?? 'Unnamed';
-                    final desc = d['description'] ?? '';
-                    final imageUrl = d['imageUrl'] ?? '';
-                    final members = List<String>.from(d['members'] ?? []);
+                    final name = d['name'] ?? 'Unnamed Group';
+                    final deptType = d['departmentType'] ?? 'Department';
+                    final imageUrl = d['imageUrl'] ?? d['photoUrl'] ?? '';
+                    final memberIds = List<String>.from(d['memberIds'] ?? d['members'] ?? []);
+                    final leaderName = d['headMemberName'] ?? 'No leader assigned';
 
                     return Card(
                       elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                       child: InkWell(
-                        onTap: () => _showGroupFormDialog(groupId, docs[i]),
-                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _showGroupDetailsDialog(groupId, docs[i]),
+                        borderRadius: BorderRadius.circular(14),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -1561,13 +1541,20 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
                               Row(
                                 children: [
                                   CircleAvatar(
-                                    radius: 28,
+                                    radius: 26,
                                     backgroundImage: imageUrl.isNotEmpty
                                         ? NetworkImage(ImageProxy.proxy(imageUrl))
                                         : null,
-                                    backgroundColor: Colors.blue[50],
+                                    backgroundColor: Colors.indigo[50],
                                     child: imageUrl.isEmpty
-                                        ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'G', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 20))
+                                        ? Text(
+                                            name.isNotEmpty
+                                                ? name[0].toUpperCase()
+                                                : 'G',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.indigo,
+                                                fontSize: 20))
                                         : null,
                                   ),
                                   const SizedBox(width: 12),
@@ -1575,34 +1562,62 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        const SizedBox(height: 4),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue[50],
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text('${members.length} members', style: const TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.bold)),
-                                        ),
+                                        Text(name,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis),
+                                        const SizedBox(height: 2),
+                                        Text(deptType,
+                                            style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 12)),
                                       ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                    onPressed: () => _deleteGroup(groupId, name),
-                                    tooltip: 'Delete Group',
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Expanded(
-                                child: Text(
-                                  desc.isNotEmpty ? desc : 'No description provided.',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.indigo[50],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text('${memberIds.length} members',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.indigo,
+                                            fontWeight: FontWeight.bold)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Leader: $leaderName',
+                                      style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 11),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'View Details & Chat →',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.indigo[700],
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1620,471 +1635,632 @@ class _GroupsManagerTabState extends State<_GroupsManagerTab> {
   }
 }
 
-// ─── GROUP FORM DIALOG ───────────────────────────────────────────────────────
-class _GroupFormDialog extends StatefulWidget {
-  final String? groupId;
-  final DocumentSnapshot? groupToEdit;
+// ─── ADMIN GROUP DETAILS & CONVERSATION DIALOG ────────────────────────────────
+class _AdminGroupDetailsDialog extends StatefulWidget {
+  final String groupId;
+  final DocumentSnapshot groupDoc;
 
-  const _GroupFormDialog({this.groupId, this.groupToEdit});
+  const _AdminGroupDetailsDialog(
+      {required this.groupId, required this.groupDoc});
 
   @override
-  State<_GroupFormDialog> createState() => _GroupFormDialogState();
+  State<_AdminGroupDetailsDialog> createState() =>
+      _AdminGroupDetailsDialogState();
 }
 
-class _GroupFormDialogState extends State<_GroupFormDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _searchCtrl = TextEditingController();
+class _AdminGroupDetailsDialogState extends State<_AdminGroupDetailsDialog> {
+  bool _uploadingImage = false;
 
-  String _searchQuery = '';
-  String? _selectedChurchGroup;
-  List<String> _churchGroups = [];
-  StreamSubscription? _groupsSub;
+  Future<void> _pickAndUploadImage() async {
+    try {
+      FilePickerResult? result =
+          await FilePicker.pickFiles(type: FileType.image, withData: true);
+      if (result == null || result.files.isEmpty) return;
 
-  Uint8List? _imageBytes;
-  String? _imageFileName;
-  String? _existingImageUrl;
+      setState(() => _uploadingImage = true);
 
-  Set<String> _selectedMemberIds = {};
-  bool _saving = false;
+      final file = result.files.first;
+      final ref = FirebaseStorage.instance.ref(
+          'group_photos/${DateTime.now().millisecondsSinceEpoch}_${file.name}');
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.groupToEdit != null) {
-      final data = widget.groupToEdit!.data() as Map<String, dynamic>? ?? {};
-      _nameCtrl.text = data['name'] ?? '';
-      _descCtrl.text = data['description'] ?? '';
-      _existingImageUrl = data['imageUrl'];
-      _selectedMemberIds = Set<String>.from(data['members'] ?? []);
-    }
+      final task = await ref.putData(
+          file.bytes!, SettableMetadata(contentType: 'image/jpeg'));
+      final url = await task.ref.getDownloadURL();
 
-    _groupsSub = FirebaseFirestore.instance.collection('church_groups').orderBy('name').snapshots().listen((snap) {
+      // Update CMS department doc
+      await FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('departments')
+          .doc(widget.groupId)
+          .update({
+        'imageUrl': url,
+        'photoUrl': url,
+      });
+
+      // Update community_groups doc if present
+      try {
+        await FirebaseFirestore.instance
+            .collection('community_groups')
+            .doc(widget.groupId)
+            .set({'imageUrl': url}, SetOptions(merge: true));
+      } catch (_) {}
+
+      setState(() => _uploadingImage = false);
       if (mounted) {
-        setState(() {
-          _churchGroups = snap.docs.map((d) => d['name'] as String).toList();
-          if (_churchGroups.isNotEmpty && _selectedChurchGroup == null) {
-            _selectedChurchGroup = _churchGroups.first;
-          }
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _groupsSub?.cancel();
-    _nameCtrl.dispose();
-    _descCtrl.dispose();
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickImage() async {
-    FilePickerResult? result = await FilePicker.pickFiles(type: FileType.image, withData: true);
-    if (result != null) {
-      setState(() {
-        _imageBytes = result.files.first.bytes;
-        _imageFileName = result.files.first.name;
-      });
-    }
-  }
-
-  Future<void> _addByChurchGroup() async {
-    if (_selectedChurchGroup == null) return;
-    try {
-      final snapNew = await FirebaseFirestore.instance
-          .collection('members')
-          .where('churchGroups', arrayContains: _selectedChurchGroup)
-          .get();
-
-      final snapOld = await FirebaseFirestore.instance
-          .collection('members')
-          .where('churchGroup', isEqualTo: _selectedChurchGroup)
-          .get();
-
-      final allDocs = [...snapNew.docs, ...snapOld.docs];
-
-      if (allDocs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No members found in church group "$_selectedChurchGroup"')),
-        );
-        return;
+            const SnackBar(content: Text('Group image updated!')));
       }
-
-      final memberIds = allDocs.map((doc) => doc.id).toSet().toList();
-      setState(() {
-        _selectedMemberIds.addAll(memberIds);
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Added ${memberIds.length} members from "$_selectedChurchGroup"')),
-      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => _uploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      }
     }
   }
 
-  Future<void> _removeByChurchGroup() async {
-    if (_selectedChurchGroup == null) return;
+  Future<void> _removeMemberFromGroup(
+      String memberId, String memberName) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove Member'),
+        content: Text(
+            'Remove "$memberName" from this group discussion?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
-      final snapNew = await FirebaseFirestore.instance
-          .collection('members')
-          .where('churchGroups', arrayContains: _selectedChurchGroup)
-          .get();
-
-      final snapOld = await FirebaseFirestore.instance
-          .collection('members')
-          .where('churchGroup', isEqualTo: _selectedChurchGroup)
-          .get();
-
-      final allDocs = [...snapNew.docs, ...snapOld.docs];
-
-      if (allDocs.isEmpty) return;
-
-      final memberIds = allDocs.map((doc) => doc.id).toSet().toList();
-      setState(() {
-        _selectedMemberIds.removeAll(memberIds);
+      // 1. Remove from department doc
+      await FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('departments')
+          .doc(widget.groupId)
+          .update({
+        'memberIds': FieldValue.arrayRemove([memberId]),
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Removed members belonging to "$_selectedChurchGroup"')),
-      );
+
+      // 2. Remove department from member doc
+      await FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('members')
+          .doc(memberId)
+          .update({
+        'departmentIds': FieldValue.arrayRemove([widget.groupId]),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$memberName removed from group.')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error removing member: $e')));
+      }
     }
   }
 
-  Future<void> _saveGroup() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _saving = true);
+  Future<void> _deleteMessage(String messageId) async {
     try {
-      String? imageUrl = _existingImageUrl;
-      if (_imageBytes != null) {
-        final imageRef = FirebaseStorage.instance.ref('groups/${DateTime.now().millisecondsSinceEpoch}_$_imageFileName');
-        await imageRef.putData(_imageBytes!);
-        imageUrl = await imageRef.getDownloadURL();
+      await FirebaseFirestore.instance
+          .collection('group_messages')
+          .doc(messageId)
+          .delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Message deleted')));
       }
-
-      final Map<String, dynamic> data = {
-        'name': _nameCtrl.text.trim(),
-        'description': _descCtrl.text.trim(),
-        'imageUrl': imageUrl ?? '',
-        'members': _selectedMemberIds.toList(),
-      };
-
-      if (widget.groupId == null) {
-        data['createdAt'] = FieldValue.serverTimestamp();
-        data['lastMessage'] = '';
-        data['lastMessageSenderName'] = '';
-        data['lastMessageTime'] = null;
-        await FirebaseFirestore.instance.collection('community_groups').add(data);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group created successfully')));
-      } else {
-        await FirebaseFirestore.instance.collection('community_groups').doc(widget.groupId).update(data);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Group updated successfully')));
-      }
-
-      if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving group: $e')));
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _clearAllMessages() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Conversations'),
+        content: const Text(
+            'Are you sure you want to delete ALL messages in this group discussion? This action cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child:
+                const Text('Clear All', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final messagesSnap = await FirebaseFirestore.instance
+          .collection('group_messages')
+          .where('groupId', isEqualTo: widget.groupId)
+          .get();
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (var doc in messagesSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('All conversation messages cleared.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 950,
-        height: 700,
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.groupId == null ? 'Create New Group' : 'Edit Group Details',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                ],
-              ),
-              const Divider(height: 24),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('departments')
+          .doc(widget.groupId)
+          .snapshots(),
+      builder: (context, snap) {
+        final data = (snap.data?.data() as Map<String, dynamic>?) ??
+            (widget.groupDoc.data() as Map<String, dynamic>? ?? {});
 
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        final name = data['name'] ?? 'Unnamed Group';
+        final deptType = data['departmentType'] ?? 'Department';
+        final imageUrl = data['imageUrl'] ?? data['photoUrl'] ?? '';
+        final leaderName = data['headMemberName'] ?? 'No leader assigned';
+        final memberIds =
+            List<String>.from(data['memberIds'] ?? data['members'] ?? []);
+
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            width: 1000,
+            height: 720,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Dialog Header ───────────────────────────────────────
+                Row(
                   children: [
-                    // Left Column: Details
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundImage: imageUrl.isNotEmpty
+                              ? NetworkImage(ImageProxy.proxy(imageUrl))
+                              : null,
+                          backgroundColor: Colors.indigo[50],
+                          child: imageUrl.isEmpty
+                              ? Text(name.isNotEmpty ? name[0].toUpperCase() : 'G',
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.indigo))
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: InkWell(
+                            onTap: _uploadingImage ? null : _pickAndUploadImage,
+                            child: CircleAvatar(
+                              radius: 12,
+                              backgroundColor: Colors.indigo,
+                              child: _uploadingImage
+                                  ? const SizedBox(
+                                      width: 10,
+                                      height: 10,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.camera_alt,
+                                      size: 12, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
                     Expanded(
-                      flex: 4,
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text('$deptType  ·  Leader: $leaderName',
+                              style: TextStyle(
+                                  color: Colors.grey[600], fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _pickAndUploadImage,
+                      icon: const Icon(Icons.image, size: 16),
+                      label: const Text('Change Group Image'),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+
+                // ── Body Split View: Members (Left) | Chat Messages (Right) ─────
+                Expanded(
+                  child: Row(
+                    children: [
+                      // ── LEFT: Members List ──────────────────────────────────
+                      Expanded(
+                        flex: 4,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              GestureDetector(
-                                onTap: _pickImage,
-                                child: Stack(
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(12)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(
-                                      width: 120,
-                                      height: 120,
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[200],
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.grey[300]!, width: 2),
-                                      ),
-                                      child: ClipOval(
-                                        child: _imageBytes != null
-                                            ? Image.memory(_imageBytes!, fit: BoxFit.cover)
-                                            : (_existingImageUrl != null && _existingImageUrl!.isNotEmpty
-                                                ? Image.network(ImageProxy.proxy(_existingImageUrl!), fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.group, size: 60, color: Colors.grey))
-                                                : const Icon(Icons.group, size: 60, color: Colors.grey)),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      bottom: 0,
-                                      right: 0,
-                                      child: CircleAvatar(
-                                        radius: 18,
-                                        backgroundColor: Theme.of(context).primaryColor,
-                                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
-                                      ),
-                                    ),
+                                    Text('Members (${memberIds.length})',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14)),
+                                    const Text('Secretary-assigned',
+                                        style: TextStyle(
+                                            fontSize: 11, color: Colors.grey)),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              const Text('Click to upload group icon', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                              const SizedBox(height: 24),
-                              TextFormField(
-                                controller: _nameCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'Group Name',
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (v) => v!.trim().isEmpty ? 'Group name is required' : null,
+                              Expanded(
+                                child: memberIds.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                            'No members assigned to this group yet.',
+                                            style:
+                                                TextStyle(color: Colors.grey)),
+                                      )
+                                    : ListView.builder(
+                                        padding: const EdgeInsets.all(8),
+                                        itemCount: memberIds.length,
+                                        itemBuilder: (context, idx) {
+                                          final mId = memberIds[idx];
+                                          return StreamBuilder<DocumentSnapshot>(
+                                            stream: FirebaseFirestore.instance
+                                                .collection('branches')
+                                                .doc('default-branch')
+                                                .collection('members')
+                                                .doc(mId)
+                                                .snapshots(),
+                                            builder: (context, mSnap) {
+                                              final mData = mSnap.data?.data()
+                                                  as Map<String, dynamic>? ?? {};
+                                              String mName =
+                                                  (mData['name'] as String?)?.trim() ?? '';
+                                              if (mName.isEmpty) {
+                                                mName =
+                                                    '${mData['firstName'] ?? ''} ${mData['lastName'] ?? ''}'
+                                                        .trim();
+                                              }
+                                              if (mName.isEmpty) mName = 'Member ($mId)';
+
+                                              final phone = mData['phone'] ??
+                                                  mData['phoneNumber'] ??
+                                                  '';
+
+                                              return Card(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 6),
+                                                child: ListTile(
+                                                  dense: true,
+                                                  leading: CircleAvatar(
+                                                    radius: 16,
+                                                    backgroundColor: Colors.indigo[50],
+                                                    child: Text(
+                                                      mName.isNotEmpty
+                                                          ? mName[0].toUpperCase()
+                                                          : '?',
+                                                      style: const TextStyle(
+                                                          color: Colors.indigo,
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                  title: Text(mName,
+                                                      style: const TextStyle(
+                                                          fontWeight: FontWeight.w600,
+                                                          fontSize: 13)),
+                                                  subtitle: phone.isNotEmpty
+                                                      ? Text(phone,
+                                                          style: const TextStyle(
+                                                              fontSize: 11))
+                                                      : null,
+                                                  trailing: IconButton(
+                                                    icon: const Icon(
+                                                        Icons.remove_circle_outline,
+                                                        color: Colors.red,
+                                                        size: 20),
+                                                    tooltip:
+                                                        'Remove from group discussion',
+                                                    onPressed: () =>
+                                                        _removeMemberFromGroup(
+                                                            mId, mName),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _descCtrl,
-                                maxLines: 4,
-                                decoration: const InputDecoration(
-                                  labelText: 'Description',
-                                  border: OutlineInputBorder(),
-                                  alignLabelWithHint: true,
-                                ),
-                              ),
-                              const SizedBox(height: 32),
-                              if (_saving)
-                                const Center(child: CircularProgressIndicator())
-                              else
-                                ElevatedButton.icon(
-                                  onPressed: _saveGroup,
-                                  icon: const Icon(Icons.save),
-                                  label: Text(widget.groupId == null ? 'Create Group' : 'Save Changes'),
-                                  style: ElevatedButton.styleFrom(
-                                    minimumSize: const Size(double.infinity, 48),
-                                  ),
-                                ),
                             ],
                           ),
                         ),
                       ),
-                    ),
 
-                    const VerticalDivider(width: 32),
+                      const SizedBox(width: 16),
 
-                    // Right Column: Members & Church Groups
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Church Group Section
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey[200]!),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Add/Remove by Church Group / Unit', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                const SizedBox(height: 12),
-                                Row(
+                      // ── RIGHT: Group Chat Conversation Viewer ───────────────
+                      Expanded(
+                        flex: 6,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(12)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    if (_churchGroups.isEmpty)
-                                      const Expanded(child: Text('No church groups available.'))
-                                    else ...[
-                                      Expanded(
-                                        child: Container(
-                                          height: 40,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: Colors.grey[400]!),
-                                            borderRadius: BorderRadius.circular(6),
-                                            color: Colors.white,
-                                          ),
-                                          child: DropdownButtonHideUnderline(
-                                            child: DropdownButton<String>(
-                                              isExpanded: true,
-                                              value: _selectedChurchGroup,
-                                              items: _churchGroups.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
-                                              onChanged: (val) => setState(() => _selectedChurchGroup = val),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      ElevatedButton.icon(
-                                        onPressed: _addByChurchGroup,
-                                        icon: const Icon(Icons.add_circle_outline, size: 18),
-                                        label: const Text('Add All'),
-                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _removeByChurchGroup,
-                                        icon: const Icon(Icons.remove_circle_outline, size: 18),
-                                        label: const Text('Remove All'),
-                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                                      ),
-                                    ]
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.forum_outlined,
+                                            size: 18, color: Colors.indigo),
+                                        SizedBox(width: 8),
+                                        Text('Group Conversation',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14)),
+                                      ],
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: _clearAllMessages,
+                                      icon: const Icon(Icons.delete_sweep,
+                                          size: 16, color: Colors.red),
+                                      label: const Text('Clear Conversation',
+                                          style: TextStyle(
+                                              color: Colors.red, fontSize: 12)),
+                                    ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                              ),
+                              Expanded(
+                                child: StreamBuilder<QuerySnapshot>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('group_messages')
+                                      .where('groupId', isEqualTo: widget.groupId)
+                                      .orderBy('timestamp', descending: true)
+                                      .snapshots(),
+                                  builder: (context, msgSnap) {
+                                    if (msgSnap.hasError) {
+                                      return Center(
+                                          child: Text('Error: ${msgSnap.error}'));
+                                    }
+                                    if (!msgSnap.hasData) {
+                                      return const Center(
+                                          child: CircularProgressIndicator());
+                                    }
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Search & Assign Members Manually', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue[50],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '${_selectedMemberIds.length} Selected',
-                                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12),
+                                    final messages = msgSnap.data!.docs;
+
+                                    if (messages.isEmpty) {
+                                      return Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.chat_bubble_outline,
+                                                size: 48,
+                                                color: Colors.grey[300]),
+                                            const SizedBox(height: 12),
+                                            const Text(
+                                                'No messages in this group discussion yet.',
+                                                style: TextStyle(
+                                                    color: Colors.grey)),
+                                          ],
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView.builder(
+                                      padding: const EdgeInsets.all(12),
+                                      itemCount: messages.length,
+                                      itemBuilder: (context, idx) {
+                                        final msgDoc = messages[idx];
+                                        final msgData = msgDoc.data()
+                                            as Map<String, dynamic>;
+                                        final senderName =
+                                            msgData['senderName'] ?? 'Unknown';
+                                        final messageText =
+                                            msgData['message'] ?? '';
+                                        final fileUrl =
+                                            msgData['fileUrl'] as String?;
+                                        final ts =
+                                            msgData['timestamp'] as Timestamp?;
+                                        final timeStr = ts != null
+                                            ? '${ts.toDate().hour.toString().padLeft(2, '0')}:${ts.toDate().minute.toString().padLeft(2, '0')}'
+                                            : '';
+
+                                        return Card(
+                                          margin: const EdgeInsets.only(
+                                              bottom: 8),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10)),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(10),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 14,
+                                                  backgroundColor:
+                                                      Colors.indigo[100],
+                                                  child: Text(
+                                                    senderName.isNotEmpty
+                                                        ? senderName[0]
+                                                            .toUpperCase()
+                                                        : '?',
+                                                    style: const TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.indigo,
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Text(senderName,
+                                                              style: const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize: 12)),
+                                                          Text(timeStr,
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .grey[500],
+                                                                  fontSize: 10)),
+                                                        ],
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      if (messageText.isNotEmpty)
+                                                        Text(messageText,
+                                                            style: const TextStyle(
+                                                                fontSize: 13)),
+                                                      if (fileUrl != null &&
+                                                          fileUrl.isNotEmpty) ...[
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(6),
+                                                          child: Image.network(
+                                                            ImageProxy.proxy(
+                                                                fileUrl),
+                                                            height: 120,
+                                                            fit: BoxFit.cover,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.delete_outline,
+                                                      size: 18,
+                                                      color: Colors.red),
+                                                  tooltip: 'Delete Message',
+                                                  onPressed: () =>
+                                                      _deleteMessage(msgDoc.id),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _searchCtrl,
-                            onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
-                            decoration: InputDecoration(
-                              hintText: 'Search members by name, email or group...',
-                              prefixIcon: const Icon(Icons.search),
-                              suffixIcon: _searchQuery.isNotEmpty
-                                  ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
-                                      _searchCtrl.clear();
-                                      setState(() => _searchQuery = '');
-                                    })
-                                  : null,
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          Expanded(
-                            child: StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance.collection('members').orderBy('name').snapshots(),
-                              builder: (context, memberSnap) {
-                                if (!memberSnap.hasData) return const Center(child: CircularProgressIndicator());
-                                var memberDocs = memberSnap.data!.docs;
-
-                                if (_searchQuery.isNotEmpty) {
-                                  memberDocs = memberDocs.where((doc) {
-                                    final data = doc.data() as Map<String, dynamic>;
-                                    final name = (data['name'] ?? '').toString().toLowerCase();
-                                    final email = (data['email'] ?? '').toString().toLowerCase();
-                                    final groupsList = data['churchGroups'] ?? (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty ? [data['churchGroup']] : []);
-                                    final groupStr = groupsList.join(', ').toLowerCase();
-                                    return name.contains(_searchQuery) || email.contains(_searchQuery) || groupStr.contains(_searchQuery);
-                                  }).toList();
-                                }
-
-                                if (memberDocs.isEmpty) {
-                                  return const Center(child: Text('No members found'));
-                                }
-
-                                return ListView.builder(
-                                  itemCount: memberDocs.length,
-                                  itemBuilder: (context, index) {
-                                    final mDoc = memberDocs[index];
-                                    final mData = mDoc.data() as Map<String, dynamic>;
-                                    final memberId = mDoc.id;
-                                    final name = mData['name'] ?? 'Unknown';
-                                    final email = mData['email'] ?? '';
-                                    final groupsList = mData['churchGroups'] ?? (mData['churchGroup'] != null && mData['churchGroup'].toString().isNotEmpty ? [mData['churchGroup']] : []);
-                                    final churchGroup = groupsList.join(', ');
-                                    final isAssigned = _selectedMemberIds.contains(memberId);
-
-                                    return Card(
-                                      margin: const EdgeInsets.only(bottom: 6),
-                                      child: ListTile(
-                                        leading: CircleAvatar(
-                                          backgroundColor: isAssigned ? Colors.green[50] : Colors.grey[100],
-                                          child: Text(
-                                            name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                            style: TextStyle(color: isAssigned ? Colors.green : Colors.grey[700], fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                        subtitle: Text('$email${churchGroup.isNotEmpty ? '  ·  $churchGroup' : ''}'),
-                                        trailing: ElevatedButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              if (isAssigned) {
-                                                _selectedMemberIds.remove(memberId);
-                                              } else {
-                                                _selectedMemberIds.add(memberId);
-                                              }
-                                            });
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: isAssigned ? Colors.red[50] : Colors.blue[50],
-                                            foregroundColor: isAssigned ? Colors.red : Colors.blue,
-                                            elevation: 0,
-                                          ),
-                                          child: Text(isAssigned ? 'Remove' : 'Assign'),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
+
+

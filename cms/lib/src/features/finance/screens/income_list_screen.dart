@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
+import 'package:intl/intl.dart';
 import 'package:cms/src/core/providers.dart';
 import 'package:cms/src/core/permissions.dart';
 import 'package:cms/src/core/theme.dart';
@@ -19,7 +20,17 @@ class IncomeListScreen extends ConsumerStatefulWidget {
 }
 
 class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
-  String _paymentFilter = 'all';
+  String _typeFilter = 'all';
+
+  static const _incomeCategories = [
+    ('Tithe', 'tithe'),
+    ('Offering', 'offering'),
+    ('Donation', 'donation'),
+    ('Building Project', 'building_project'),
+    ('Special Seed', 'special_seed'),
+    ('Welfare', 'welfare'),
+    ('Other', 'other'),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -35,8 +46,8 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CmsPageHeader(
-            title: 'Income & Revenues',
-            subtitle: 'Record and track tithes, offerings, donations, and special funds',
+            title: 'Income & Giving',
+            subtitle: 'Record and track branch tithes, offerings, donations, building projects, and special funds',
             actions: [
               if (canRecord)
                 CmsButton(
@@ -48,48 +59,55 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
             ],
           ),
           const SizedBox(height: 24),
+
           // Total metric cards
           incomeAsync.when(
             loading: () => const LinearProgressIndicator(),
             error: (_, __) => const SizedBox.shrink(),
             data: (items) {
               final total = items.fold<double>(0, (sum, i) => sum + i.amount);
-              final cash = items.where((i) => i.formType == 'cash').fold<double>(0, (sum, i) => sum + i.amount);
-              final transfer = items.where((i) => i.formType == 'transfer').fold<double>(0, (sum, i) => sum + i.amount);
+              final tithes = items.where((i) => i.source.toLowerCase().contains('tithe')).fold<double>(0, (sum, i) => sum + i.amount);
+              final offerings = items.where((i) => i.source.toLowerCase().contains('offering')).fold<double>(0, (sum, i) => sum + i.amount);
+              final special = total - tithes - offerings;
 
               return Row(
                 children: [
-                  _statCard('Total Revenue', '₦${total.toStringAsFixed(2)}', CmsTheme.success, Icons.trending_up),
+                  _statCard('Total Income', '₦${total.toStringAsFixed(2)}', CmsTheme.success, Icons.trending_up),
                   const SizedBox(width: 16),
-                  _statCard('Cash Inflow', '₦${cash.toStringAsFixed(2)}', CmsTheme.accent, Icons.payments_outlined),
+                  _statCard('Tithes Total', '₦${tithes.toStringAsFixed(2)}', CmsTheme.accent, Icons.volunteer_activism_outlined),
                   const SizedBox(width: 16),
-                  _statCard('Bank Transfer', '₦${transfer.toStringAsFixed(2)}', CmsTheme.info, Icons.account_balance_outlined),
+                  _statCard('Offerings Total', '₦${offerings.toStringAsFixed(2)}', CmsTheme.info, Icons.payments_outlined),
+                  const SizedBox(width: 16),
+                  _statCard('Projects / Other', '₦${special.toStringAsFixed(2)}', CmsTheme.warning, Icons.account_balance_outlined),
                 ],
               );
             },
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              ChoiceChip(
-                label: const Text('All Types', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                selected: _paymentFilter == 'all',
-                onSelected: (_) => setState(() => _paymentFilter = 'all'),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Cash', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                selected: _paymentFilter == 'cash',
-                onSelected: (_) => setState(() => _paymentFilter = 'cash'),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('Bank Transfer', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                selected: _paymentFilter == 'transfer',
-                onSelected: (_) => setState(() => _paymentFilter = 'transfer'),
-              ),
-            ],
+
+          // Category Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text('All Income', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                  selected: _typeFilter == 'all',
+                  onSelected: (_) => setState(() => _typeFilter = 'all'),
+                ),
+                const SizedBox(width: 8),
+                for (final (label, value) in _incomeCategories) ...[
+                  ChoiceChip(
+                    label: Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                    selected: _typeFilter == value,
+                    onSelected: (_) => setState(() => _typeFilter = value),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
           ),
+
           const SizedBox(height: 16),
           Expanded(
             child: CmsCard(
@@ -98,12 +116,25 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: CmsTheme.danger))),
                 data: (items) {
-                  final filtered = items.where((i) => _paymentFilter == 'all' || i.formType == _paymentFilter).toList();
+                  final filtered = items.where((i) {
+                    if (_typeFilter == 'all') return true;
+                    final src = i.source.toLowerCase();
+                    return switch (_typeFilter) {
+                      'tithe' => src.contains('tithe'),
+                      'offering' => src.contains('offering'),
+                      'donation' => src.contains('donation'),
+                      'building_project' => src.contains('building'),
+                      'special_seed' => src.contains('seed') || src.contains('special'),
+                      'welfare' => src.contains('welfare'),
+                      _ => !src.contains('tithe') && !src.contains('offering') && !src.contains('donation') && !src.contains('building'),
+                    };
+                  }).toList();
+
                   if (filtered.isEmpty) {
                     return CmsEmptyState(
                       icon: Icons.monetization_on_outlined,
                       title: 'No income recorded yet',
-                      subtitle: 'Record church collections and general offerings.',
+                      subtitle: 'Record church collections, tithes, offerings, and donations.',
                       action: canRecord
                           ? CmsButton(
                               label: 'Record Income',
@@ -119,7 +150,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
                     child: DataTable2(
                       columnSpacing: 16,
                       horizontalMargin: 20,
-                      minWidth: 700,
+                      minWidth: 750,
                       headingRowColor: WidgetStateProperty.all(CmsTheme.surfaceElevated),
                       dataRowColor: WidgetStateProperty.resolveWith((states) {
                         if (states.contains(WidgetState.hovered)) return CmsTheme.surfaceElevated;
@@ -127,9 +158,10 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
                       }),
                       columns: const [
                         DataColumn2(label: Text('Date', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.S),
-                        DataColumn2(label: Text('Source / Fund', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.L),
+                        DataColumn2(label: Text('Income Type / Source', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.L),
                         DataColumn2(label: Text('Payment Method', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.S),
                         DataColumn2(label: Text('Amount', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M, numeric: true),
+                        DataColumn2(label: Text('Notes', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M),
                         DataColumn2(label: Text('Recorded By', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600)), size: ColumnSize.M),
                       ],
                       rows: filtered.map((item) => _buildRow(item)).toList(),
@@ -145,10 +177,11 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
   }
 
   DataRow2 _buildRow(IncomeModel item) {
+    final formattedDate = DateFormat('dd/MM/yyyy').format(item.date);
     return DataRow2(
       cells: [
-        DataCell(Text('${item.date.day}/${item.date.month}/${item.date.year}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary))),
-        DataCell(Text(item.source, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w500, color: CmsTheme.textPrimary))),
+        DataCell(Text(formattedDate, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary))),
+        DataCell(Text(item.source, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary))),
         DataCell(Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -158,6 +191,7 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
           child: Text(item.formType.toUpperCase(), style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: CmsTheme.accent)),
         )),
         DataCell(Text('₦${item.amount.toStringAsFixed(2)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w700, color: CmsTheme.success))),
+        DataCell(Text(item.comment ?? '—', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis)),
         DataCell(Text(item.recordedBy, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted))),
       ],
     );
@@ -183,12 +217,14 @@ class _IncomeListScreenState extends ConsumerState<IncomeListScreen> {
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value, style: const TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w700, color: CmsTheme.textPrimary)),
-              Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value, style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w700, color: CmsTheme.textPrimary), overflow: TextOverflow.ellipsis),
+                Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.textSecondary)),
+              ],
+            ),
           ),
         ],
       ),
@@ -216,95 +252,170 @@ class _IncomeFormDialog extends StatefulWidget {
 class _IncomeFormDialogState extends State<_IncomeFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _amtCtrl = TextEditingController();
-  final _sourceCtrl = TextEditingController();
+  final _otherSourceCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+
+  String _selectedCategory = 'Tithe';
   String _formType = 'cash';
+  DateTime _selectedDate = DateTime.now();
   bool _saving = false;
+
+  static const _presetCategories = [
+    'Tithe',
+    'Offering',
+    'Donation',
+    'Building Project',
+    'Special Seed',
+    'Welfare',
+    'Other',
+  ];
 
   @override
   void dispose() {
     _amtCtrl.dispose();
-    _sourceCtrl.dispose();
+    _otherSourceCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final formattedDateStr = DateFormat('EEE, dd MMM yyyy').format(_selectedDate);
+
     return AlertDialog(
       backgroundColor: CmsTheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: CmsTheme.border),
       ),
-      title: const Text('Record Church Revenue', style: TextStyle(fontFamily: 'Inter', color: CmsTheme.textPrimary, fontWeight: FontWeight.w600)),
+      title: const Text('Record Income / Giving', style: TextStyle(fontFamily: 'Inter', color: CmsTheme.textPrimary, fontWeight: FontWeight.w600)),
       content: SizedBox(
-        width: 420,
+        width: 460,
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Source / Description', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _sourceCtrl,
-                style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
-                decoration: const InputDecoration(hintText: 'e.g. Sunday Service Offering, Building Fund'),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Amount (₦)', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _amtCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
-                          decoration: const InputDecoration(),
-                          validator: (v) => (v == null || double.tryParse(v) == null) ? 'Valid amount' : null,
-                        ),
-                      ],
-                    ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Income Type Dropdown
+                const Text('Income Type / Category *', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  dropdownColor: CmsTheme.surfaceElevated,
+                  style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                  decoration: const InputDecoration(filled: true, fillColor: CmsTheme.bg),
+                  items: _presetCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  onChanged: (v) => setState(() => _selectedCategory = v!),
+                ),
+                const SizedBox(height: 14),
+
+                // If 'Other' selected, show custom text input
+                if (_selectedCategory == 'Other') ...[
+                  const Text('Specify Other Income Name / Type *', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _otherSourceCtrl,
+                    style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                    decoration: const InputDecoration(hintText: 'e.g. Youth Camp Collection, Thanksgiving', filled: true, fillColor: CmsTheme.bg),
+                    validator: (v) => (_selectedCategory == 'Other' && (v == null || v.trim().isEmpty)) ? 'Please specify income name' : null,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Payment Method', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
-                        const SizedBox(height: 6),
-                        DropdownButtonFormField<String>(
-                          initialValue: _formType,
-                          dropdownColor: CmsTheme.surfaceElevated,
-                          style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
-                          decoration: const InputDecoration(),
-                          items: const [
-                            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                            DropdownMenuItem(value: 'transfer', child: Text('Bank Transfer')),
-                            DropdownMenuItem(value: 'cheque', child: Text('Cheque')),
-                          ],
-                          onChanged: (v) => setState(() => _formType = v!),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 14),
                 ],
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _notesCtrl,
-                maxLines: 2,
-                style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
-                decoration: const InputDecoration(hintText: 'Additional notes (optional)…'),
-              ),
-            ],
+
+                // Date Picker + Amount
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Date *', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                          const SizedBox(height: 6),
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _selectedDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (picked != null) {
+                                setState(() => _selectedDate = picked);
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: CmsTheme.bg,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: CmsTheme.border),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_today, size: 16, color: CmsTheme.accent),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(formattedDateStr, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textPrimary), overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Amount (₦) *', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _amtCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                            decoration: const InputDecoration(filled: true, fillColor: CmsTheme.bg, hintText: '0.00'),
+                            validator: (v) => (v == null || double.tryParse(v) == null || double.parse(v) <= 0) ? 'Enter valid amount' : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Payment Method Dropdown
+                const Text('Payment Method', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  value: _formType,
+                  dropdownColor: CmsTheme.surfaceElevated,
+                  style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                  decoration: const InputDecoration(filled: true, fillColor: CmsTheme.bg),
+                  items: const [
+                    DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                    DropdownMenuItem(value: 'transfer', child: Text('Bank Transfer')),
+                    DropdownMenuItem(value: 'cheque', child: Text('Cheque')),
+                    DropdownMenuItem(value: 'in-kind', child: Text('In-Kind')),
+                  ],
+                  onChanged: (v) => setState(() => _formType = v!),
+                ),
+                const SizedBox(height: 14),
+
+                const Text('Description / Additional Notes', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _notesCtrl,
+                  maxLines: 2,
+                  style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                  decoration: const InputDecoration(hintText: 'e.g. Service collection notes, bank reference', filled: true, fillColor: CmsTheme.bg),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -317,18 +428,28 @@ class _IncomeFormDialogState extends State<_IncomeFormDialog> {
           onPressed: () async {
             if (!_formKey.currentState!.validate()) return;
             setState(() => _saving = true);
+
+            final sourceName = _selectedCategory == 'Other'
+                ? _otherSourceCtrl.text.trim()
+                : _selectedCategory;
+
             try {
               final item = IncomeModel(
                 id: '',
                 amount: double.parse(_amtCtrl.text.trim()),
-                source: _sourceCtrl.text.trim(),
+                source: sourceName,
                 formType: _formType,
                 recordedBy: widget.user.displayName ?? widget.user.email,
-                date: DateTime.now(),
-                comment: _notesCtrl.text.trim(),
+                date: _selectedDate,
+                comment: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
               );
               await widget.ref.read(financeRepositoryProvider).recordIncome(widget.branchId, item);
               if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Income entry saved successfully'), backgroundColor: CmsTheme.success),
+                );
+              }
             } catch (e) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

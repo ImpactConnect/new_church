@@ -14,25 +14,33 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
     }
 
+    function getUserData() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+        : {};
+    }
+
     function getUserBranchId() {
       return request.auth.token != null && 'branchId' in request.auth.token && request.auth.token.branchId != null
         ? request.auth.token.branchId
-        : 'default-branch';
+        : (isAuthenticated() && 'branchId' in getUserData() ? getUserData().branchId : 'default-branch');
     }
 
     function getUserRoleId() {
       return request.auth.token != null && 'roleId' in request.auth.token && request.auth.token.roleId != null
         ? request.auth.token.roleId
-        : 'leadPastor';
+        : (isAuthenticated() && 'roleId' in getUserData() ? getUserData().roleId : 'leadPastor');
     }
 
     // Read the permission list from the caller's role document.
     function permissions(bId, rId) {
-      return get(/databases/$(database)/documents/branches/$(bId)/roles/$(rId)).data.permissions;
+      return exists(/databases/$(database)/documents/branches/$(bId)/roles/$(rId))
+        ? get(/databases/$(database)/documents/branches/$(bId)/roles/$(rId)).data.permissions
+        : [];
     }
 
     function hasPerm(bId, rId, perm) {
-      return perm in permissions(bId, rId);
+      return getUserRoleId() == 'leadPastor' || (perm in permissions(getUserBranchId(), getUserRoleId()));
     }
 
     // Caller must belong to the branch they're accessing or be signed in.
@@ -40,45 +48,37 @@ service cloud.firestore {
       return isAuthenticated();
     }
 
-    // ── Public read collections (app fetches these) ───────────────────────────
-
-    // Sermons: anyone can read, only admins can write
+    // Public read collections (app fetches these)
     match /sermons/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Books/Library: anyone can read, only admins can write
     match /books/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Sermon Categories: anyone can read, only admins can write
     match /sermon_categories/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Gallery Categories: anyone can read, only admins can write
     match /gallery_categories/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Video Categories: anyone can read, only admins can write
     match /video_categories/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // App Settings (like YouTube API keys and active home template)
     match /app_settings/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Homepage templates and their tiles
     match /home_templates/{templateId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -89,21 +89,18 @@ service cloud.firestore {
       }
     }
 
-    // Videos: anyone can read; admins write; authenticated users can increment views/likes
     match /videos/{doc} {
       allow read: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || isAuthenticated(); // allow view/like increments
     }
 
-    // Video comments: anyone can read, authenticated users can create
     match /videos/{videoId}/comments/{commentId} {
       allow read: if true;
-      allow create: if true; // Allow anonymous comments; tighten to isAuthenticated() if login is required
+      allow create: if true; 
       allow delete: if isAdmin();
     }
 
-    // Gallery images: publicly readable
     match /gallery/{doc} {
       allow read: if true;
       allow create, delete: if isAdmin();
@@ -112,31 +109,26 @@ service cloud.firestore {
       );
     }
 
-    // Live streams: anyone can read
     match /live_streams/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Events: anyone can read
     match /events/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Donations: anyone can read
     match /donations/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Devotionals: anyone can read
     match /devotionals/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Carousel / banners: anyone can read
     match /carousel_items/{doc} {
       allow read: if true;
       allow create, delete: if isAdmin();
@@ -151,44 +143,37 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Announcements: anyone can read
     match /announcements/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Push notifications: only admins write; authenticated app reads its own
     match /push_notifications/{doc} {
       allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
-    // Members: any authenticated user can read; unauthenticated can read for search/directory
     match /members/{doc} {
-      allow read: if true; // members directory is public in the app
+      allow read: if true; 
       allow write: if isAdmin();
     }
 
-    // Testimonies: anyone can read approved ones
     match /testimonies/{doc} {
       allow read: if true;
-      allow create: if isAuthenticated(); // members can submit
+      allow create: if isAuthenticated(); 
       allow update, delete: if isAdmin();
     }
 
-    // Daily cache (celebrants): public read
     match /daily_cache/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Admin tasks (password reset requests): admin write only
     match /admin_tasks/{doc} {
       allow read: if isAdmin();
-      allow write: if isAuthenticated(); // prevent permission errors if admin_users sync is delayed
+      allow write: if isAuthenticated(); 
     }
 
-    // Church Groups & Officials
     match /church_groups/{doc} {
       allow read: if true;
       allow write: if isAuthenticated();
@@ -198,25 +183,21 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
-    // Admin users list: only admins can read (security)
     match /admin_users/{doc} {
       allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
-    // Ministers content
     match /ministers_content/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Blog posts: anyone can read
     match /blog_posts/{doc} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // Community posts: authenticated users read; moderation by admins
     match /community_posts/{doc} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
@@ -232,51 +213,43 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    // Top-level community_comments collection
     match /community_comments/{doc} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated(); // For likes
+      allow update: if isAuthenticated(); 
       allow delete: if isAdmin();
     }
 
-    // Community groups (communication groups)
     match /community_groups/{doc} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
 
-    // Group messages (for group chat)
     match /group_messages/{doc} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update, delete: if isAdmin();
     }
 
-    // Bible reading plan progress: per-user private data
     match /bible_reading_progress/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Bible AI Chats: per-user private data
     match /bible_ai_chats/{userId}/sessions/{doc=**} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Prayer and Testimonies
     match /prayer_testimonies/{doc} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
-    // Support Requests
     match /support_requests/{doc} {
-      allow create: if true; // Anyone can submit a support request
+      allow create: if true; 
       allow read, update, delete: if isAdmin();
     }
 
-    // Bible AI config: anyone can read, only admins can write
     match /bible_ai/{doc} {
       allow read: if true;
       allow write: if isAdmin();
@@ -298,7 +271,6 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Private chats and messages
     match /private_chats/{chatId} {
       allow read: if isAuthenticated() && (resource == null || request.auth.uid in resource.data.participants);
       allow create: if isAuthenticated() && (request.auth.uid in request.resource.data.participants);
@@ -309,26 +281,60 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid && (request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants);
     }
 
+    match /users/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Top-Level /remittances and /resourceRequests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /remittances/{remittanceId} {
+      allow read: if isAuthenticated()
+                  && (getUserRoleId() == 'leadPastor'
+                      || resource.data.branchId == getUserBranchId()
+                      || hasPerm(getUserBranchId(), getUserRoleId(), 'viewFinancialReports'));
+      allow create: if isAuthenticated()
+                    && (getUserRoleId() == 'branchPastor' || hasPerm(getUserBranchId(), getUserRoleId(), 'sendIncomeReport'))
+                    && request.resource.data.branchId == getUserBranchId();
+      allow update: if isAuthenticated()
+                    && (getUserRoleId() == 'leadPastor' || hasPerm(getUserBranchId(), getUserRoleId(), 'viewFinancialReports'));
+      allow delete: if false;
+    }
+
+    match /resourceRequests/{requestId} {
+      allow read: if isAuthenticated()
+                  && (getUserRoleId() == 'leadPastor'
+                      || resource.data.branchId == getUserBranchId()
+                      || hasPerm(getUserBranchId(), getUserRoleId(), 'manageRoles'));
+      allow create: if isAuthenticated()
+                    && (getUserRoleId() == 'branchPastor' || request.resource.data.branchId == getUserBranchId())
+                    && request.resource.data.branchId == getUserBranchId();
+      allow update: if isAuthenticated() && (getUserRoleId() == 'leadPastor' || hasPerm(getUserBranchId(), getUserRoleId(), 'manageRoles'));
+      allow delete: if false;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Branches (top-level org config — Lead Pastor only)
     // ─────────────────────────────────────────────────────────────────────────
     match /branches/{branchId} {
-      allow read: if isInBranch(branchId);
-      allow write: if isInBranch(branchId)
-                   && hasPerm(branchId, getUserRoleId(), 'manageRoles');
+
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
 
       // ── Roles ──────────────────────────────────────────────────────────────
       match /roles/{roleId} {
-        allow read: if isInBranch(branchId);
-        allow write: if isInBranch(branchId)
-                     && hasPerm(branchId, getUserRoleId(), 'manageRoles');
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
       }
+
 
       // ── Members ────────────────────────────────────────────────────────────
       match /members/{memberId} {
         allow read: if isInBranch(branchId);
         allow create, update: if isInBranch(branchId)
-                               && hasPerm(branchId, getUserRoleId(), 'manageMembers');
+                               && hasPerm(branchId, getUserRoleId(), 'manageMembers')
+                               && getUserRoleId() != 'leadPastor';
         allow delete: if false; // soft-delete only (status = inactive)
       }
 
@@ -336,7 +342,8 @@ service cloud.firestore {
       match /departments/{deptId} {
         allow read: if isInBranch(branchId);
         allow write: if isInBranch(branchId)
-                     && hasPerm(branchId, getUserRoleId(), 'manageDepartments');
+                     && hasPerm(branchId, getUserRoleId(), 'manageDepartments')
+                     && getUserRoleId() != 'leadPastor';
       }
 
       // ── Events ────────────────────────────────────────────────────────────
@@ -380,10 +387,14 @@ service cloud.firestore {
       // ── Giving ─────────────────────────────────────────────────────────────
       match /giving/{givingId} {
         allow read: if isInBranch(branchId)
-                    && hasPerm(branchId, getUserRoleId(), 'recordIncome');
+                    && (hasPerm(branchId, getUserRoleId(), 'recordIncome')
+                        || hasPerm(branchId, getUserRoleId(), 'viewFinancialReports')
+                        || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
         allow write: if isInBranch(branchId)
-                     && hasPerm(branchId, getUserRoleId(), 'recordIncome');
+                     && (hasPerm(branchId, getUserRoleId(), 'recordIncome')
+                         || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
       }
+
 
       // ── Income ─────────────────────────────────────────────────────────────
       match /income/{incomeId} {
@@ -399,62 +410,52 @@ service cloud.firestore {
       match /budgets/{budgetId} {
         allow read: if isInBranch(branchId);
         allow create: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'createBudgetRequest');
-        // Segregation of duties: approver cannot be the requester
+                      && (hasPerm(branchId, getUserRoleId(), 'createBudgetRequest')
+                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
         allow update: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'approveBudget')
-                      && request.auth.uid != resource.data.requestedBy;
+                      && (hasPerm(branchId, getUserRoleId(), 'approveBudget')
+                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
       }
 
       // ── Expenditure Requests ───────────────────────────────────────────────
       match /expenditureRequests/{requestId} {
         allow read: if isInBranch(branchId);
         allow create: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'createExpenditureRequest');
+                      && (hasPerm(branchId, getUserRoleId(), 'createExpenditureRequest')
+                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
         allow update: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'approveExpenditure')
-                      && request.auth.uid != resource.data.requestedBy;
+                      && (hasPerm(branchId, getUserRoleId(), 'approveExpenditure')
+                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
       }
 
-      // ── Expenditures (official ledger — created by Cloud Function only) ───
+      // ── Expenditures (official ledger) ────────────────────────────────────
       match /expenditures/{expenditureId} {
         allow read: if isInBranch(branchId);
-        // Client writes are blocked; Cloud Function creates the record on approval.
-        allow write: if false;
+        allow create, update: if isInBranch(branchId)
+                               && (hasPerm(branchId, getUserRoleId(), 'approveExpenditure')
+                                   || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
 
         // Disbursements (Finance writes freely once expenditure is approved)
         match /disbursements/{disbursementId} {
           allow read: if isInBranch(branchId);
           allow create: if isInBranch(branchId)
-                        && hasPerm(branchId, getUserRoleId(), 'recordDisbursement')
-                        // Over-disbursement guard (client-side check —
-                        // Cloud Function enforces atomically server-side).
+                        && (hasPerm(branchId, getUserRoleId(), 'recordDisbursement')
+                            || hasPerm(branchId, getUserRoleId(), 'manageRoles'))
                         && request.resource.data.amountDisbursed > 0;
           allow update, delete: if false;
         }
       }
 
-      // ── Assets ────────────────────────────────────────────────────────────
-      match /assets/{assetId} {
-        allow read: if isInBranch(branchId);
-        // Secretary can write physical fields; Finance can write financial fields.
-        // TODO Phase 6: enforce field-level ownership with affectedKeys() checks.
-        allow write: if isInBranch(branchId)
-                     && (hasPerm(branchId, getUserRoleId(), 'manageAssetPhysical')
-                         || hasPerm(branchId, getUserRoleId(), 'manageAssetFinancial'));
+      // ── Finance Notifications ──────────────────────────────────────────────
+      match /financeNotifications/{notifId} {
+        allow read, write: if isInBranch(branchId);
       }
 
       // ── Notifications ─────────────────────────────────────────────────────
       match /notifications/{notifId} {
-        // Users can read their own notifications and mark them read.
-        allow read: if isInBranch(branchId)
-                    && resource.data.recipientUid == request.auth.uid;
-        allow update: if isInBranch(branchId)
-                      && resource.data.recipientUid == request.auth.uid
-                      && request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['read']);
-        allow create, delete: if false; // Cloud Functions only
+        allow read, write: if isInBranch(branchId);
       }
+
 
       // ── Audit Logs (IMMUTABLE — Cloud Functions Admin SDK only) ───────────
       match /auditLogs/{logId} {

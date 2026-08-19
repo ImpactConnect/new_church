@@ -22,6 +22,10 @@ class AppPermission {
   static const String viewFinancialReports = 'viewFinancialReports';
   static const String viewNonFinancialReports = 'viewNonFinancialReports';
   static const String sendNotifications = 'sendNotifications';
+  // Branch Pastor specific
+  static const String isBranchPastor = 'isBranchPastor';
+  static const String sendIncomeReport = 'sendIncomeReport';
+  static const String viewBranchReports = 'viewBranchReports';
 
   static const List<String> all = [
     manageMembers,
@@ -43,6 +47,9 @@ class AppPermission {
     viewFinancialReports,
     viewNonFinancialReports,
     sendNotifications,
+    isBranchPastor,
+    sendIncomeReport,
+    viewBranchReports,
   ];
 }
 
@@ -53,10 +60,30 @@ class AppRole {
   static const String leadPastor = 'leadPastor';
   static const String secretary = 'secretary';
   static const String financeDept = 'financeDept';
+  static const String branchPastor = 'branchPastor';
 
   /// Default permission sets used to seed Firestore on first setup.
   static const Map<String, List<String>> defaultPermissions = {
-    leadPastor: AppPermission.all,
+    leadPastor: [
+      AppPermission.manageRoles,
+      AppPermission.recordAttendance,
+      AppPermission.manageEvents,
+      AppPermission.createAnnouncement,
+      AppPermission.approveAnnouncement,
+      AppPermission.logCorrespondence,
+      AppPermission.recordIncome,
+      AppPermission.createBudgetRequest,
+      AppPermission.approveBudget,
+      AppPermission.createExpenditureRequest,
+      AppPermission.approveExpenditure,
+      AppPermission.recordDisbursement,
+      AppPermission.manageAssetPhysical,
+      AppPermission.manageAssetFinancial,
+      AppPermission.viewFinancialReports,
+      AppPermission.viewNonFinancialReports,
+      AppPermission.sendNotifications,
+    ],
+
     secretary: [
       AppPermission.manageMembers,
       AppPermission.recordAttendance,
@@ -67,6 +94,7 @@ class AppRole {
       AppPermission.manageAssetPhysical,
       AppPermission.viewNonFinancialReports,
     ],
+
     financeDept: [
       AppPermission.recordIncome,
       AppPermission.createBudgetRequest,
@@ -74,6 +102,19 @@ class AppRole {
       AppPermission.recordDisbursement,
       AppPermission.manageAssetFinancial,
       AppPermission.viewFinancialReports,
+    ],
+
+    // Branch Pastor: sole operator of a branch church — combines secretary + finance + reporting
+    branchPastor: [
+      AppPermission.isBranchPastor,       // sentinel flag — used for UI routing
+      AppPermission.manageMembers,         // add/edit branch members (auto-syncs to main list)
+      AppPermission.recordAttendance,      // record attendance per service
+      AppPermission.manageEvents,          // log branch services/events
+      AppPermission.recordIncome,          // log branch income + giving
+      AppPermission.createBudgetRequest,   // submit budget requests to HQ
+      AppPermission.createExpenditureRequest, // submit expenditure requests to HQ
+      AppPermission.sendIncomeReport,      // submit income remittance to HQ finance dept
+      AppPermission.viewBranchReports,     // view approved budgets/expenditures from Lead Pastor
     ],
   };
 }

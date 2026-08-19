@@ -60,7 +60,14 @@ class _SidebarState extends ConsumerState<_Sidebar> {
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final user = widget.user;
+    final isBranchPastor = user.can(AppPermission.isBranchPastor);
 
+    // ── Branch Pastor gets a dedicated, scoped sidebar ───────────────────────
+    if (isBranchPastor) {
+      return _BranchPastorSidebar(user: user, location: location);
+    }
+
+    // ── Head Church CMS sidebar ──────────────────────────────────────────────
     return Container(
       width: 240,
       decoration: const BoxDecoration(
@@ -173,6 +180,16 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                     ),
                   const _SectionLabel('Finance'),
                   if (user.can(AppPermission.recordIncome) ||
+                      user.can(AppPermission.createBudgetRequest) ||
+                      user.can(AppPermission.createExpenditureRequest) ||
+                      user.can(AppPermission.viewFinancialReports))
+                    _NavItem(
+                      icon: Icons.dashboard_customize_outlined,
+                      label: 'Finance Overview',
+                      path: AppRoutes.financeDashboard,
+                      current: location,
+                    ),
+                  if (user.can(AppPermission.recordIncome) ||
                       user.can(AppPermission.viewFinancialReports))
                     _NavItem(
                       icon: Icons.trending_up_outlined,
@@ -188,6 +205,7 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       path: AppRoutes.giving,
                       current: location,
                     ),
+
                   if (user.can(AppPermission.createBudgetRequest) ||
                       user.can(AppPermission.approveBudget) ||
                       user.can(AppPermission.viewFinancialReports))
@@ -214,6 +232,26 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       path: AppRoutes.disbursements,
                       current: location,
                     ),
+                  // Finance notifications — only for Finance Dept role
+                  if (user.can(AppPermission.createBudgetRequest) ||
+                      user.can(AppPermission.createExpenditureRequest))
+                    _NavItem(
+                      icon: Icons.notifications_outlined,
+                      label: 'Finance Alerts',
+                      path: AppRoutes.financeNotifications,
+                      current: location,
+                      badge: true,
+                    ),
+                  // Secretary-only financial documentation view
+                  if (user.can(AppPermission.viewNonFinancialReports) &&
+                      !user.can(AppPermission.viewFinancialReports))
+                    _NavItem(
+                      icon: Icons.folder_open_outlined,
+                      label: 'Financial Docs',
+                      path: AppRoutes.financialDocs,
+                      current: location,
+                    ),
+
                   const _SectionLabel('Admin'),
                   if (user.can(AppPermission.manageAssetPhysical) ||
                       user.can(AppPermission.manageAssetFinancial))
@@ -229,6 +267,13 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       icon: Icons.bar_chart_outlined,
                       label: 'Reports',
                       path: AppRoutes.reports,
+                      current: location,
+                    ),
+                  if (user.can(AppPermission.manageRoles))
+                    _NavItem(
+                      icon: Icons.account_tree_outlined,
+                      label: 'Branch Churches',
+                      path: AppRoutes.branches,
                       current: location,
                     ),
                   if (user.can(AppPermission.manageRoles))
@@ -251,6 +296,7 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                     path: AppRoutes.settings,
                     current: location,
                   ),
+
                 ],
               ),
             ),
@@ -315,8 +361,233 @@ class _SidebarState extends ConsumerState<_Sidebar> {
       'leadPastor' => 'Lead Pastor',
       'secretary' => 'Secretary',
       'financeDept' => 'Finance Dept',
+      'branchPastor' => 'Branch Pastor',
       _ => roleId,
     };
+  }
+}
+
+// ─── Branch Pastor Dedicated Sidebar ─────────────────────────────────────────
+
+class _BranchPastorSidebar extends ConsumerWidget {
+  const _BranchPastorSidebar({required this.user, required this.location});
+  final dynamic user;
+  final String location;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      width: 240,
+      decoration: BoxDecoration(
+        color: CmsTheme.sidebar,
+        border: const Border(right: BorderSide(color: CmsTheme.border, width: 1)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            CmsTheme.sidebar,
+            CmsTheme.sidebar.withValues(alpha: 0.97),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Branch Portal Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: StreamBuilder(
+              stream: ref.read(branchRepositoryProvider).watchBranch(user.branchId as String),
+              builder: (context, snapshot) {
+                final branchName = snapshot.data?.name ?? 'Branch Portal';
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [CmsTheme.accent, CmsTheme.accent.withValues(alpha: 0.7)],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.church_outlined, color: Colors.white, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            branchName,
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: CmsTheme.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: CmsTheme.accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Branch Portal',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w600, color: CmsTheme.accent),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const Divider(color: CmsTheme.border, height: 1),
+          const SizedBox(height: 8),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _NavItem(
+                    icon: Icons.dashboard_outlined,
+                    label: 'Dashboard',
+                    path: AppRoutes.dashboard,
+                    current: location,
+                  ),
+                  // Pending approvals from Lead Pastor
+                  _NavItem(
+                    icon: Icons.pending_actions_outlined,
+                    label: 'Approvals Inbox',
+                    path: AppRoutes.approvalQueue,
+                    current: location,
+                    badge: true,
+                  ),
+
+                  const _SectionLabel('People'),
+                  _NavItem(
+                    icon: Icons.people_outline,
+                    label: 'Members',
+                    path: AppRoutes.members,
+                    current: location,
+                  ),
+                  _NavItem(
+                    icon: Icons.how_to_reg_outlined,
+                    label: 'Attendance',
+                    path: AppRoutes.attendance,
+                    current: location,
+                  ),
+                  _NavItem(
+                    icon: Icons.calendar_month_outlined,
+                    label: 'Services & Events',
+                    path: AppRoutes.events,
+                    current: location,
+                  ),
+
+                  const _SectionLabel('Finance'),
+                  _NavItem(
+                    icon: Icons.dashboard_customize_outlined,
+                    label: 'Finance Overview',
+                    path: AppRoutes.financeDashboard,
+                    current: location,
+                  ),
+                  _NavItem(
+                    icon: Icons.trending_up_outlined,
+                    label: 'Income & Giving',
+                    path: AppRoutes.income,
+                    current: location,
+                  ),
+                  _NavItem(
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Expenditure Requests',
+                    path: AppRoutes.expenditures,
+                    current: location,
+                  ),
+                  _NavItem(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Budget Requests',
+                    path: AppRoutes.budgets,
+                    current: location,
+                  ),
+                  _NavItem(
+                    icon: Icons.paid_outlined,
+                    label: 'Remittances',
+                    path: AppRoutes.remittances,
+                    current: location,
+                  ),
+
+                  const _SectionLabel('Requests'),
+                  _NavItem(
+                    icon: Icons.inventory_2_outlined,
+                    label: 'Resource Requests',
+                    path: AppRoutes.resourceRequests,
+                    current: location,
+                  ),
+
+                  const _SectionLabel('Settings'),
+                  _NavItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    path: AppRoutes.settings,
+                    current: location,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(color: CmsTheme.border, height: 1),
+          // User info footer
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: CmsTheme.accent.withValues(alpha: 0.15),
+                  child: Text(
+                    (user.displayName?.isNotEmpty == true
+                            ? user.displayName![0]
+                            : user.email[0])
+                        .toUpperCase(),
+                    style: const TextStyle(
+                      color: CmsTheme.accent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user.displayName ?? user.email,
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const Text(
+                        'Branch Pastor',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.accent),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -440,7 +711,61 @@ class _TopBar extends ConsumerWidget {
               color: CmsTheme.textPrimary,
             ),
           ),
+          const SizedBox(width: 20),
+          if (user.can(AppPermission.manageRoles))
+            Consumer(
+              builder: (context, ref, _) {
+                final branchesAsync = ref.watch(branchRepositoryProvider).watchBranches();
+                final selectedBranchId = ref.watch(selectedBranchIdProvider);
+
+                return StreamBuilder(
+                  stream: branchesAsync,
+                  builder: (context, snapshot) {
+                    final subBranches = (snapshot.data ?? []).where((b) => b.id != 'default-branch' && !b.name.toLowerCase().contains('main branch')).toList();
+                    if (subBranches.isEmpty) return const SizedBox.shrink();
+                    final validSelected = subBranches.any((b) => b.id == selectedBranchId) ? selectedBranchId : subBranches.first.id;
+
+                    return Container(
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: CmsTheme.surfaceElevated,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: CmsTheme.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: validSelected,
+                          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: CmsTheme.accent),
+                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
+                          dropdownColor: CmsTheme.surface,
+                          items: [
+                            ...subBranches.map((b) => DropdownMenuItem(
+                              value: b.id,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.church_outlined, size: 14, color: CmsTheme.accent),
+                                  const SizedBox(width: 6),
+                                  Text('Branch: ${b.name}', style: const TextStyle(fontSize: 12, color: CmsTheme.textPrimary)),
+                                ],
+                              ),
+                            )),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              ref.read(selectedBranchIdProvider.notifier).state = val;
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+
+                );
+              },
+            ),
           const Spacer(),
+
           // Sync status indicator
           Consumer(
             builder: (context, ref, _) {
@@ -537,17 +862,23 @@ class _TopBar extends ConsumerWidget {
       AppRoutes.events => 'Events',
       AppRoutes.announcements => 'Announcements',
       AppRoutes.correspondence => 'Correspondence',
+      AppRoutes.financeDashboard => 'Finance Overview',
       AppRoutes.income => 'Income',
       AppRoutes.giving => 'Giving Records',
       AppRoutes.budgets => 'Budgets',
       AppRoutes.expenditures => 'Expenditures',
       AppRoutes.disbursements => 'Disbursements',
+      AppRoutes.financeNotifications => 'Finance Notifications',
+      AppRoutes.financialDocs => 'Financial Documentation',
       AppRoutes.assets => 'Assets & Inventory',
       AppRoutes.reports => 'Reports & Analytics',
       AppRoutes.roles => 'Roles & Permissions',
+      AppRoutes.branches => 'Branch Churches & Directory',
       AppRoutes.auditLog => 'Audit Log',
       AppRoutes.settings => 'Branch Settings',
+      _ when location.startsWith('/branches/') => 'Branch Church Details',
       _ => 'Church CMS',
     };
   }
 }
+

@@ -63,7 +63,15 @@ class FirebaseFinanceRepository implements FinanceRepository {
   @override
   Future<void> createBudgetRequest(String branchId, BudgetModel budget) async {
     final id = budget.id.isEmpty ? _uuid.v4() : budget.id;
-    await _col(branchId, 'budgets').doc(id).set(budget.toFirestore());
+    final data = budget.toFirestore();
+    // Preserve original fields for diff computation
+    data['originalAmount'] = budget.requestedAmount;
+    data['originalCategory'] = budget.category;
+    if (budget.requestedDescription != null) {
+      data['originalDescription'] = budget.requestedDescription;
+    }
+    data['createdAt'] = FieldValue.serverTimestamp();
+    await _col(branchId, 'budgets').doc(id).set(data);
   }
 
   @override
@@ -85,22 +93,138 @@ class FirebaseFinanceRepository implements FinanceRepository {
     String approvedByName,
   ) async {
     final doc = await _col(branchId, 'budgets').doc(budgetId).get();
-    final requested = (doc.data()?['requestedAmount'] as num?)?.toDouble() ?? 0;
+    final data = doc.data();
+    if (data == null) return;
 
-    await _col(branchId, 'budgets').doc(budgetId).update({
+    final requested = (data['requestedAmount'] as num?)?.toDouble() ?? 0;
+    final category = data['category'] as String? ?? '';
+    final description = data['requestedDescription'] as String? ?? '';
+    final requestedBy = data['requestedBy'] as String? ?? '';
+
+    // No changes — approve as-is
+    final batch = _db.batch();
+    batch.update(_col(branchId, 'budgets').doc(budgetId), {
       'status': 'approved',
       'approvedAmount': requested,
+      'approvedCategory': category,
+      'approvedDescription': description,
       'approvedBy': approvedBy,
       'approvedAt': FieldValue.serverTimestamp(),
+      'changesSummary': [],
     });
+
+    // Notify Finance
+    final notifId = _uuid.v4();
+    batch.set(
+      _col(branchId, 'financeNotifications').doc(notifId),
+      {
+        'recipientUid': requestedBy,
+        'type': 'budget-approved',
+        'referenceId': budgetId,
+        'message': 'Your budget request for "$category" was approved.',
+        'changesSummary': [],
+        'read': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    );
+    await batch.commit();
+  }
+
+  @override
+  Future<void> approveBudgetWithEdits(
+    String branchId,
+    String budgetId,
+    String approvedBy,
+    String approvedByName, {
+    required double approvedAmount,
+    required String approvedCategory,
+    required String approvedDescription,
+  }) async {
+    final doc = await _col(branchId, 'budgets').doc(budgetId).get();
+    final data = doc.data();
+    if (data == null) return;
+
+    final origAmount = (data['originalAmount'] as num?)?.toDouble() ??
+        (data['requestedAmount'] as num?)?.toDouble() ?? 0;
+    final origCategory = data['originalCategory'] as String? ?? data['category'] as String? ?? '';
+    final origDescription = data['originalDescription'] as String? ?? '';
+    final requestedBy = data['requestedBy'] as String? ?? '';
+
+    // Compute diff
+    final changes = <Map<String, dynamic>>[];
+    if (approvedAmount != origAmount) {
+      changes.add({'field': 'amount', 'from': origAmount, 'to': approvedAmount});
+    }
+    if (approvedCategory != origCategory) {
+      changes.add({'field': 'category', 'from': origCategory, 'to': approvedCategory});
+    }
+    if (approvedDescription != origDescription) {
+      changes.add({'field': 'description', 'from': origDescription, 'to': approvedDescription});
+    }
+
+    final hasChanges = changes.isNotEmpty;
+    final batch = _db.batch();
+
+    batch.update(_col(branchId, 'budgets').doc(budgetId), {
+      'status': 'approved',
+      'approvedAmount': approvedAmount,
+      'approvedCategory': approvedCategory,
+      'approvedDescription': approvedDescription,
+      'approvedBy': approvedBy,
+      'approvedAt': FieldValue.serverTimestamp(),
+      'changesSummary': changes,
+    });
+
+    // Notify Finance
+    final notifId = _uuid.v4();
+    final type = hasChanges ? 'budget-approved-with-changes' : 'budget-approved';
+    final message = hasChanges
+        ? 'Your budget request for "$approvedCategory" was approved with changes.'
+        : 'Your budget request for "$approvedCategory" was approved.';
+
+    batch.set(
+      _col(branchId, 'financeNotifications').doc(notifId),
+      {
+        'recipientUid': requestedBy,
+        'type': type,
+        'referenceId': budgetId,
+        'message': message,
+        'changesSummary': changes,
+        'read': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    );
+    await batch.commit();
   }
 
   @override
   Future<void> rejectBudget(String branchId, String budgetId, String reason) async {
-    await _col(branchId, 'budgets').doc(budgetId).update({
+    final doc = await _col(branchId, 'budgets').doc(budgetId).get();
+    final data = doc.data();
+    final requestedBy = data?['requestedBy'] as String? ?? '';
+    final category = data?['category'] as String? ?? '';
+
+    final batch = _db.batch();
+    batch.update(_col(branchId, 'budgets').doc(budgetId), {
       'status': 'rejected',
       'rejectionReason': reason,
     });
+
+    // Notify Finance of rejection
+    final notifId = _uuid.v4();
+    batch.set(
+      _col(branchId, 'financeNotifications').doc(notifId),
+      {
+        'recipientUid': requestedBy,
+        'type': 'budget-rejected',
+        'referenceId': budgetId,
+        'message': 'Your budget request for "$category" was rejected. Reason: $reason',
+        'changesSummary': [],
+        'read': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      },
+    );
+    await batch.commit();
   }
 
   @override
@@ -127,9 +251,13 @@ class FirebaseFinanceRepository implements FinanceRepository {
     ExpenditureRequestModel request,
   ) async {
     final id = request.id.isEmpty ? _uuid.v4() : request.id;
-    await _col(branchId, 'expenditureRequests').doc(id).set(
-      request.toFirestore(),
-    );
+    final data = request.toFirestore();
+    // Preserve original fields for diff
+    data['originalAmount'] = request.amount;
+    data['originalCategory'] = request.category;
+    data['originalDescription'] = request.description;
+    data['createdAt'] = FieldValue.serverTimestamp();
+    await _col(branchId, 'expenditureRequests').doc(id).set(data);
   }
 
   @override
@@ -162,6 +290,7 @@ class FirebaseFinanceRepository implements FinanceRepository {
     final amount = (data['amount'] as num?)?.toDouble() ?? 0;
     final category = data['category'] as String? ?? '';
     final description = data['description'] as String? ?? '';
+    final requestedBy = data['requestedBy'] as String? ?? '';
 
     final batch = _db.batch();
 
@@ -169,14 +298,16 @@ class FirebaseFinanceRepository implements FinanceRepository {
     batch.update(_col(branchId, 'expenditureRequests').doc(requestId), {
       'status': 'approved',
       'approvedAmount': amount,
+      'approvedCategory': category,
+      'approvedDescription': description,
       'approvedBy': approvedBy,
       'approvedAt': FieldValue.serverTimestamp(),
+      'changesSummary': [],
     });
 
     // 2. Create official expenditure ledger record
     final expId = _uuid.v4();
-    final expRef = _col(branchId, 'expenditures').doc(expId);
-    batch.set(expRef, {
+    batch.set(_col(branchId, 'expenditures').doc(expId), {
       'approvedAmount': amount,
       'category': category,
       'description': description,
@@ -185,6 +316,97 @@ class FirebaseFinanceRepository implements FinanceRepository {
       'date': FieldValue.serverTimestamp(),
       'totalDisbursed': 0.0,
       'status': 'not-disbursed',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. Notify Finance
+    batch.set(_col(branchId, 'financeNotifications').doc(_uuid.v4()), {
+      'recipientUid': requestedBy,
+      'type': 'expenditure-approved',
+      'referenceId': requestId,
+      'message': 'Your expenditure request for "$description" was approved.',
+      'changesSummary': [],
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  @override
+  Future<void> approveExpenditureWithEdits(
+    String branchId,
+    String requestId,
+    String approvedBy,
+    String approvedByName, {
+    required double approvedAmount,
+    required String approvedCategory,
+    required String approvedDescription,
+  }) async {
+    final reqDoc = await _col(branchId, 'expenditureRequests').doc(requestId).get();
+    final data = reqDoc.data();
+    if (data == null) return;
+
+    final origAmount = (data['originalAmount'] as num?)?.toDouble() ??
+        (data['amount'] as num?)?.toDouble() ?? 0;
+    final origCategory = data['originalCategory'] as String? ?? data['category'] as String? ?? '';
+    final origDescription = data['originalDescription'] as String? ?? data['description'] as String? ?? '';
+    final requestedBy = data['requestedBy'] as String? ?? '';
+
+    // Compute diff
+    final changes = <Map<String, dynamic>>[];
+    if (approvedAmount != origAmount) {
+      changes.add({'field': 'amount', 'from': origAmount, 'to': approvedAmount});
+    }
+    if (approvedCategory != origCategory) {
+      changes.add({'field': 'category', 'from': origCategory, 'to': approvedCategory});
+    }
+    if (approvedDescription != origDescription) {
+      changes.add({'field': 'description', 'from': origDescription, 'to': approvedDescription});
+    }
+
+    final hasChanges = changes.isNotEmpty;
+    final batch = _db.batch();
+
+    // 1. Update request
+    batch.update(_col(branchId, 'expenditureRequests').doc(requestId), {
+      'status': 'approved',
+      'approvedAmount': approvedAmount,
+      'approvedCategory': approvedCategory,
+      'approvedDescription': approvedDescription,
+      'approvedBy': approvedBy,
+      'approvedAt': FieldValue.serverTimestamp(),
+      'changesSummary': changes,
+    });
+
+    // 2. Create expenditure ledger record with final approved values
+    final expId = _uuid.v4();
+    batch.set(_col(branchId, 'expenditures').doc(expId), {
+      'approvedAmount': approvedAmount,
+      'category': approvedCategory,
+      'description': approvedDescription,
+      'approvedBy': approvedBy,
+      'sourceRequestId': requestId,
+      'date': FieldValue.serverTimestamp(),
+      'totalDisbursed': 0.0,
+      'status': 'not-disbursed',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. Notify Finance
+    final type = hasChanges ? 'expenditure-approved-with-changes' : 'expenditure-approved';
+    final message = hasChanges
+        ? 'Your expenditure request for "$approvedDescription" was approved with changes.'
+        : 'Your expenditure request for "$approvedDescription" was approved.';
+
+    batch.set(_col(branchId, 'financeNotifications').doc(_uuid.v4()), {
+      'recipientUid': requestedBy,
+      'type': type,
+      'referenceId': requestId,
+      'message': message,
+      'changesSummary': changes,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
     });
 
     await batch.commit();
@@ -192,10 +414,28 @@ class FirebaseFinanceRepository implements FinanceRepository {
 
   @override
   Future<void> rejectExpenditure(String branchId, String requestId, String reason) async {
-    await _col(branchId, 'expenditureRequests').doc(requestId).update({
+    final doc = await _col(branchId, 'expenditureRequests').doc(requestId).get();
+    final data = doc.data();
+    final requestedBy = data?['requestedBy'] as String? ?? '';
+    final description = data?['description'] as String? ?? '';
+
+    final batch = _db.batch();
+    batch.update(_col(branchId, 'expenditureRequests').doc(requestId), {
       'status': 'rejected',
       'rejectionReason': reason,
     });
+
+    batch.set(_col(branchId, 'financeNotifications').doc(_uuid.v4()), {
+      'recipientUid': requestedBy,
+      'type': 'expenditure-rejected',
+      'referenceId': requestId,
+      'message': 'Your expenditure request for "$description" was rejected. Reason: $reason',
+      'changesSummary': [],
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
   }
 
   // ── Expenditures (approved ledger) ─────────────────────────────────────────
@@ -212,11 +452,29 @@ class FirebaseFinanceRepository implements FinanceRepository {
     String branchId,
     String expenditureId,
   ) async {
-    final doc =
-        await _col(branchId, 'expenditures').doc(expenditureId).get();
+    final doc = await _col(branchId, 'expenditures').doc(expenditureId).get();
     if (!doc.exists) return null;
     return ExpenditureModel.fromFirestore(doc.data()!, doc.id);
   }
+
+  @override
+  Stream<List<BudgetModel>> watchApprovedBudgets(String branchId) =>
+      _col(branchId, 'budgets')
+          .where('status', isEqualTo: 'approved')
+          .snapshots()
+          .map(
+            (s) => s.docs
+                .map((d) => BudgetModel.fromFirestore(d.data(), d.id))
+                .toList(),
+          );
+
+  @override
+  Stream<List<ExpenditureModel>> watchApprovedExpenditures(String branchId) =>
+      _col(branchId, 'expenditures').snapshots().map(
+        (s) => s.docs
+            .map((d) => ExpenditureModel.fromFirestore(d.data(), d.id))
+            .toList(),
+      );
 
   // ── Disbursements ─────────────────────────────────────────────────────────────
   @override
@@ -230,7 +488,7 @@ class FirebaseFinanceRepository implements FinanceRepository {
 
     final exp = ExpenditureModel.fromFirestore(expDoc.data()!, expenditureId);
 
-    // Over-disbursement guard!
+    // Over-disbursement guard (client-side; server-side Cloud Function is the final authority)
     if (disbursement.amountDisbursed > exp.remainingBalance) {
       throw Exception(
         'Disbursement amount (₦${disbursement.amountDisbursed}) exceeds remaining balance (₦${exp.remainingBalance})',
@@ -276,4 +534,30 @@ class FirebaseFinanceRepository implements FinanceRepository {
                 .map((d) => DisbursementModel.fromFirestore(d.data(), d.id))
                 .toList(),
           );
+
+  // ── Finance Notifications ────────────────────────────────────────────────────
+  @override
+  Stream<List<FinanceNotificationModel>> watchNotifications(
+    String branchId,
+    String uid,
+  ) =>
+      _col(branchId, 'financeNotifications')
+          .where('recipientUid', isEqualTo: uid)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map(
+            (s) => s.docs
+                .map((d) => FinanceNotificationModel.fromFirestore(d.data(), d.id))
+                .toList(),
+          );
+
+  @override
+  Future<void> markNotificationRead(
+    String branchId,
+    String notificationId,
+  ) async {
+    await _col(branchId, 'financeNotifications').doc(notificationId).update({
+      'read': true,
+    });
+  }
 }

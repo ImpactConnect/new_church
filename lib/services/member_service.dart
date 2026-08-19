@@ -21,13 +21,24 @@ class MemberService {
   Future<List<Member>> searchMembers(String query) async {
     if (query.trim().isEmpty) return [];
     
+    // Fetch all members and filter client-side for flexible search
+    // (Firestore doesn't support multi-field text search natively)
     final snapshot = await _firestore
+        .collection('branches')
+        .doc('default-branch')
         .collection('members')
-        .where('name', isGreaterThanOrEqualTo: query)
-        .where('name', isLessThan: query + 'z')
-        .limit(20)
         .get();
 
-    return snapshot.docs.map((doc) => Member.fromFirestore(doc)).toList();
+    final q = query.trim().toLowerCase();
+    return snapshot.docs
+        .map((doc) => Member.fromFirestore(doc))
+        .where((m) =>
+            m.name.toLowerCase().contains(q) ||
+            (m.occupation?.toLowerCase().contains(q) ?? false) ||
+            (m.profession?.toLowerCase().contains(q) ?? false) ||
+            (m.email?.toLowerCase().contains(q) ?? false) ||
+            (m.phoneNumber?.contains(q) ?? false))
+        .take(20)
+        .toList();
   }
 }

@@ -10,6 +10,11 @@ import 'package:cms/src/features/departments/screens/department_list_screen.dart
 import 'package:cms/src/features/roles/screens/role_list_screen.dart';
 import 'package:cms/src/features/audit/screens/audit_log_screen.dart';
 import 'package:cms/src/features/branches/screens/branch_settings_screen.dart';
+import 'package:cms/src/features/branches/screens/branch_list_screen.dart';
+import 'package:cms/src/features/branches/screens/branch_detail_screen.dart';
+import 'package:cms/src/features/branches/screens/remittance_screen.dart';
+import 'package:cms/src/features/branches/screens/resource_request_screen.dart';
+import 'package:cms/src/features/branches/screens/branch_pastor_dashboard_screen.dart';
 import 'package:cms/src/features/events/screens/event_list_screen.dart';
 import 'package:cms/src/features/events/screens/attendance_report_screen.dart';
 import 'package:cms/src/features/announcements/screens/announcement_list_screen.dart';
@@ -20,9 +25,13 @@ import 'package:cms/src/features/finance/screens/giving_list_screen.dart';
 import 'package:cms/src/features/finance/screens/budget_list_screen.dart';
 import 'package:cms/src/features/finance/screens/expenditure_list_screen.dart';
 import 'package:cms/src/features/finance/screens/disbursement_list_screen.dart';
+import 'package:cms/src/features/finance/screens/finance_dashboard_screen.dart';
+import 'package:cms/src/features/finance/screens/finance_notifications_screen.dart';
+import 'package:cms/src/features/finance/screens/secretary_financial_docs_screen.dart';
 import 'package:cms/src/features/assets/screens/asset_list_screen.dart';
 import 'package:cms/src/features/reports/screens/reports_screen.dart';
 import 'package:cms/src/features/shell/screens/app_shell.dart';
+
 
 // Route paths
 class AppRoutes {
@@ -34,18 +43,27 @@ class AppRoutes {
   static const events = '/events';
   static const announcements = '/announcements';
   static const correspondence = '/correspondence';
+  static const financeDashboard = '/finance-dashboard';
   static const income = '/income';
   static const giving = '/giving';
   static const budgets = '/budgets';
   static const expenditures = '/expenditures';
   static const disbursements = '/disbursements';
+  static const financeNotifications = '/finance-notifications';
+  static const financialDocs = '/financial-docs';
   static const assets = '/assets';
   static const reports = '/reports';
   static const approvalQueue = '/approval-queue';
   static const auditLog = '/audit-log';
   static const roles = '/roles';
+  static const branches = '/branches';
+  static const branchDetail = '/branches/:branchId';
   static const settings = '/settings';
+  // Branch pastor specific routes
+  static const remittances = '/remittances';
+  static const resourceRequests = '/resource-requests';
 }
+
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(cmsUserProvider);
@@ -58,9 +76,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = user != null;
       final isLoginRoute = state.matchedLocation == AppRoutes.login;
 
-      if (isLoading) return null; // Let the splash handle this
+      if (isLoading) return null;
       if (!isLoggedIn && !isLoginRoute) return AppRoutes.login;
       if (isLoggedIn && isLoginRoute) return AppRoutes.dashboard;
+
+      // Branch pastor should not access admin-only routes
+      if (user != null && user.can(AppPermission.isBranchPastor)) {
+        final adminRoutes = [AppRoutes.branches, AppRoutes.roles, AppRoutes.auditLog, AppRoutes.departments, AppRoutes.announcements, AppRoutes.correspondence, AppRoutes.disbursements, AppRoutes.assets, AppRoutes.reports];
+        if (adminRoutes.contains(state.matchedLocation)) {
+          return AppRoutes.dashboard;
+        }
+      }
       return null;
     },
     routes: [
@@ -73,7 +99,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: AppRoutes.dashboard,
-            builder: (context, state) => const DashboardScreen(),
+            builder: (context, state) {
+              // Branch Pastor gets their own scoped dashboard
+              final user = ref.read(cmsUserProvider).valueOrNull;
+              if (user != null && user.can(AppPermission.isBranchPastor)) {
+                return const BranchPastorDashboardScreen();
+              }
+              return const DashboardScreen();
+            },
           ),
           GoRoute(
             path: AppRoutes.approvalQueue,
@@ -126,6 +159,29 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: AppRoutes.financeDashboard,
+            builder: (context, state) => const _PermissionGate(
+              anyOf: [AppPermission.createBudgetRequest, AppPermission.createExpenditureRequest,
+                      AppPermission.recordIncome, AppPermission.viewFinancialReports],
+              child: FinanceDashboardScreen(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.financeNotifications,
+            builder: (context, state) => const _PermissionGate(
+              anyOf: [AppPermission.createBudgetRequest, AppPermission.createExpenditureRequest,
+                      AppPermission.recordIncome],
+              child: FinanceNotificationsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.financialDocs,
+            builder: (context, state) => const _PermissionGate(
+              required: AppPermission.viewNonFinancialReports,
+              child: SecretaryFinancialDocsScreen(),
+            ),
+          ),
+          GoRoute(
             path: AppRoutes.budgets,
             builder: (context, state) => const _PermissionGate(
               anyOf: [AppPermission.createBudgetRequest, AppPermission.approveBudget, AppPermission.viewFinancialReports],
@@ -169,6 +225,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: AppRoutes.roles,
+            builder: (context, state) => const _PermissionGate(
+              required: AppPermission.manageRoles,
+              child: RoleListScreen(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.branches,
+            builder: (context, state) => const _PermissionGate(
+              required: AppPermission.manageRoles,
+              child: BranchListScreen(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.branchDetail,
+            builder: (context, state) {
+              final branchId = state.pathParameters['branchId'] ?? '';
+              return _PermissionGate(
+                required: AppPermission.manageRoles,
+                child: BranchDetailScreen(branchId: branchId),
+              );
+            },
+          ),
+          GoRoute(
             path: AppRoutes.settings,
             builder: (context, state) => const BranchSettingsScreen(),
           ),
@@ -177,6 +257,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const _PermissionGate(
               anyOf: [AppPermission.recordAttendance, AppPermission.viewNonFinancialReports, AppPermission.manageEvents],
               child: AttendanceReportScreen(),
+            ),
+          ),
+          // Branch pastor specific routes
+          GoRoute(
+            path: AppRoutes.remittances,
+            builder: (context, state) => const _PermissionGate(
+              required: AppPermission.sendIncomeReport,
+              child: RemittanceScreen(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.resourceRequests,
+            builder: (context, state) => const _PermissionGate(
+              required: AppPermission.isBranchPastor,
+              child: ResourceRequestScreen(),
             ),
           ),
         ],

@@ -60,7 +60,7 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
     const currentMonth = today.getMonth() + 1; // JS months are 0-11
     const currentDay = today.getDate();
 
-    const membersSnapshot = await admin.firestore().collection('members').get();
+    const membersSnapshot = await admin.firestore().collection('branches').doc('default-branch').collection('members').get();
     
     let birthdayUsers = [];
     let anniversaryUsers = [];
@@ -68,25 +68,33 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
 
     membersSnapshot.forEach(doc => {
       const data = doc.data();
+      const name = (data.name || `${data.firstName || ''} ${data.lastName || ''}`).trim() || 'Member';
       
-      // Check Birthdays
-      if (data.birthDate) {
-        const bDateStr = data.birthDate.toDate().toLocaleString("en-US", {timeZone: "Africa/Lagos"});
-        const bDate = new Date(bDateStr);
-        if (bDate.getMonth() + 1 === currentMonth && bDate.getDate() === currentDay) {
-          birthdayUsers.push(data.name);
-          celebrantsCache.push({ id: doc.id, ...data, isBirthday: true });
-        }
+      // Check Birthdays (dob or birthDate)
+      const rawDob = data.dob || data.birthDate;
+      if (rawDob) {
+        try {
+          const bDateObj = rawDob.toDate ? rawDob.toDate() : new Date(rawDob);
+          const bDateStr = bDateObj.toLocaleString("en-US", {timeZone: "Africa/Lagos"});
+          const bDate = new Date(bDateStr);
+          if (bDate.getMonth() + 1 === currentMonth && bDate.getDate() === currentDay) {
+            birthdayUsers.push(name);
+            celebrantsCache.push({ id: doc.id, name, ...data, isBirthday: true });
+          }
+        } catch (_) {}
       }
 
       // Check Anniversaries
       if (data.weddingDate) {
-        const wDateStr = data.weddingDate.toDate().toLocaleString("en-US", {timeZone: "Africa/Lagos"});
-        const wDate = new Date(wDateStr);
-        if (wDate.getMonth() + 1 === currentMonth && wDate.getDate() === currentDay) {
-          anniversaryUsers.push(data.name);
-          celebrantsCache.push({ id: doc.id, ...data, isBirthday: false });
-        }
+        try {
+          const wDateObj = data.weddingDate.toDate ? data.weddingDate.toDate() : new Date(data.weddingDate);
+          const wDateStr = wDateObj.toLocaleString("en-US", {timeZone: "Africa/Lagos"});
+          const wDate = new Date(wDateStr);
+          if (wDate.getMonth() + 1 === currentMonth && wDate.getDate() === currentDay) {
+            anniversaryUsers.push(name);
+            celebrantsCache.push({ id: doc.id, name, ...data, isBirthday: false });
+          }
+        } catch (_) {}
       }
     });
 
@@ -687,3 +695,155 @@ exports.seedDemoAccountsAndData = functions.https.onRequest(async (req, res) => 
   }
 });
 
+
+// ── CMS → Mobile App Member Sync ─────────────────────────────────────────────
+// Firestore trigger: whenever a member doc is created/updated/deleted in the
+// CMS branch collection, mirror the data into the flat root-level 'members'
+// collection that the Mobile App and Admin Panel consume.
+
+/**
+ * Maps CMS member fields to the flat mobile-app-friendly schema.
+ * Preserves any existing mobile-specific fields (username, role, etc.)
+ * that may already be on the flat doc.
+ */
+async function mapCmsMemberToFlat(cmsMemberId, cmsData, branchId) {
+  const db = admin.firestore();
+
+  // Resolve department IDs to department names for churchGroups
+  let churchGroups = [];
+  const deptIds = cmsData.departmentIds || [];
+  if (deptIds.length > 0) {
+    try {
+      const deptSnaps = await Promise.all(
+        deptIds.map(id =>
+          db.collection('branches').doc(branchId).collection('departments').doc(id).get()
+        )
+      );
+      churchGroups = deptSnaps
+        .filter(d => d.exists)
+        .map(d => d.data().name || d.id);
+    } catch (e) {
+      console.warn('Could not resolve department names:', e.message);
+      churchGroups = deptIds;
+    }
+  }
+
+  // Build the flat member doc
+  const fullName = `${(cmsData.firstName || '').trim()} ${(cmsData.lastName || '').trim()}`.trim();
+
+  const flatDoc = {
+    name: fullName,
+    email: cmsData.email || null,
+    phoneNumber: cmsData.phone || null,
+    gender: cmsData.gender || null,
+    maritalStatus: cmsData.maritalStatus || null,
+    occupation: cmsData.profession || null,
+    address: cmsData.residentAddress || null,
+    memberStatus: cmsData.memberStatus || 'active',
+    churchGroups: churchGroups,
+    _cmsSync: true,
+    _cmsBranchId: branchId,
+    _cmsMemberId: cmsMemberId,
+    _lastSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // Handle date fields: CMS stores ISO strings or Firestore Timestamps
+  if (cmsData.dob) {
+    try {
+      const dobDate = cmsData.dob.toDate ? cmsData.dob.toDate() : new Date(cmsData.dob);
+      if (!isNaN(dobDate.getTime())) {
+        flatDoc.birthDate = admin.firestore.Timestamp.fromDate(dobDate);
+      }
+    } catch (e) { /* skip if invalid */ }
+  }
+
+  if (cmsData.weddingDate) {
+    try {
+      const wDate = cmsData.weddingDate.toDate ? cmsData.weddingDate.toDate() : new Date(cmsData.weddingDate);
+      if (!isNaN(wDate.getTime())) {
+        flatDoc.weddingDate = admin.firestore.Timestamp.fromDate(wDate);
+      }
+    } catch (e) { /* skip if invalid */ }
+  }
+
+  // Photo URL mapping
+  if (cmsData.profileImageUrl) {
+    flatDoc.photoUrl = cmsData.profileImageUrl;
+    flatDoc.imageUrl = cmsData.profileImageUrl;
+  }
+
+  // Preserve CMS-specific fields for reference
+  if (cmsData.firstName) flatDoc._cmsFirstName = cmsData.firstName;
+  if (cmsData.lastName) flatDoc._cmsLastName = cmsData.lastName;
+  if (cmsData.relations) flatDoc._cmsRelations = cmsData.relations;
+  if (cmsData.joinDate) flatDoc._cmsJoinDate = cmsData.joinDate;
+
+  return flatDoc;
+}
+
+// Trigger: sync on create/update/delete of CMS branch members
+exports.syncCmsMemberOnWrite = functions.firestore
+  .document('branches/{branchId}/members/{memberId}')
+  .onWrite(async (change, context) => {
+    const { branchId, memberId } = context.params;
+    const db = admin.firestore();
+    const flatRef = db.collection('members').doc(memberId);
+
+    // DELETE: member was removed from CMS
+    if (!change.after.exists) {
+      console.log(`CMS member ${memberId} deleted from branch ${branchId}, removing from flat collection.`);
+      try {
+        await flatRef.delete();
+      } catch (e) {
+        console.warn('Could not delete flat member doc:', e.message);
+      }
+      return null;
+    }
+
+    // CREATE or UPDATE: sync CMS data to flat doc
+    const cmsData = change.after.data();
+    const flatData = await mapCmsMemberToFlat(memberId, cmsData, branchId);
+
+    // Use set with merge to preserve mobile-specific fields like username, role
+    await flatRef.set(flatData, { merge: true });
+    console.log(`Synced CMS member ${memberId} (${flatData.name}) to flat members collection.`);
+    return null;
+  });
+
+// One-time callable: bulk sync all CMS members to flat collection
+exports.migrateAllCmsMembers = functions.https.onRequest(async (req, res) => {
+  const branchId = req.query.branchId || 'default-branch';
+  const db = admin.firestore();
+
+  try {
+    // 1. Delete all existing flat members (override with CMS data)
+    const existingFlat = await db.collection('members').get();
+    const batch = db.batch();
+    existingFlat.forEach(doc => {
+      batch.delete(db.collection('members').doc(doc.id));
+    });
+    await batch.commit();
+    console.log(`Deleted ${existingFlat.size} old flat member docs.`);
+
+    // 2. Sync all CMS members
+    const cmsSnap = await db.collection('branches').doc(branchId).collection('members').get();
+    let synced = 0;
+
+    for (const doc of cmsSnap.docs) {
+      const flatData = await mapCmsMemberToFlat(doc.id, doc.data(), branchId);
+      await db.collection('members').doc(doc.id).set(flatData);
+      synced++;
+    }
+
+    console.log(`Migration complete: synced ${synced} CMS members from branch ${branchId}.`);
+    res.status(200).json({
+      success: true,
+      message: `Migrated ${synced} members from CMS branch '${branchId}' to flat members collection. Deleted ${existingFlat.size} old records.`,
+      synced,
+      deleted: existingFlat.size,
+    });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});

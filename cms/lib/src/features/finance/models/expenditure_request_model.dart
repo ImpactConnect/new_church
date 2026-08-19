@@ -6,4 +6,6 @@ export 'budget_model.dart'
         ExpenditureModel,
         DisbursementModel,
         IncomeModel,
-        GivingModel;
+        GivingModel,
+        FinanceNotificationModel;
+

@@ -48,6 +48,22 @@
         { "fieldPath": "isActive", "order": "ASCENDING" },
         { "fieldPath": "publishedDate", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "resourceRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "branchId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "remittances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "branchId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

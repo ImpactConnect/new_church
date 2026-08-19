@@ -14,8 +14,10 @@ class CommunityAuthService {
 
   Future<CommunityUser?> signIn(String username, String password) async {
     try {
-      // 1. Find user by username in 'members' collection
+      // 1. Find user by username in CMS 'members' collection
       final querySnapshot = await _firestore
+          .collection('branches')
+          .doc('default-branch')
           .collection('members')
           .where('username', isEqualTo: username)
           .limit(1)
@@ -38,11 +40,18 @@ class CommunityAuthService {
       // 2. Authenticate with FirebaseAuth
       await _auth.signInWithEmailAndPassword(email: email, password: password);
 
+      String displayName = (userData['name'] as String?)?.trim() ?? '';
+      if (displayName.isEmpty) {
+        final fn = (userData['firstName'] as String?)?.trim() ?? '';
+        final ln = (userData['lastName'] as String?)?.trim() ?? '';
+        displayName = '$fn $ln'.trim();
+      }
+
       // 3. Create CommunityUser object
       final CommunityUser user = CommunityUser(
         id: userDoc.id,
         username: userData['username'] ?? '',
-        displayName: userData['name'] ?? '',
+        displayName: displayName,
         memberId: userDoc.id,
         role: 'member', // Default role for standard members
         accountStatus: 'active',
@@ -151,6 +160,8 @@ class CommunityAuthService {
   Future<void> sendPasswordResetEmail(String username) async {
     try {
       final querySnapshot = await _firestore
+          .collection('branches')
+          .doc('default-branch')
           .collection('members')
           .where('username', isEqualTo: username)
           .limit(1)

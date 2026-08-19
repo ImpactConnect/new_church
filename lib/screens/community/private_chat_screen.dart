@@ -333,7 +333,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                             ),
                             const Divider(),
                             StreamBuilder<QuerySnapshot>(
-                              stream: _firestore.collection('members').snapshots(),
+                              stream: _firestore.collection('branches').doc('default-branch').collection('members').snapshots(),
                               builder: (context, memberSnap) {
                                 if (!memberSnap.hasData) {
                                   return const Center(child: CircularProgressIndicator());
@@ -475,7 +475,7 @@ class _PrivateChatScreenState extends State<PrivateChatScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         StreamBuilder<QuerySnapshot>(
-                          stream: _firestore.collection('members').snapshots(),
+                          stream: _firestore.collection('branches').doc('default-branch').collection('members').snapshots(),
                           builder: (context, memberSnap) {
                             String subtitle = 'Tap for group info';
                             if (memberSnap.hasData) {

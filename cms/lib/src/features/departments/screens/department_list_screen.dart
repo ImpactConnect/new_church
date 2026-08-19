@@ -29,7 +29,8 @@ class DepartmentListScreen extends ConsumerWidget {
     final user = ref.watch(cmsUserProvider).valueOrNull;
     final deptsAsync = ref.watch(_departmentsProvider(branchId));
     final allMembersAsync = ref.watch(_allMembersForDeptProvider(branchId));
-    final canManage = user?.can(AppPermission.manageDepartments) ?? false;
+    final canManage = (user?.can(AppPermission.manageDepartments) ?? false) &&
+        user?.roleId != AppRole.leadPastor;
 
     return Padding(
       padding: const EdgeInsets.all(28),

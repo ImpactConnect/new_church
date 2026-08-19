@@ -43,7 +43,8 @@ class _MemberListScreenState extends ConsumerState<MemberListScreen> {
     final user = ref.watch(cmsUserProvider).valueOrNull;
     final membersAsync = ref.watch(_membersProvider(branchId));
 
-    final canCreate = user?.can(AppPermission.manageMembers) ?? false;
+    final canCreate = (user?.can(AppPermission.manageMembers) ?? false) &&
+        user?.roleId != AppRole.leadPastor;
 
     return Padding(
       padding: const EdgeInsets.all(28),

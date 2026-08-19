@@ -40,7 +40,8 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
   Widget build(BuildContext context) {
     final branchId = ref.watch(currentBranchIdProvider);
     final user = ref.watch(cmsUserProvider).valueOrNull;
-    final canManage = user?.can(AppPermission.manageMembers) ?? false;
+    final canManage = (user?.can(AppPermission.manageMembers) ?? false) &&
+        user?.roleId != AppRole.leadPastor;
     final deptsAsync = ref.watch(_departmentsForDetailProvider(branchId));
 
     return Scaffold(
