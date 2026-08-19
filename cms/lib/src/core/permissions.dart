@@ -26,6 +26,11 @@ class AppPermission {
   static const String isBranchPastor = 'isBranchPastor';
   static const String sendIncomeReport = 'sendIncomeReport';
   static const String viewBranchReports = 'viewBranchReports';
+  // Sub-Group & Cell Operations
+  static const String manageSubGroups = 'manageSubGroups';
+  static const String recordSubGroupAttendance = 'recordSubGroupAttendance';
+  static const String recordSubGroupIncome = 'recordSubGroupIncome';
+  static const String viewSubGroupReports = 'viewSubGroupReports';
 
   static const List<String> all = [
     manageMembers,
@@ -33,6 +38,10 @@ class AppPermission {
     recordAttendance,
     manageEvents,
     manageDepartments,
+    manageSubGroups,
+    recordSubGroupAttendance,
+    recordSubGroupIncome,
+    viewSubGroupReports,
     createAnnouncement,
     approveAnnouncement,
     logCorrespondence,
@@ -66,6 +75,10 @@ class AppRole {
   static const Map<String, List<String>> defaultPermissions = {
     leadPastor: [
       AppPermission.manageRoles,
+      AppPermission.manageSubGroups,
+      AppPermission.recordSubGroupAttendance,
+      AppPermission.recordSubGroupIncome,
+      AppPermission.viewSubGroupReports,
       AppPermission.recordAttendance,
       AppPermission.manageEvents,
       AppPermission.createAnnouncement,
@@ -86,6 +99,9 @@ class AppRole {
 
     secretary: [
       AppPermission.manageMembers,
+      AppPermission.manageSubGroups,
+      AppPermission.viewSubGroupReports,
+      AppPermission.recordSubGroupAttendance,
       AppPermission.recordAttendance,
       AppPermission.manageEvents,
       AppPermission.manageDepartments,

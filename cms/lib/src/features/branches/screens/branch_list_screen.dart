@@ -88,10 +88,13 @@ class _BranchListScreenState extends ConsumerState<BranchListScreen> {
                       ),
                       const Spacer(),
                       branchesAsync.when(
-                        data: (branches) => Text(
-                          '${branches.length} Registered Branches',
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.textMuted),
-                        ),
+                        data: (branches) {
+                          final count = branches.where((b) => b.id != 'default-branch' && !b.name.toLowerCase().contains('main branch')).length;
+                          return Text(
+                            '$count Registered Branches',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.textMuted),
+                          );
+                        },
                         loading: () => const SizedBox.shrink(),
                         error: (_, __) => const SizedBox.shrink(),
                       ),

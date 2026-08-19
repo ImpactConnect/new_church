@@ -49,6 +49,10 @@ service cloud.firestore {
     }
 
     // Public read collections (app fetches these)
+    match /{path=**}/members/{memberId} {
+      allow read: if isAuthenticated();
+    }
+
     match /sermons/{doc} {
       allow read: if true;
       allow write: if isAdmin();
@@ -346,6 +350,17 @@ service cloud.firestore {
                      && getUserRoleId() != 'leadPastor';
       }
 
+      // ── Sub-Groups & Cells ───────────────────────────────────────────
+      match /sub_groups/{groupId} {
+        allow read: if isInBranch(branchId);
+        allow write: if isInBranch(branchId);
+
+        match /meetings/{meetingId} {
+          allow read: if isInBranch(branchId);
+          allow write: if isInBranch(branchId);
+        }
+      }
+
       // ── Events ────────────────────────────────────────────────────────────
       match /events/{eventId} {
         allow read: if isInBranch(branchId);
@@ -463,6 +478,14 @@ service cloud.firestore {
                     && hasPerm(branchId, getUserRoleId(), 'manageRoles'); // Lead Pastor only
         allow write: if false; // Admin SDK bypasses these rules
       }
+    }
+
+    match /{path=**}/meetings/{meetingId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /{path=**}/members/{memberId} {
+      allow read: if isAuthenticated();
     }
 
     // Default: deny everything else

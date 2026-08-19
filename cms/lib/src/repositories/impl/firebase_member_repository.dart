@@ -16,11 +16,14 @@ class FirebaseMemberRepository implements MemberRepository {
 
   @override
   Stream<List<MemberModel>> watchMembers(String branchId) {
-    return _col(branchId).snapshots().map(
-      (snap) =>
-          snap.docs
-              .map((d) => MemberModel.fromFirestore(d.data(), d.id))
-              .toList(),
+    final effectiveBranchId =
+        (branchId.isEmpty || branchId == 'hq' || branchId == 'all')
+            ? 'default-branch'
+            : branchId;
+    return _col(effectiveBranchId).snapshots().map(
+      (snap) => snap.docs
+          .map((d) => MemberModel.fromFirestore(d.data(), d.id))
+          .toList(),
     );
   }
 

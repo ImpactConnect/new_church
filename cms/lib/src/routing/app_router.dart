@@ -7,6 +7,7 @@ import 'package:cms/src/features/auth/screens/login_screen.dart';
 import 'package:cms/src/features/dashboard/screens/dashboard_screen.dart';
 import 'package:cms/src/features/members/screens/member_list_screen.dart';
 import 'package:cms/src/features/departments/screens/department_list_screen.dart';
+import 'package:cms/src/features/sub_groups/screens/sub_group_list_screen.dart';
 import 'package:cms/src/features/roles/screens/role_list_screen.dart';
 import 'package:cms/src/features/audit/screens/audit_log_screen.dart';
 import 'package:cms/src/features/branches/screens/branch_settings_screen.dart';
@@ -40,6 +41,7 @@ class AppRoutes {
   static const members = '/members';
   static const attendance = '/attendance';
   static const departments = '/departments';
+  static const subGroups = '/sub-groups';
   static const events = '/events';
   static const announcements = '/announcements';
   static const correspondence = '/correspondence';
@@ -125,6 +127,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               anyOf: [AppPermission.manageDepartments, AppPermission.viewNonFinancialReports],
               child: DepartmentListScreen(),
             ),
+          ),
+          GoRoute(
+            path: AppRoutes.subGroups,
+            builder: (context, state) => const SubGroupListScreen(),
           ),
           GoRoute(
             path: AppRoutes.events,

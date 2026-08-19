@@ -146,6 +146,18 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       path: AppRoutes.departments,
                       current: location,
                     ),
+                  if (user.roleId == AppRole.leadPastor ||
+                      user.roleId == AppRole.secretary ||
+                      user.roleId == AppRole.branchPastor ||
+                      user.can(AppPermission.manageSubGroups) ||
+                      user.can(AppPermission.recordSubGroupAttendance) ||
+                      user.can(AppPermission.viewSubGroupReports))
+                    _NavItem(
+                      icon: Icons.home_work_outlined,
+                      label: 'Sub-Groups & Fellowships',
+                      path: AppRoutes.subGroups,
+                      current: location,
+                    ),
                   if (user.can(AppPermission.recordAttendance) ||
                       user.can(AppPermission.viewNonFinancialReports) ||
                       user.can(AppPermission.manageEvents))
@@ -711,59 +723,6 @@ class _TopBar extends ConsumerWidget {
               color: CmsTheme.textPrimary,
             ),
           ),
-          const SizedBox(width: 20),
-          if (user.can(AppPermission.manageRoles))
-            Consumer(
-              builder: (context, ref, _) {
-                final branchesAsync = ref.watch(branchRepositoryProvider).watchBranches();
-                final selectedBranchId = ref.watch(selectedBranchIdProvider);
-
-                return StreamBuilder(
-                  stream: branchesAsync,
-                  builder: (context, snapshot) {
-                    final subBranches = (snapshot.data ?? []).where((b) => b.id != 'default-branch' && !b.name.toLowerCase().contains('main branch')).toList();
-                    if (subBranches.isEmpty) return const SizedBox.shrink();
-                    final validSelected = subBranches.any((b) => b.id == selectedBranchId) ? selectedBranchId : subBranches.first.id;
-
-                    return Container(
-                      height: 32,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: CmsTheme.surfaceElevated,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: CmsTheme.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: validSelected,
-                          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: CmsTheme.accent),
-                          style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
-                          dropdownColor: CmsTheme.surface,
-                          items: [
-                            ...subBranches.map((b) => DropdownMenuItem(
-                              value: b.id,
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.church_outlined, size: 14, color: CmsTheme.accent),
-                                  const SizedBox(width: 6),
-                                  Text('Branch: ${b.name}', style: const TextStyle(fontSize: 12, color: CmsTheme.textPrimary)),
-                                ],
-                              ),
-                            )),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              ref.read(selectedBranchIdProvider.notifier).state = val;
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-
-                );
-              },
-            ),
           const Spacer(),
 
           // Sync status indicator
@@ -858,6 +817,7 @@ class _TopBar extends ConsumerWidget {
       AppRoutes.approvalQueue => 'Approval Queue',
       AppRoutes.members => 'Members',
       AppRoutes.departments => 'Departments',
+      AppRoutes.subGroups => 'Sub-Groups & Fellowships',
       AppRoutes.attendance => 'Attendance',
       AppRoutes.events => 'Events',
       AppRoutes.announcements => 'Announcements',

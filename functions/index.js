@@ -847,3 +847,62 @@ exports.migrateAllCmsMembers = functions.https.onRequest(async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Callable: provision staff user with credentials, claims, and Firestore docs
+exports.provisionStaffUser = functions.https.onCall(async (data, context) => {
+  const { email, password, displayName, roleId, branchId = 'default-branch', phone = '' } = data;
+  if (!email || !password || !roleId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing required fields (email, password, roleId)');
+  }
+
+  const db = admin.firestore();
+  const auth = admin.auth();
+
+  try {
+    let user;
+    try {
+      user = await auth.getUserByEmail(email);
+      await auth.updateUser(user.uid, { password, displayName: displayName || email.split('@')[0] });
+    } catch (e) {
+      user = await auth.createUser({
+        email,
+        password,
+        displayName: displayName || email.split('@')[0],
+      });
+    }
+
+    // Set Custom Claims
+    await auth.setCustomUserClaims(user.uid, { branchId, roleId });
+
+    // Write to /users/{uid}
+    await db.collection('users').doc(user.uid).set({
+      uid: user.uid,
+      email,
+      roleId,
+      branchId,
+      displayName: displayName || email.split('@')[0],
+      phone,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    // Write to /branches/{branchId}/members/{uid}
+    const nameParts = (displayName || '').split(' ');
+    const firstName = nameParts[0] || 'Staff';
+    const lastName = nameParts.slice(1).join(' ') || 'Member';
+
+    await db.collection('branches').doc(branchId).collection('members').doc(user.uid).set({
+      firstName,
+      lastName,
+      email,
+      phone,
+      roleId,
+      isStaff: true,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return { success: true, uid: user.uid, message: `Provisioned staff account for ${email}` };
+  } catch (error) {
+    console.error('Error provisioning staff user:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});

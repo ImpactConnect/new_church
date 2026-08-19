@@ -15,12 +15,14 @@ import 'package:cms/src/repositories/event_repository.dart';
 import 'package:cms/src/repositories/announcement_repository.dart';
 import 'package:cms/src/repositories/correspondence_repository.dart';
 import 'package:cms/src/repositories/asset_repository.dart';
+import 'package:cms/src/repositories/sub_group_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_auth_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_member_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_finance_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_branch_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_department_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_role_repository.dart';
+import 'package:cms/src/repositories/impl/firebase_sub_group_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_audit_log_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_event_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_announcement_repository.dart';
@@ -89,6 +91,13 @@ final departmentRepositoryProvider = Provider<DepartmentRepository>((ref) {
 final roleRepositoryProvider = Provider<RoleRepository>((ref) {
   final db = ref.watch(firestoreProvider);
   return FirebaseRoleRepository(firestore: db);
+});
+
+// ── Sub-Groups ────────────────────────────────────────────────────────────────
+
+final subGroupRepositoryProvider = Provider<SubGroupRepository>((ref) {
+  final db = ref.watch(firestoreProvider);
+  return FirebaseSubGroupRepository(firestore: db);
 });
 
 // ── Audit Log ─────────────────────────────────────────────────────────────────

@@ -165,22 +165,20 @@ class _GivingListScreenState extends ConsumerState<GivingListScreen> {
   void _showGivingDialog(BuildContext context, WidgetRef ref, String branchId, dynamic user) {
     showDialog(
       context: context,
-      builder: (_) => _GivingFormDialog(branchId: branchId, ref: ref, user: user),
+      builder: (_) => _GivingFormDialog(branchId: branchId),
     );
   }
 }
 
-class _GivingFormDialog extends StatefulWidget {
-  const _GivingFormDialog({required this.branchId, required this.ref, required this.user});
+class _GivingFormDialog extends ConsumerStatefulWidget {
+  const _GivingFormDialog({required this.branchId});
   final String branchId;
-  final WidgetRef ref;
-  final dynamic user;
 
   @override
-  State<_GivingFormDialog> createState() => _GivingFormDialogState();
+  ConsumerState<_GivingFormDialog> createState() => _GivingFormDialogState();
 }
 
-class _GivingFormDialogState extends State<_GivingFormDialog> {
+class _GivingFormDialogState extends ConsumerState<_GivingFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _amtCtrl = TextEditingController();
   String? _selectedMemberId;
@@ -195,7 +193,8 @@ class _GivingFormDialogState extends State<_GivingFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final membersMapAsync = widget.ref.watch(_membersMapProvider(widget.branchId));
+    final membersMapAsync = ref.watch(_membersMapProvider(widget.branchId));
+    final user = ref.watch(cmsUserProvider).valueOrNull;
 
     return AlertDialog(
       backgroundColor: CmsTheme.surface,
@@ -290,9 +289,9 @@ class _GivingFormDialogState extends State<_GivingFormDialog> {
                 type: _type,
                 amount: double.parse(_amtCtrl.text.trim()),
                 date: DateTime.now(),
-                recordedBy: widget.user.displayName ?? widget.user.email,
+                recordedBy: user?.displayName ?? user?.email ?? 'Unknown',
               );
-              await widget.ref.read(financeRepositoryProvider).recordGiving(widget.branchId, item);
+              await ref.read(financeRepositoryProvider).recordGiving(widget.branchId, item);
               if (context.mounted) Navigator.pop(context);
             } catch (e) {
               if (context.mounted) {
