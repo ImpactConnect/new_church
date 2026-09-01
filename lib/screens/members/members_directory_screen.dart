@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:church_mobile/models/member.dart';
+import 'package:church_mobile/services/member_service.dart';
 import 'package:church_mobile/widgets/members/member_details_dialog.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -28,17 +29,13 @@ class _MembersDirectoryScreenState extends State<MembersDirectoryScreen> {
   @override
   void initState() {
     super.initState();
-    _sub = FirebaseFirestore.instance
-        .collection('branches')
-        .doc('default-branch')
-        .collection('members')
-        .snapshots()
-        .listen((snap) {
-      final members = snap.docs.map((d) => Member.fromFirestore(d)).toList();
-      members.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final memberService = MemberService();
+    _sub = memberService.getAllMembersStream().listen((members) {
+      final filteredList =
+          members.where((m) => m.role?.toLowerCase() != 'admin').toList();
       if (mounted) {
         setState(() {
-          _allMembers = members;
+          _allMembers = filteredList;
           _applyFilter();
           _loading = false;
         });

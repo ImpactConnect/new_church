@@ -413,7 +413,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
   Widget build(BuildContext context) {
     if (_isInitializing) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Ask GSW')),
+        appBar: AppBar(title: const Text('Ask Pastor')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -423,7 +423,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ask GSW', style: TextStyle(fontSize: 16)),
+            const Text('Ask Pastor', style: TextStyle(fontSize: 16)),
             if (widget.bookName != null)
               Text(
                 '${widget.bookName} ${widget.chapterNumber}:${widget.verseNumber}',
@@ -556,7 +556,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              msg.isUser ? 'Your Message' : 'Pastor GSW\'s Response',
+              msg.isUser ? 'Your Message' : 'Pastor\'s Response',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -586,7 +586,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
 
   Future<void> _saveMessageToNote(ChatMessage msg) async {
     // Determine the sender
-    final sender = msg.isUser ? 'You' : 'Pastor GSW';
+    final sender = msg.isUser ? 'You' : 'Pastor';
 
     // Format the content using ContentLinkerService
     final formattedContent = ContentLinkerService.formatChatMessage(

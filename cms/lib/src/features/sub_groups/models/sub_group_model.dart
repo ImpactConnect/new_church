@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class SubGroupModel extends Equatable {
@@ -28,18 +29,66 @@ class SubGroupModel extends Equatable {
   final String? createdAt;
 
   factory SubGroupModel.fromFirestore(Map<String, dynamic> data, String id) {
+    String? parseString(dynamic v) {
+      if (v == null) return null;
+      if (v is String) return v;
+      if (v is Timestamp) return v.toDate().toIso8601String();
+      final typeStr = v.runtimeType.toString();
+      if (typeStr.contains('FieldValue') || typeStr.contains('Sentinel') || typeStr.contains('minified')) {
+        return DateTime.now().toIso8601String();
+      }
+      try {
+        final res = (v as dynamic).toDate();
+        if (res is DateTime) return res.toIso8601String();
+      } catch (_) {}
+      return v.toString();
+    }
+
+    List<String> parseStringList(dynamic v) {
+      if (v == null || v is! Iterable) return [];
+      return v.map((e) => e?.toString() ?? '').where((s) => s.isNotEmpty).toList();
+    }
+
     return SubGroupModel(
       id: id,
-      branchId: data['branchId'] as String? ?? 'default-branch',
-      name: data['name'] as String? ?? '',
-      type: data['type'] as String? ?? 'houseFellowship',
-      recordingOfficerMemberId: data['recordingOfficerMemberId'] as String? ?? '',
-      officerName: data['officerName'] as String?,
-      memberIds: List<String>.from(data['memberIds'] ?? []),
-      meetingDay: data['meetingDay'] as String? ?? 'Sunday',
-      meetingTime: data['meetingTime'] as String? ?? '17:00',
-      locationAddress: data['locationAddress'] as String? ?? '',
-      createdAt: data['createdAt'] as String?,
+      branchId: parseString(data['branchId']) ?? 'default-branch',
+      name: parseString(data['name']) ?? '',
+      type: parseString(data['type']) ?? 'houseFellowship',
+      recordingOfficerMemberId: parseString(data['recordingOfficerMemberId']) ?? parseString(data['officerMemberId']) ?? '',
+      officerName: parseString(data['officerName']),
+      memberIds: parseStringList(data['memberIds']),
+      meetingDay: parseString(data['meetingDay']) ?? 'Sunday',
+      meetingTime: parseString(data['meetingTime']) ?? '17:00',
+      locationAddress: parseString(data['locationAddress']) ?? '',
+      createdAt: parseString(data['createdAt']),
+    );
+  }
+
+  SubGroupModel copyWith({
+    String? id,
+    String? branchId,
+    String? name,
+    String? type,
+    String? recordingOfficerMemberId,
+    String? officerName,
+    List<String>? memberIds,
+    String? meetingDay,
+    String? meetingTime,
+    String? locationAddress,
+    String? createdAt,
+  }) {
+    return SubGroupModel(
+      id: id ?? this.id,
+      branchId: branchId ?? this.branchId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      recordingOfficerMemberId: recordingOfficerMemberId ?? this.recordingOfficerMemberId,
+      officerName: officerName ?? this.officerName,
+      memberIds: memberIds ?? this.memberIds,
+      meetingDay: meetingDay ?? this.meetingDay,
+      meetingTime: meetingTime ?? this.meetingTime,
+      locationAddress: locationAddress ?? this.locationAddress,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 

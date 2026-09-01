@@ -28,6 +28,11 @@ import 'package:cms/src/repositories/impl/firebase_event_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_announcement_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_correspondence_repository.dart';
 import 'package:cms/src/repositories/impl/firebase_asset_repository.dart';
+import 'package:cms/src/repositories/communication_repository.dart';
+import 'package:cms/src/repositories/impl/firebase_communication_repository.dart';
+import 'package:cms/src/features/communication/services/messaging_service.dart';
+import 'package:cms/src/repositories/group_income_repository.dart';
+import 'package:cms/src/repositories/impl/firebase_group_income_repository.dart';
 import 'package:cms/src/repositories/impl/isar_repositories.dart';
 
 // ── Firebase singletons ───────────────────────────────────────────────────────
@@ -100,6 +105,13 @@ final subGroupRepositoryProvider = Provider<SubGroupRepository>((ref) {
   return FirebaseSubGroupRepository(firestore: db);
 });
 
+// ── Group Income ─────────────────────────────────────────────────────────────
+
+final groupIncomeRepositoryProvider = Provider<GroupIncomeRepository>((ref) {
+  final db = ref.watch(firestoreProvider);
+  return FirebaseGroupIncomeRepository(firestore: db);
+});
+
 // ── Audit Log ─────────────────────────────────────────────────────────────────
 
 final auditLogRepositoryProvider = Provider<AuditLogRepository>((ref) {
@@ -133,6 +145,18 @@ final correspondenceRepositoryProvider = Provider<CorrespondenceRepository>((ref
 final assetRepositoryProvider = Provider<AssetRepository>((ref) {
   final db = ref.watch(firestoreProvider);
   return FirebaseAssetRepository(firestore: db);
+});
+
+// ── Communication ─────────────────────────────────────────────────────────────
+
+final communicationRepositoryProvider = Provider<CommunicationRepository>((ref) {
+  final db = ref.watch(firestoreProvider);
+  return FirebaseCommunicationRepository(firestore: db);
+});
+
+final messagingServiceProvider = Provider<MessagingService>((ref) {
+  final db = ref.watch(firestoreProvider);
+  return MessagingService(firestore: db);
 });
 
 // ── Convenience: current & selected branch ID ─────────────────────────────────

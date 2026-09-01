@@ -5,6 +5,7 @@ import 'package:cms/src/core/providers.dart';
 import 'package:cms/src/core/theme.dart';
 import 'package:cms/src/core/widgets.dart';
 import 'package:cms/src/features/departments/models/department_model.dart';
+import 'package:cms/src/features/departments/widgets/hod_cell_portal_widget.dart';
 import 'package:cms/src/features/members/models/member_model.dart';
 
 // ─────────────────────────── Providers ─────────────────────────────────────
@@ -258,6 +259,15 @@ class _DepartmentDetailScreenState
                     ],
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // ── HOD Department Financial Portal ─────────────────────
+                HodCellPortalWidget(
+                  branchId: widget.branchId,
+                  entityId: _dept.id,
+                  entityName: _dept.name,
+                  entityType: 'department',
+                ),
               ],
             ),
           );
@@ -494,9 +504,16 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   @override
   Widget build(BuildContext context) {
     final candidates = widget.allMembers
-        .where((m) =>
-            !widget.currentMemberIds.contains(m.id) &&
-            m.fullName.toLowerCase().contains(_query.toLowerCase()))
+        .where((m) {
+          final isNotMember = !widget.currentMemberIds.contains(m.id);
+          if (_query.trim().isEmpty) return isNotMember;
+          final q = _query.toLowerCase();
+          return isNotMember &&
+              (m.fullName.toLowerCase().contains(q) ||
+                  m.phone.toLowerCase().contains(q) ||
+                  (m.email ?? '').toLowerCase().contains(q) ||
+                  (m.memberCode ?? '').toLowerCase().contains(q));
+        })
         .toList()
       ..sort((a, b) => a.lastName.compareTo(b.lastName));
 
@@ -510,27 +527,39 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Member to Department',
-                style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: CmsTheme.textPrimary)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Add Member to Department',
+                    style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: CmsTheme.textPrimary)),
+                Text('${candidates.length} available',
+                    style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: CmsTheme.accent)),
+              ],
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _ctrl,
               autofocus: true,
               style: const TextStyle(
-                  fontFamily: 'Inter', color: CmsTheme.textPrimary),
+                  fontFamily: 'Inter', color: CmsTheme.textPrimary, fontSize: 13),
               onChanged: (v) => setState(() => _query = v),
               decoration: InputDecoration(
-                hintText: 'Search member by name…',
+                hintText: 'Search member name, phone, code…',
                 hintStyle:
                     const TextStyle(color: CmsTheme.textMuted, fontSize: 13),
                 prefixIcon: const Icon(Icons.search,
                     size: 18, color: CmsTheme.textMuted),
                 filled: true,
                 fillColor: CmsTheme.bg,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide:
@@ -554,26 +583,53 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
                               fontFamily: 'Inter',
                               fontSize: 13,
                               color: CmsTheme.textMuted)))
-                  : ListView.builder(
+                  : ListView.separated(
                       itemCount: candidates.length,
+                      separatorBuilder: (_, __) => const Divider(color: CmsTheme.border, height: 1),
                       itemBuilder: (_, i) {
                         final m = candidates[i];
                         return ListTile(
                           contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 0),
+                              const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           leading: _MemberAvatar(member: m, radius: 18),
-                          title: Text(m.fullName,
-                              style: const TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 13,
-                                  color: CmsTheme.textPrimary)),
-                          subtitle: Text(m.phone,
+                          title: Row(
+                            children: [
+                              Text(m.fullName,
+                                  style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: CmsTheme.textPrimary)),
+                              if (m.memberCode?.isNotEmpty == true) ...[
+                                const SizedBox(width: 6),
+                                Text('(${m.memberCode})',
+                                    style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 11,
+                                        color: CmsTheme.textSecondary)),
+                              ],
+                            ],
+                          ),
+                          subtitle: Text(m.phone.isNotEmpty ? m.phone : (m.email ?? 'No contact'),
                               style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 11,
                                   color: CmsTheme.textMuted)),
-                          trailing: const Icon(Icons.add_circle_outline,
-                              color: CmsTheme.accent, size: 20),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: CmsTheme.accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.add, size: 14, color: CmsTheme.accent),
+                                SizedBox(width: 4),
+                                Text('Add', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: CmsTheme.accent)),
+                              ],
+                            ),
+                          ),
                           onTap: () => widget.onAdd(m),
                         );
                       },

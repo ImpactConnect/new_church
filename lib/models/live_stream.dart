@@ -43,6 +43,8 @@ class LiveStream {
     this.endTime,
     this.thumbnailUrl,
     this.description,
+    this.isSynchronized = false,
+    this.scheduledVideoStart,
   });
 
   factory LiveStream.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +63,10 @@ class LiveStream {
           : null,
       thumbnailUrl: data['thumbnailUrl'],
       description: data['description'],
+      isSynchronized: data['isSynchronized'] ?? false,
+      scheduledVideoStart: data['scheduledVideoStart'] != null
+          ? (data['scheduledVideoStart'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -74,7 +80,27 @@ class LiveStream {
   final String? thumbnailUrl;
   final String? description;
 
+  /// Whether synchronized playback mode is enabled for this stream.
+  final bool isSynchronized;
+
+  /// The real-world clock time the video should start playing from position 0.
+  /// Defaults to [startTime] if not explicitly set.
+  final DateTime? scheduledVideoStart;
+
+  /// Effective video-start reference time (falls back to startTime).
+  DateTime get effectiveVideoStart => scheduledVideoStart ?? startTime;
+
   bool get hasEnded => endTime != null && endTime!.isBefore(DateTime.now());
+
+  bool get hasStarted => !DateTime.now().isBefore(effectiveVideoStart);
+
+  /// Seconds into the video the player should seek to so all viewers are in sync.
+  /// Returns 0 if the stream has not started yet.
+  int get syncSeekOffsetSeconds {
+    if (!isSynchronized) return 0;
+    final elapsed = DateTime.now().difference(effectiveVideoStart).inSeconds;
+    return elapsed.clamp(0, 86400); // cap at 24 hrs
+  }
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -86,6 +112,10 @@ class LiveStream {
       'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
       'thumbnailUrl': thumbnailUrl,
       'description': description,
+      'isSynchronized': isSynchronized,
+      'scheduledVideoStart': scheduledVideoStart != null
+          ? Timestamp.fromDate(scheduledVideoStart!)
+          : null,
     };
   }
 }

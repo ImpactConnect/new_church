@@ -414,7 +414,7 @@ class _AiExplanationScreenState extends ConsumerState<AiExplanationScreen> {
               );
             },
             icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('Ask GSW'),
+            label: const Text('Ask Pastor'),
           ),
           body: _buildBody(snapshot),
         );

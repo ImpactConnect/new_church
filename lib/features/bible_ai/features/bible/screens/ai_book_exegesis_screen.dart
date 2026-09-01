@@ -94,7 +94,7 @@ class _AiBookExegesisScreenState extends ConsumerState<AiBookExegesisScreen> {
           );
         },
         icon: const Icon(Icons.chat_bubble_outline),
-        label: const Text('Ask GSW'),
+        label: const Text('Ask Pastor'),
       ),
       body: FutureBuilder<BookExegesis>(
         future: _analysisFuture,

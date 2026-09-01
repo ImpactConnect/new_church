@@ -26,10 +26,12 @@ class EventService {
 
       for (var doc in querySnapshot.docs) {
         final event = Event.fromFirestore(doc);
-        if (event.isUpcoming) {
-          upcomingEvents.add(event);
-        } else {
-          pastEvents.add(event);
+        if (event.isApproved) {
+          if (event.isUpcoming) {
+            upcomingEvents.add(event);
+          } else {
+            pastEvents.add(event);
+          }
         }
       }
 
@@ -66,7 +68,7 @@ class EventService {
         .map((snapshot) {
       final events =
           snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
-      final upcomingEvents = events.where((e) => e.isUpcoming).toList();
+      final upcomingEvents = events.where((e) => e.isApproved && e.isUpcoming).toList();
       upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
       return upcomingEvents.take(limit).toList();
     });

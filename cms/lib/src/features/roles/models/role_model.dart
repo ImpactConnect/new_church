@@ -18,7 +18,7 @@ class RoleModel extends Equatable {
 
   final bool isCustom;
 
-  bool get isSystemRole => id == 'leadPastor' || id == 'secretary' || id == 'financeDept' || id == 'branchPastor';
+  bool get isSystemRole => id == 'leadPastor' || id == 'secretary' || id == 'financeDept' || id == 'branchPastor' || id == 'assetManager';
 
   factory RoleModel.fromFirestore(Map<String, dynamic> data, String id) {
     return RoleModel(
@@ -27,7 +27,7 @@ class RoleModel extends Equatable {
       permissions: List<String>.from(data['permissions'] ?? []),
       scopeType: data['scope']?['type'] as String?,
       scopeDepartmentId: data['scope']?['departmentId'] as String?,
-      isCustom: data['isCustom'] as bool? ?? (id != 'leadPastor' && id != 'secretary' && id != 'financeDept' && id != 'branchPastor'),
+      isCustom: data['isCustom'] as bool? ?? (id != 'leadPastor' && id != 'secretary' && id != 'financeDept' && id != 'branchPastor' && id != 'assetManager'),
     );
   }
 
@@ -46,6 +46,7 @@ class RoleModel extends Equatable {
     'secretary' => 'Secretary',
     'financeDept' => 'Finance Dept',
     'branchPastor' => 'Branch Pastor',
+    'assetManager' => 'Asset Manager',
     _ => name,
   };
 

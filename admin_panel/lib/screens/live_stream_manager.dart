@@ -91,6 +91,10 @@ class _LiveControlTabState extends State<_LiveControlTab> {
   bool _isLoading = true;
   bool _isSaving = false;
 
+  // ── Synchronized Playback ───────────────────────────────────────────────────
+  bool _isSynchronized = false;
+  DateTime? _scheduledVideoStart;
+
   @override
   void initState() {
     super.initState();
@@ -125,6 +129,8 @@ class _LiveControlTabState extends State<_LiveControlTab> {
           _isLive = s.isLive;
           _startTime = s.startTime;
           _endTime = s.endTime;
+          _isSynchronized = s.isSynchronized;
+          _scheduledVideoStart = s.scheduledVideoStart;
         });
       }
     } catch (_) {}
@@ -169,6 +175,12 @@ class _LiveControlTabState extends State<_LiveControlTab> {
           : null,
       'startTime': Timestamp.fromDate(_startTime),
       'endTime': _endTime != null ? Timestamp.fromDate(_endTime!) : null,
+      'isSynchronized': _isSynchronized,
+      'scheduledVideoStart': _isSynchronized && _scheduledVideoStart != null
+          ? Timestamp.fromDate(_scheduledVideoStart!)
+          : _isSynchronized
+              ? Timestamp.fromDate(_startTime) // default to startTime
+              : null,
     };
 
     try {
@@ -303,6 +315,9 @@ class _LiveControlTabState extends State<_LiveControlTab> {
                             DropdownMenuItem(
                                 value: 'hls',
                                 child: Text('Custom HLS / RTMP')),
+                            DropdownMenuItem(
+                                value: 'firebase',
+                                child: Text('Firebase Storage (MP4)')),
                           ],
                           onChanged: (v) => setState(() => _platform = v!),
                         ),
@@ -428,6 +443,101 @@ class _LiveControlTabState extends State<_LiveControlTab> {
                               label: const Text('Clear End Time'),
                             ),
                           ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Synchronized Playback ─────────────────────────────────
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SectionTitle('Synchronized Playback'),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'When enabled, every user who joins will automatically seek to the same position — ideal for replaying a pre-recorded video as a shared live experience.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 12),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Enable Synchronized Playback',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            _isSynchronized
+                                ? 'Users will join at the current elapsed position.'
+                                : 'Off — each user starts from the beginning.',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.grey),
+                          ),
+                          value: _isSynchronized,
+                          activeThumbColor: const Color(0xFF3B82F6),
+                          activeTrackColor: const Color(0xFF93C5FD),
+                          onChanged: (v) =>
+                              setState(() => _isSynchronized = v),
+                        ),
+                        if (_isSynchronized) ...[
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Video Start Time',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'The exact clock time the video plays from position 0:00. Users who join after this will auto-seek to the correct offset. Defaults to Start Time if not set.',
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 12),
+                          _DateTile(
+                            label: 'Video Start Time',
+                            value: _scheduledVideoStart != null
+                                ? _fmtDate(_scheduledVideoStart!)
+                                : 'Same as Start Time (${_fmtDate(_startTime)})',
+                            icon: Icons.schedule_rounded,
+                            color: const Color(0xFF3B82F6),
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _scheduledVideoStart ?? _startTime,
+                                firstDate: DateTime.now()
+                                    .subtract(const Duration(days: 1)),
+                                lastDate: DateTime.now()
+                                    .add(const Duration(days: 365)),
+                              );
+                              if (picked == null || !mounted) return;
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: TimeOfDay.fromDateTime(
+                                    _scheduledVideoStart ?? _startTime),
+                              );
+                              if (time == null) return;
+                              setState(() {
+                                _scheduledVideoStart = DateTime(
+                                    picked.year,
+                                    picked.month,
+                                    picked.day,
+                                    time.hour,
+                                    time.minute);
+                              });
+                            },
+                          ),
+                          if (_scheduledVideoStart != null)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => setState(
+                                    () => _scheduledVideoStart = null),
+                                icon: const Icon(Icons.clear, size: 14),
+                                label: const Text('Use Start Time'),
+                              ),
+                            ),
+                        ],
                       ],
                     ),
                   ),

@@ -3,7 +3,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // ── Helper Functions ─────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
 
     function isAuthenticated() {
       return request.auth != null;
@@ -14,267 +16,120 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
     }
 
-    function getUserData() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
-        : {};
+    // CMS role from Custom Claims (set by Cloud Functions only)
+    function cmsRole() {
+      return request.auth.token.get('roleId', '');
     }
 
-    function getUserBranchId() {
-      return request.auth.token != null && 'branchId' in request.auth.token && request.auth.token.branchId != null
-        ? request.auth.token.branchId
-        : (isAuthenticated() && 'branchId' in getUserData() ? getUserData().branchId : 'default-branch');
+    function cmsBranch() {
+      return request.auth.token.get('branchId', '');
     }
 
-    function getUserRoleId() {
-      return request.auth.token != null && 'roleId' in request.auth.token && request.auth.token.roleId != null
-        ? request.auth.token.roleId
-        : (isAuthenticated() && 'roleId' in getUserData() ? getUserData().roleId : 'leadPastor');
+    function isLeadPastor()   { return cmsRole() == 'leadPastor'; }
+    function isSecretary()    { return cmsRole() == 'secretary'; }
+    function isFinanceDept()  { return cmsRole() == 'financeDept'; }
+    function isBranchPastor() { return cmsRole() == 'branchPastor'; }
+    function isAssetManager() { return cmsRole() == 'assetManager'; }
+
+    function isCmsUser() {
+      return isAuthenticated() && (
+        isLeadPastor() || isSecretary() || isFinanceDept() ||
+        isBranchPastor() || isAssetManager()
+      );
     }
 
-    // Read the permission list from the caller's role document.
-    function permissions(bId, rId) {
-      return exists(/databases/$(database)/documents/branches/$(bId)/roles/$(rId))
-        ? get(/databases/$(database)/documents/branches/$(bId)/roles/$(rId)).data.permissions
-        : [];
+    function isFinancialRole() {
+      return isLeadPastor() || isFinanceDept() || isBranchPastor();
     }
 
-    function hasPerm(bId, rId, perm) {
-      return getUserRoleId() == 'leadPastor' || (perm in permissions(getUserBranchId(), getUserRoleId()));
+    function canApprove() {
+      return isLeadPastor() || isBranchPastor();
     }
 
-    // Caller must belong to the branch they're accessing or be signed in.
-    function isInBranch(bId) {
-      return isAuthenticated();
+    // ══════════════════════════════════════════════════════════════════════════
+    // ── Mobile App Public Collections ────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+
+    match /sermons/{doc}              { allow read: if true; allow write: if isAdmin(); }
+    match /books/{doc}                { allow read: if true; allow write: if isAdmin(); }
+    match /sermon_categories/{doc}    { allow read: if true; allow write: if isAdmin(); }
+    match /gallery_categories/{doc}   { allow read: if true; allow write: if isAdmin(); }
+    match /video_categories/{doc}     { allow read: if true; allow write: if isAdmin(); }
+    match /home_templates/{t} {
+      allow read: if true; allow write: if isAdmin();
+      match /tiles/{tile} { allow read: if true; allow write: if isAdmin(); }
     }
-
-    // Public read collections (app fetches these)
-    match /{path=**}/members/{memberId} {
-      allow read: if isAuthenticated();
-    }
-
-    match /sermons/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /books/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /sermon_categories/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /gallery_categories/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /video_categories/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /app_settings/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /home_templates/{templateId} {
-      allow read: if true;
-      allow write: if isAdmin();
-
-      match /tiles/{tileId} {
-        allow read: if true;
-        allow write: if isAdmin();
-      }
-    }
-
     match /videos/{doc} {
       allow read: if true;
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || isAuthenticated(); // allow view/like increments
+      allow update: if isAdmin() || isAuthenticated();
     }
-
     match /videos/{videoId}/comments/{commentId} {
-      allow read: if true;
-      allow create: if true; 
-      allow delete: if isAdmin();
+      allow read: if true; allow create: if true; allow delete: if isAdmin();
     }
-
     match /gallery/{doc} {
       allow read: if true;
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'downloads'])
-      );
+      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'downloads']);
     }
-
-    match /live_streams/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /events/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /donations/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /devotionals/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
+    match /live_streams/{doc}         { allow read: if true; allow write: if isAdmin(); }
+    match /events/{doc}               { allow read: if true; allow write: if isAdmin(); }
+    match /donations/{doc}            { allow read: if true; allow write: if isAdmin(); }
+    match /devotionals/{doc}          { allow read: if true; allow write: if isAdmin(); }
     match /carousel_items/{doc} {
-      allow read: if true;
-      allow create, delete: if isAdmin();
+      allow read: if true; allow create, delete: if isAdmin();
       allow update: if isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['itemType']));
     }
-    match /carousel_config/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    match /carousels/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /announcements/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /push_notifications/{doc} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
-    }
-
-    match /members/{doc} {
-      allow read: if true; 
-      allow write: if isAdmin();
-    }
-
+    match /carousel_config/{doc}      { allow read: if true; allow write: if isAdmin(); }
+    match /carousels/{document=**}    { allow read: if true; allow write: if isAdmin(); }
+    match /announcements/{doc}        { allow read: if true; allow write: if isAdmin(); }
+    match /push_notifications/{doc}   { allow read: if isAdmin(); allow write: if isAdmin(); }
     match /testimonies/{doc} {
-      allow read: if true;
-      allow create: if isAuthenticated(); 
+      allow read: if true; allow create: if isAuthenticated();
       allow update, delete: if isAdmin();
     }
-
-    match /daily_cache/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /admin_tasks/{doc} {
-      allow read: if isAdmin();
-      allow write: if isAuthenticated(); 
-    }
-
-    match /church_groups/{doc} {
-      allow read: if true;
-      allow write: if isAuthenticated();
-    }
-    match /church_officials/{doc} {
-      allow read: if true;
-      allow write: if isAuthenticated();
-    }
-
-    match /admin_users/{doc} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
-    }
-
-    match /ministers_content/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /blog_posts/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
+    match /daily_cache/{doc}          { allow read: if true; allow write: if isAdmin(); }
+    match /ministers_content/{doc}    { allow read: if true; allow write: if isAdmin(); }
+    match /blog_posts/{doc}           { allow read: if true; allow write: if isAdmin(); }
+    match /bible_ai/{doc}             { allow read: if true; allow write: if isAdmin(); }
+    match /ai_config/{doc}            { allow read: if true; allow write: if isAdmin(); }
+    match /ai_prompts/{document=**}   { allow read: if true; allow write: if isAdmin(); }
+    match /ai_exegesis/{document=**}  { allow read: if true; allow write: if isAdmin(); }
+    match /test/{document=**}         { allow read: if true; allow write: if isAdmin(); }
 
     match /community_posts/{doc} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAdmin() || (
-        isAuthenticated() && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['liked_by', 'likes_count', 'comments_count'])
-      );
+      allow read: if isAuthenticated(); allow create: if isAuthenticated();
+      allow update: if isAdmin() || (isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['liked_by', 'likes_count', 'comments_count']));
       allow delete: if isAdmin();
     }
     match /community_posts/{postId}/comments/{commentId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated(); allow create: if isAuthenticated();
       allow delete: if isAdmin();
     }
-    
     match /community_comments/{doc} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated(); 
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated(); allow create: if isAuthenticated();
+      allow update: if isAuthenticated(); allow delete: if isAdmin();
     }
-
-    match /community_groups/{doc} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
+    match /community_groups/{doc} { allow read, write: if isAuthenticated(); }
     match /group_messages/{doc} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated(); allow create: if isAuthenticated();
       allow update, delete: if isAdmin();
     }
-
     match /bible_reading_progress/{userId} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
-
     match /bible_ai_chats/{userId}/sessions/{doc=**} {
       allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
-
     match /prayer_testimonies/{doc} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
-
     match /support_requests/{doc} {
-      allow create: if true; 
-      allow read, update, delete: if isAdmin();
+      allow create: if true; allow read, update, delete: if isAdmin();
     }
-
-    match /bible_ai/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    match /ai_config/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    match /ai_prompts/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    match /ai_exegesis/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    match /test/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
     match /private_chats/{chatId} {
       allow read: if isAuthenticated() && (resource == null || request.auth.uid in resource.data.participants);
       allow create: if isAuthenticated() && (request.auth.uid in request.resource.data.participants);
@@ -282,215 +137,220 @@ service cloud.firestore {
     }
     match /private_chats/{chatId}/messages/{msgId} {
       allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants);
-      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid && (request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants);
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid &&
+        (request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.participants);
+    }
+
+    match /church_groups/{doc}    { allow read: if true; allow write: if isAuthenticated(); }
+    match /church_officials/{doc} { allow read: if true; allow write: if isAuthenticated(); }
+    match /admin_users/{doc}      { allow read: if isAdmin(); allow write: if isAdmin(); }
+    match /admin_tasks/{doc}      { allow read: if isAdmin(); allow write: if isAuthenticated(); }
+    match /notification_cache/{doc} { allow read, write: if isAdmin(); }
+
+    match /app_settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin() || isLeadPastor();
     }
 
     match /users/{userId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isLeadPastor() || isSecretary());
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isLeadPastor());
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Top-Level /remittances and /resourceRequests
-    // ─────────────────────────────────────────────────────────────────────────
-
-    match /remittances/{remittanceId} {
-      allow read: if isAuthenticated()
-                  && (getUserRoleId() == 'leadPastor'
-                      || resource.data.branchId == getUserBranchId()
-                      || hasPerm(getUserBranchId(), getUserRoleId(), 'viewFinancialReports'));
-      allow create: if isAuthenticated()
-                    && (getUserRoleId() == 'branchPastor' || hasPerm(getUserBranchId(), getUserRoleId(), 'sendIncomeReport'))
-                    && request.resource.data.branchId == getUserBranchId();
-      allow update: if isAuthenticated()
-                    && (getUserRoleId() == 'leadPastor' || hasPerm(getUserBranchId(), getUserRoleId(), 'viewFinancialReports'));
-      allow delete: if false;
+    match /members/{doc} {
+      allow read: if true;
+      allow write: if isAdmin() || isLeadPastor() || isSecretary();
     }
 
-    match /resourceRequests/{requestId} {
-      allow read: if isAuthenticated()
-                  && (getUserRoleId() == 'leadPastor'
-                      || resource.data.branchId == getUserBranchId()
-                      || hasPerm(getUserBranchId(), getUserRoleId(), 'manageRoles'));
-      allow create: if isAuthenticated()
-                    && (getUserRoleId() == 'branchPastor' || request.resource.data.branchId == getUserBranchId())
-                    && request.resource.data.branchId == getUserBranchId();
-      allow update: if isAuthenticated() && (getUserRoleId() == 'leadPastor' || hasPerm(getUserBranchId(), getUserRoleId(), 'manageRoles'));
-      allow delete: if false;
-    }
+    match /remittances/{remittanceId}    { allow read, write: if isAuthenticated(); }
+    match /resourceRequests/{requestId}  { allow read, write: if isAuthenticated(); }
+    match /assets/{assetId}              { allow read, write: if isAuthenticated(); }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Branches (top-level org config — Lead Pastor only)
-    // ─────────────────────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // ── CMS Branch Sub-Collections — Full RBAC ───────────────────────────────
+    // Guide §3.1: "Security Rules are the real authority, not the UI."
+    // ══════════════════════════════════════════════════════════════════════════
+
     match /branches/{branchId} {
+      allow read: if isCmsUser() && cmsBranch() == branchId;
+      allow write: if isLeadPastor() && cmsBranch() == branchId;
 
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-
-      // ── Roles ──────────────────────────────────────────────────────────────
       match /roles/{roleId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if isLeadPastor() && cmsBranch() == branchId;
       }
 
-
-      // ── Members ────────────────────────────────────────────────────────────
       match /members/{memberId} {
-        allow read: if isInBranch(branchId);
-        allow create, update: if isInBranch(branchId)
-                               && hasPerm(branchId, getUserRoleId(), 'manageMembers')
-                               && getUserRoleId() != 'leadPastor';
-        allow delete: if false; // soft-delete only (status = inactive)
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow create, update: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow delete: if cmsBranch() == branchId && (isLeadPastor() || isSecretary());
       }
 
-      // ── Departments ────────────────────────────────────────────────────────
       match /departments/{deptId} {
-        allow read: if isInBranch(branchId);
-        allow write: if isInBranch(branchId)
-                     && hasPerm(branchId, getUserRoleId(), 'manageDepartments')
-                     && getUserRoleId() != 'leadPastor';
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
       }
 
-      // ── Sub-Groups & Cells ───────────────────────────────────────────
       match /sub_groups/{groupId} {
-        allow read: if isInBranch(branchId);
-        allow write: if isInBranch(branchId);
-
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
         match /meetings/{meetingId} {
-          allow read: if isInBranch(branchId);
-          allow write: if isInBranch(branchId);
+          allow read: if isCmsUser() && cmsBranch() == branchId;
+          allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
         }
       }
 
-      // ── Events ────────────────────────────────────────────────────────────
+      match /assets/{assetId} {
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if cmsBranch() == branchId && (
+          isLeadPastor() || isSecretary() || isAssetManager() || isFinanceDept()
+        );
+      }
+
       match /events/{eventId} {
-        allow read: if isInBranch(branchId);
-        allow write: if isInBranch(branchId)
-                     && hasPerm(branchId, getUserRoleId(), 'manageEvents');
-
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
         match /attendance/{attendanceId} {
-          allow read: if isInBranch(branchId);
-          allow write: if isInBranch(branchId)
-                       && hasPerm(branchId, getUserRoleId(), 'recordAttendance');
+          allow read: if isCmsUser() && cmsBranch() == branchId;
+          allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
         }
       }
 
-      // ── Demographic & Service Attendance Records ─────────────────────────
       match /attendance_records/{recordId} {
-        allow read: if isInBranch(branchId);
-        allow write: if isInBranch(branchId)
-                     && (hasPerm(branchId, getUserRoleId(), 'recordAttendance')
-                         || hasPerm(branchId, getUserRoleId(), 'manageEvents'));
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
       }
 
-      // ── Announcements ──────────────────────────────────────────────────────
+      // Secretary can create/update drafts but NOT approve (set status=approved)
       match /announcements/{announcementId} {
-        allow read: if isInBranch(branchId);
-        allow create: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'createAnnouncement');
-        // Only Lead Pastor can approve (update status → approved)
-        allow update: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'approveAnnouncement');
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow create: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow update: if cmsBranch() == branchId && (
+          canApprove() ||
+          (isSecretary() && resource.data.status != 'approved' &&
+            (!('status' in request.resource.data) || request.resource.data.status != 'approved'))
+        );
+        allow delete: if cmsBranch() == branchId && isLeadPastor();
       }
 
-      // ── Correspondence ─────────────────────────────────────────────────────
+      // Finance has NO access to correspondence
       match /correspondence/{corrId} {
-        allow read: if isInBranch(branchId);
-        allow write: if isInBranch(branchId)
-                     && hasPerm(branchId, getUserRoleId(), 'logCorrespondence');
+        allow read: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow create: if cmsBranch() == branchId && (isSecretary() || isBranchPastor());
+        allow update: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow delete: if cmsBranch() == branchId && (isLeadPastor() || isSecretary());
       }
 
-      // ── Giving ─────────────────────────────────────────────────────────────
       match /giving/{givingId} {
-        allow read: if isInBranch(branchId)
-                    && (hasPerm(branchId, getUserRoleId(), 'recordIncome')
-                        || hasPerm(branchId, getUserRoleId(), 'viewFinancialReports')
-                        || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
-        allow write: if isInBranch(branchId)
-                     && (hasPerm(branchId, getUserRoleId(), 'recordIncome')
-                         || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
+        allow read: if cmsBranch() == branchId && isFinancialRole();
+        allow create: if cmsBranch() == branchId && isFinanceDept();
+        allow update: if cmsBranch() == branchId && (isFinanceDept() || isLeadPastor());
+        allow delete: if cmsBranch() == branchId && isLeadPastor();
       }
 
-
-      // ── Income ─────────────────────────────────────────────────────────────
       match /income/{incomeId} {
-        allow read: if isInBranch(branchId)
-                    && (hasPerm(branchId, getUserRoleId(), 'recordIncome')
-                        || hasPerm(branchId, getUserRoleId(), 'viewFinancialReports'));
-        allow create: if isInBranch(branchId)
-                      && hasPerm(branchId, getUserRoleId(), 'recordIncome');
-        allow update, delete: if false; // immutable once recorded
+        allow read: if cmsBranch() == branchId && isFinancialRole();
+        allow create: if cmsBranch() == branchId && isFinanceDept();
+        allow update: if cmsBranch() == branchId && (isFinanceDept() || isLeadPastor());
+        allow delete: if cmsBranch() == branchId && isLeadPastor();
       }
 
-      // ── Budget Requests ────────────────────────────────────────────────────
+      // Finance creates; Lead Pastor approves; Finance cannot self-approve
       match /budgets/{budgetId} {
-        allow read: if isInBranch(branchId);
-        allow create: if isInBranch(branchId)
-                      && (hasPerm(branchId, getUserRoleId(), 'createBudgetRequest')
-                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
-        allow update: if isInBranch(branchId)
-                      && (hasPerm(branchId, getUserRoleId(), 'approveBudget')
-                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
+        allow read: if cmsBranch() == branchId && (
+          isFinancialRole() ||
+          (isSecretary() && resource.data.status == 'approved')
+        );
+        allow create: if cmsBranch() == branchId && isFinanceDept();
+        allow update: if cmsBranch() == branchId && (
+          canApprove() ||
+          (isFinanceDept() && resource.data.status == 'pending' &&
+            (!('status' in request.resource.data) || request.resource.data.status == 'pending'))
+        );
+        allow delete: if cmsBranch() == branchId && isLeadPastor();
       }
 
-      // ── Expenditure Requests ───────────────────────────────────────────────
+      // Segregation of duties: Finance creates, Lead Pastor approves
       match /expenditureRequests/{requestId} {
-        allow read: if isInBranch(branchId);
-        allow create: if isInBranch(branchId)
-                      && (hasPerm(branchId, getUserRoleId(), 'createExpenditureRequest')
-                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
-        allow update: if isInBranch(branchId)
-                      && (hasPerm(branchId, getUserRoleId(), 'approveExpenditure')
-                          || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
+        allow read: if cmsBranch() == branchId && (
+          isFinancialRole() ||
+          (isSecretary() && resource.data.status == 'approved')
+        );
+        allow create: if cmsBranch() == branchId && isFinanceDept();
+        allow update: if cmsBranch() == branchId && (
+          canApprove() ||
+          (isFinanceDept() && resource.data.status == 'pending' &&
+            (!('status' in request.resource.data) || request.resource.data.status == 'pending'))
+        );
+        allow delete: if cmsBranch() == branchId && isLeadPastor();
       }
 
-      // ── Expenditures (official ledger) ────────────────────────────────────
+      // Expenditure LEDGER: created ONLY by Cloud Function (Admin SDK bypasses rules)
+      // Clients cannot create, update, or delete expenditure records
       match /expenditures/{expenditureId} {
-        allow read: if isInBranch(branchId);
-        allow create, update: if isInBranch(branchId)
-                               && (hasPerm(branchId, getUserRoleId(), 'approveExpenditure')
-                                   || hasPerm(branchId, getUserRoleId(), 'manageRoles'));
+        allow read: if cmsBranch() == branchId && isFinancialRole();
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
 
-        // Disbursements (Finance writes freely once expenditure is approved)
+        // Disbursements: APPEND-ONLY (create allowed, update/delete blocked forever)
         match /disbursements/{disbursementId} {
-          allow read: if isInBranch(branchId);
-          allow create: if isInBranch(branchId)
-                        && (hasPerm(branchId, getUserRoleId(), 'recordDisbursement')
-                            || hasPerm(branchId, getUserRoleId(), 'manageRoles'))
-                        && request.resource.data.amountDisbursed > 0;
-          allow update, delete: if false;
+          allow read: if cmsBranch() == branchId && isFinancialRole();
+          allow create: if cmsBranch() == branchId && isFinanceDept();
+          allow update: if false;
+          allow delete: if false;
         }
       }
 
-      // ── Finance Notifications ──────────────────────────────────────────────
+      // Finance notifications: Cloud Function creates; Finance may mark as read
       match /financeNotifications/{notifId} {
-        allow read, write: if isInBranch(branchId);
+        allow read: if cmsBranch() == branchId && (isLeadPastor() || isFinanceDept() || isBranchPastor());
+        allow create: if false;
+        allow update: if cmsBranch() == branchId && isFinancialRole() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        allow delete: if false;
       }
 
-      // ── Notifications ─────────────────────────────────────────────────────
       match /notifications/{notifId} {
-        allow read, write: if isInBranch(branchId);
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow write: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
       }
 
-
-      // ── Audit Logs (IMMUTABLE — Cloud Functions Admin SDK only) ───────────
+      // Audit logs: IMMUTABLE — Cloud Functions write via Admin SDK only
       match /auditLogs/{logId} {
-        allow read: if isInBranch(branchId)
-                    && hasPerm(branchId, getUserRoleId(), 'manageRoles'); // Lead Pastor only
-        allow write: if false; // Admin SDK bypasses these rules
+        allow read: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      match /sentCommunications/{commId} {
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow create: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow update: if false;
+        allow delete: if cmsBranch() == branchId && isLeadPastor();
+      }
+
+      match /externalEmails/{emailId} {
+        allow read: if isCmsUser() && cmsBranch() == branchId;
+        allow create: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow update: if cmsBranch() == branchId && (isLeadPastor() || isSecretary() || isBranchPastor());
+        allow delete: if cmsBranch() == branchId && (isLeadPastor() || isSecretary());
       }
     }
 
-    match /{path=**}/meetings/{meetingId} {
-      allow read, write: if isAuthenticated();
-    }
+    // ══════════════════════════════════════════════════════════════════════════
+    // ── Wildcard fallbacks for nested paths ───────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
 
-    match /{path=**}/members/{memberId} {
-      allow read: if isAuthenticated();
-    }
+    match /{path=**}/assets/{assetId}     { allow read: if isCmsUser(); allow write: if isCmsUser(); }
+    match /{path=**}/sub_groups/{groupId} { allow read: if isCmsUser(); allow write: if isLeadPastor() || isSecretary() || isBranchPastor(); }
+    match /{path=**}/meetings/{meetingId} { allow read: if isCmsUser(); allow write: if isLeadPastor() || isSecretary() || isBranchPastor(); }
 
-    // Default: deny everything else
+    // Default: deny unauthenticated; mobile app users can read general content
     match /{document=**} {
-      allow read, write: if false;
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

@@ -11,6 +11,10 @@ abstract class EventRepository {
   Future<void> recordAttendance(String branchId, String eventId, List<AttendanceModel> records);
   Future<void> updateHeadcount(String branchId, String eventId, int headcount);
 
+  // Event Approval Workflow
+  Future<void> approveEvent(String branchId, String eventId);
+  Future<void> rejectEvent(String branchId, String eventId, String reason);
+
   // Demographic & Service Attendance Records
   Stream<List<AttendanceRecordModel>> watchDetailedAttendanceRecords(String branchId);
   Future<void> recordDetailedAttendance(String branchId, AttendanceRecordModel record);

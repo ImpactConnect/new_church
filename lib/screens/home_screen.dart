@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
               pinned: true,
               flexibleSpace: FlexibleSpaceBar(
                 title: const Text(
-                  'Impact Connect',
+                  'FWC',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

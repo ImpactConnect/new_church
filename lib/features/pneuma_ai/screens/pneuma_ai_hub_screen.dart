@@ -52,7 +52,7 @@ class _PneumaAiHubScreenState extends State<PneumaAiHubScreen> {
             title: AnimatedOpacity(
               opacity: _showTitle ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 200),
-              child: const Text('Pneuma AI', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              child: const Text('Church AI', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -106,7 +106,7 @@ class _PneumaAiHubScreenState extends State<PneumaAiHubScreen> {
                         ),
                         const SizedBox(height: 12),
                         const Text(
-                          'Pneuma AI',
+                          'Church AI',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -147,8 +147,8 @@ class _PneumaAiHubScreenState extends State<PneumaAiHubScreen> {
                 const SizedBox(height: 12),
                 _PneumaFeatureCard(
                   emoji: '📜',
-                  title: 'Ask GSW',
-                  subtitle: 'Get 24/7 spiritual guidance and answers to your scripture questions directly from Pastor GSW.',
+                  title: 'Ask Pastor',
+                  subtitle: 'Get 24/7 spiritual guidance and answers to your scripture questions directly from your Pastor.',
                   gradient: const LinearGradient(
                     colors: [Color(0xFF4F63D2), Color(0xFF8B3FC0)],
                     begin: Alignment.topLeft,

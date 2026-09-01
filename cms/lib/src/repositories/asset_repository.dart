@@ -4,4 +4,5 @@ abstract class AssetRepository {
   Stream<List<AssetModel>> watchAssets(String branchId);
   Future<void> saveAsset(String branchId, AssetModel asset);
   Future<void> deleteAsset(String branchId, String assetId);
+  Future<void> seedSampleAssets(String branchId);
 }

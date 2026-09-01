@@ -48,6 +48,7 @@ class MemberModel extends Equatable {
     required this.gender,
     required this.joinDate,
     required this.memberStatus,
+    this.memberCode,
     this.email,
     this.dob,
     this.maritalStatus,
@@ -60,12 +61,23 @@ class MemberModel extends Equatable {
     this.residentAddress,
     this.profession,
     this.weddingDate,
+    this.waterBaptized,
+    this.waterBaptismDate,
+    this.holySpiritBaptized,
+    this.holySpiritBaptismDate,
+    this.subGroupId,
+    this.subGroupName,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
+    this.emergencyContactRelation,
+    this.pastoralNotes,
   });
 
   final String id;
   final String firstName;
   final String lastName;
   final String phone;
+  final String? memberCode;
   final String? email;
   final String gender; // 'male' | 'female'
   final DateTime joinDate;
@@ -81,6 +93,16 @@ class MemberModel extends Equatable {
   final String? residentAddress;
   final String? profession;
   final DateTime? weddingDate;
+  final bool? waterBaptized;
+  final DateTime? waterBaptismDate;
+  final bool? holySpiritBaptized;
+  final DateTime? holySpiritBaptismDate;
+  final String? subGroupId;
+  final String? subGroupName;
+  final String? emergencyContactName;
+  final String? emergencyContactPhone;
+  final String? emergencyContactRelation;
+  final String? pastoralNotes;
 
   String get fullName => '$firstName $lastName';
 
@@ -90,6 +112,7 @@ class MemberModel extends Equatable {
       firstName: data['firstName'] as String? ?? '',
       lastName: data['lastName'] as String? ?? '',
       phone: data['phone'] as String? ?? '',
+      memberCode: data['memberCode'] as String?,
       email: data['email'] as String?,
       gender: data['gender'] as String? ?? '',
       joinDate: _parseDate(data['joinDate']) ?? DateTime.now(),
@@ -108,6 +131,16 @@ class MemberModel extends Equatable {
       residentAddress: data['residentAddress'] as String?,
       profession: data['profession'] as String?,
       weddingDate: _parseDate(data['weddingDate']),
+      waterBaptized: data['waterBaptized'] as bool?,
+      waterBaptismDate: _parseDate(data['waterBaptismDate']),
+      holySpiritBaptized: data['holySpiritBaptized'] as bool?,
+      holySpiritBaptismDate: _parseDate(data['holySpiritBaptismDate']),
+      subGroupId: data['subGroupId'] as String?,
+      subGroupName: data['subGroupName'] as String?,
+      emergencyContactName: data['emergencyContactName'] as String?,
+      emergencyContactPhone: data['emergencyContactPhone'] as String?,
+      emergencyContactRelation: data['emergencyContactRelation'] as String?,
+      pastoralNotes: data['pastoralNotes'] as String?,
     );
   }
 
@@ -115,6 +148,7 @@ class MemberModel extends Equatable {
     'firstName': firstName,
     'lastName': lastName,
     'phone': phone,
+    if (memberCode != null) 'memberCode': memberCode,
     if (email != null) 'email': email,
     'gender': gender,
     'joinDate': joinDate.toIso8601String(),
@@ -130,12 +164,23 @@ class MemberModel extends Equatable {
     if (residentAddress != null) 'residentAddress': residentAddress,
     if (profession != null) 'profession': profession,
     if (weddingDate != null) 'weddingDate': weddingDate!.toIso8601String(),
+    if (waterBaptized != null) 'waterBaptized': waterBaptized,
+    if (waterBaptismDate != null) 'waterBaptismDate': waterBaptismDate!.toIso8601String(),
+    if (holySpiritBaptized != null) 'holySpiritBaptized': holySpiritBaptized,
+    if (holySpiritBaptismDate != null) 'holySpiritBaptismDate': holySpiritBaptismDate!.toIso8601String(),
+    if (subGroupId != null) 'subGroupId': subGroupId,
+    if (subGroupName != null) 'subGroupName': subGroupName,
+    if (emergencyContactName != null) 'emergencyContactName': emergencyContactName,
+    if (emergencyContactPhone != null) 'emergencyContactPhone': emergencyContactPhone,
+    if (emergencyContactRelation != null) 'emergencyContactRelation': emergencyContactRelation,
+    if (pastoralNotes != null) 'pastoralNotes': pastoralNotes,
   };
 
   MemberModel copyWith({
     String? firstName,
     String? lastName,
     String? phone,
+    String? memberCode,
     String? email,
     String? gender,
     DateTime? joinDate,
@@ -149,12 +194,23 @@ class MemberModel extends Equatable {
     String? residentAddress,
     String? profession,
     DateTime? weddingDate,
+    bool? waterBaptized,
+    DateTime? waterBaptismDate,
+    bool? holySpiritBaptized,
+    DateTime? holySpiritBaptismDate,
+    String? subGroupId,
+    String? subGroupName,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelation,
+    String? pastoralNotes,
   }) {
     return MemberModel(
       id: id,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,
+      memberCode: memberCode ?? this.memberCode,
       email: email ?? this.email,
       gender: gender ?? this.gender,
       joinDate: joinDate ?? this.joinDate,
@@ -170,6 +226,16 @@ class MemberModel extends Equatable {
       residentAddress: residentAddress ?? this.residentAddress,
       profession: profession ?? this.profession,
       weddingDate: weddingDate ?? this.weddingDate,
+      waterBaptized: waterBaptized ?? this.waterBaptized,
+      waterBaptismDate: waterBaptismDate ?? this.waterBaptismDate,
+      holySpiritBaptized: holySpiritBaptized ?? this.holySpiritBaptized,
+      holySpiritBaptismDate: holySpiritBaptismDate ?? this.holySpiritBaptismDate,
+      subGroupId: subGroupId ?? this.subGroupId,
+      subGroupName: subGroupName ?? this.subGroupName,
+      emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
+      emergencyContactRelation: emergencyContactRelation ?? this.emergencyContactRelation,
+      pastoralNotes: pastoralNotes ?? this.pastoralNotes,
     );
   }
 
@@ -183,5 +249,6 @@ class MemberModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, firstName, lastName, phone, memberStatus];
+  List<Object?> get props => [id, firstName, lastName, phone, memberStatus, memberCode];
 }
+

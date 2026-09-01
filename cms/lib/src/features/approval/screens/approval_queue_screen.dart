@@ -4,8 +4,10 @@ import 'package:cms/src/core/providers.dart';
 import 'package:cms/src/core/permissions.dart';
 import 'package:cms/src/core/theme.dart';
 import 'package:cms/src/core/widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:cms/src/features/announcements/models/announcement_model.dart';
 import 'package:cms/src/features/finance/models/budget_model.dart';
+import 'package:cms/src/features/events/models/event_model.dart';
 
 final _pendingAnnouncementsProvider =
     StreamProvider.autoDispose.family<List<AnnouncementModel>, String>(
@@ -25,6 +27,13 @@ final _pendingExpendituresProvider =
       ref.watch(financeRepositoryProvider).watchExpenditureRequests(branchId, status: 'pending'),
 );
 
+final _pendingEventsProvider =
+    StreamProvider.autoDispose.family<List<EventModel>, String>(
+  (ref, branchId) => ref.watch(eventRepositoryProvider).watchEvents(branchId).map(
+        (list) => list.where((e) => e.isPending).toList(),
+      ),
+);
+
 class ApprovalQueueScreen extends ConsumerWidget {
   const ApprovalQueueScreen({super.key});
 
@@ -36,10 +45,12 @@ class ApprovalQueueScreen extends ConsumerWidget {
     final pendingAnnouncementsAsync = ref.watch(_pendingAnnouncementsProvider(branchId));
     final pendingBudgetsAsync = ref.watch(_pendingBudgetsProvider(branchId));
     final pendingExpendituresAsync = ref.watch(_pendingExpendituresProvider(branchId));
+    final pendingEventsAsync = ref.watch(_pendingEventsProvider(branchId));
 
     final canApproveAnnounce = user?.can(AppPermission.approveAnnouncement) ?? false;
     final canApproveBudget = user?.can(AppPermission.approveBudget) ?? false;
     final canApproveExpenditure = user?.can(AppPermission.approveExpenditure) ?? false;
+    final isLeadPastorOrAdmin = user?.roleId == AppRole.leadPastor || user?.roleId == 'admin';
 
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -48,7 +59,7 @@ class ApprovalQueueScreen extends ConsumerWidget {
         children: [
           const CmsPageHeader(
             title: 'Approval Queue',
-            subtitle: 'Unified inbox for pending approvals — announcements, budgets, and expenditures',
+            subtitle: 'Unified inbox for pending approvals — events, master calendar, announcements, budgets, and expenditures',
           ),
           const SizedBox(height: 28),
           Expanded(
@@ -56,6 +67,23 @@ class ApprovalQueueScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Church Events & Calendar ──────────────────────────────
+                  if (isLeadPastorOrAdmin) ...[
+                    _sectionHeader('Pending Church Events & Master Calendar'),
+                    const SizedBox(height: 12),
+                    pendingEventsAsync.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (e, _) => Text('Error: $e', style: const TextStyle(color: CmsTheme.danger)),
+                      data: (list) {
+                        if (list.isEmpty) return _emptyCard('No pending church events for approval.');
+                        return Column(
+                          children: list.map((e) => _EventApprovalItem(event: e, branchId: branchId, ref: ref)).toList(),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 28),
+                  ],
+
                   // ── Announcements ───────────────────────────────────────────
                   if (canApproveAnnounce) ...[
                     _sectionHeader('Pending Announcements'),
@@ -833,4 +861,107 @@ class _EditApproveExpenditureDialogState
         style: const TextStyle(
             fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary),
       );
+}
+
+// ── Event Approval Item ────────────────────────────────────────────────────────
+
+class _EventApprovalItem extends StatelessWidget {
+  const _EventApprovalItem({
+    required this.event,
+    required this.branchId,
+    required this.ref,
+  });
+
+  final EventModel event;
+  final String branchId;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: CmsTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CmsTheme.warning.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const StatusBadge('pending'),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  event.title,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: CmsTheme.textPrimary,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: CmsTheme.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  event.eventType.toUpperCase(),
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.bold, color: CmsTheme.accent),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Date: ${DateFormat('EEEE, MMM d, yyyy').format(event.effectiveStartDate)} | Venue: ${event.location}',
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary),
+          ),
+          if (event.description.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(event.description, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted)),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                'Submitted by ${event.createdByName ?? "Secretary"}',
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textMuted),
+              ),
+              const Spacer(),
+              CmsButton(
+                label: 'Reject',
+                compact: true,
+                variant: CmsButtonVariant.danger,
+                onPressed: () async {
+                  final reason = await showRejectionReasonDialog(context);
+                  if (reason == null || !context.mounted) return;
+                  await ref.read(eventRepositoryProvider).rejectEvent(branchId, event.id, reason);
+                },
+              ),
+              const SizedBox(width: 8),
+              CmsButton(
+                label: 'Approve Event',
+                icon: Icons.check,
+                compact: true,
+                onPressed: () async {
+                  await ref.read(eventRepositoryProvider).approveEvent(branchId, event.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Approved "${event.title}"'), backgroundColor: CmsTheme.success),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

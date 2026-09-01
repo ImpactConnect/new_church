@@ -25,12 +25,92 @@ class FirebaseEventRepository implements EventRepository {
   @override
   Future<void> saveEvent(String branchId, EventModel event) async {
     final id = event.id.isEmpty ? _uuid.v4() : event.id;
-    await _eventsCol(branchId).doc(id).set(event.toFirestore(), SetOptions(merge: true));
+    final payload = EventModel(
+      id: id,
+      title: event.title,
+      description: event.description,
+      dateTime: event.dateTime,
+      location: event.location,
+      category: event.category,
+      headcount: event.headcount,
+      departmentId: event.departmentId,
+      status: event.status,
+      eventType: event.eventType,
+      year: event.year,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      createdByRole: event.createdByRole,
+      createdByName: event.createdByName,
+      rejectionReason: event.rejectionReason,
+      mediaUrls: event.mediaUrls,
+    ).toFirestore();
+
+    // 1. Write to branch collection
+    await _eventsCol(branchId).doc(id).set(payload, SetOptions(merge: true));
+
+    // 2. If approved, sync to root 'events' collection for mobile app consumption
+    if (event.isApproved) {
+      await _db.collection('events').doc(id).set({
+        'id': id,
+        'title': event.title,
+        'description': event.description,
+        'venue': event.location,
+        'location': event.location,
+        'category': event.category,
+        'eventType': event.eventType,
+        'status': event.status,
+        'startDate': Timestamp.fromDate(event.effectiveStartDate),
+        'endDate': Timestamp.fromDate(event.effectiveEndDate),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+  }
+
+  @override
+  Future<void> approveEvent(String branchId, String eventId) async {
+    final docRef = _eventsCol(branchId).doc(eventId);
+    await docRef.update({
+      'status': 'approved',
+      'rejectionReason': FieldValue.delete(),
+    });
+
+    final updatedDoc = await docRef.get();
+    if (updatedDoc.exists && updatedDoc.data() != null) {
+      final ev = EventModel.fromFirestore(updatedDoc.data()!, eventId);
+      await _db.collection('events').doc(eventId).set({
+        'id': eventId,
+        'title': ev.title,
+        'description': ev.description,
+        'venue': ev.location,
+        'location': ev.location,
+        'category': ev.category,
+        'eventType': ev.eventType,
+        'status': 'approved',
+        'startDate': Timestamp.fromDate(ev.effectiveStartDate),
+        'endDate': Timestamp.fromDate(ev.effectiveEndDate),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+  }
+
+  @override
+  Future<void> rejectEvent(String branchId, String eventId, String reason) async {
+    await _eventsCol(branchId).doc(eventId).update({
+      'status': 'rejected',
+      'rejectionReason': reason,
+    });
+    try {
+      await _db.collection('events').doc(eventId).delete();
+    } catch (_) {}
   }
 
   @override
   Future<void> deleteEvent(String branchId, String eventId) async {
     await _eventsCol(branchId).doc(eventId).delete();
+    try {
+      await _db.collection('events').doc(eventId).delete();
+    } catch (_) {}
   }
 
   @override

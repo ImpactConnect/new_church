@@ -190,6 +190,15 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                       path: AppRoutes.correspondence,
                       current: location,
                     ),
+                  if (user.roleId == AppRole.leadPastor ||
+                      user.roleId == AppRole.secretary ||
+                      user.can(AppPermission.sendCommunication))
+                    _NavItem(
+                      icon: Icons.hub_outlined,
+                      label: 'Communication Desk',
+                      path: AppRoutes.communication,
+                      current: location,
+                    ),
                   const _SectionLabel('Finance'),
                   if (user.can(AppPermission.recordIncome) ||
                       user.can(AppPermission.createBudgetRequest) ||
@@ -265,7 +274,10 @@ class _SidebarState extends ConsumerState<_Sidebar> {
                     ),
 
                   const _SectionLabel('Admin'),
-                  if (user.can(AppPermission.manageAssetPhysical) ||
+                  if (user.roleId == AppRole.leadPastor ||
+                      user.roleId == AppRole.secretary ||
+                      user.roleId == AppRole.assetManager ||
+                      user.can(AppPermission.manageAssetPhysical) ||
                       user.can(AppPermission.manageAssetFinancial))
                     _NavItem(
                       icon: Icons.inventory_2_outlined,
@@ -374,6 +386,7 @@ class _SidebarState extends ConsumerState<_Sidebar> {
       'secretary' => 'Secretary',
       'financeDept' => 'Finance Dept',
       'branchPastor' => 'Branch Pastor',
+      'assetManager' => 'Asset Manager',
       _ => roleId,
     };
   }
@@ -822,6 +835,7 @@ class _TopBar extends ConsumerWidget {
       AppRoutes.events => 'Events',
       AppRoutes.announcements => 'Announcements',
       AppRoutes.correspondence => 'Correspondence',
+      AppRoutes.communication => 'Communication Desk',
       AppRoutes.financeDashboard => 'Finance Overview',
       AppRoutes.income => 'Income',
       AppRoutes.giving => 'Giving Records',

@@ -13,6 +13,8 @@ class AttendanceRecordModel extends Equatable {
     required this.adult,
     required this.youth,
     required this.children,
+    this.firstTimers = 0,
+    this.newConverts = 0,
     required this.total,
     this.recordedBy,
     this.recordedByName,
@@ -30,6 +32,8 @@ class AttendanceRecordModel extends Equatable {
   final int adult;
   final int youth;
   final int children;
+  final int firstTimers;
+  final int newConverts;
   final int total;
   final String? recordedBy;
   final String? recordedByName;
@@ -53,6 +57,8 @@ class AttendanceRecordModel extends Equatable {
     final a = (data['adult'] as num?)?.toInt() ?? 0;
     final y = (data['youth'] as num?)?.toInt() ?? 0;
     final c = (data['children'] as num?)?.toInt() ?? 0;
+    final ft = (data['firstTimers'] as num?)?.toInt() ?? (data['first_timers'] as num?)?.toInt() ?? 0;
+    final nc = (data['newConverts'] as num?)?.toInt() ?? (data['new_converts'] as num?)?.toInt() ?? 0;
     final tot = (data['total'] as num?)?.toInt() ?? (data['headcount'] as num?)?.toInt() ?? (m + f > 0 ? m + f : a + y + c);
 
     return AttendanceRecordModel(
@@ -67,6 +73,8 @@ class AttendanceRecordModel extends Equatable {
       adult: a,
       youth: y,
       children: c,
+      firstTimers: ft,
+      newConverts: nc,
       total: tot,
       recordedBy: data['recordedBy'] as String?,
       recordedByName: data['recordedByName'] as String?,
@@ -85,6 +93,8 @@ class AttendanceRecordModel extends Equatable {
     'adult': adult,
     'children': children,
     'youth': youth,
+    'firstTimers': firstTimers,
+    'newConverts': newConverts,
     'total': total,
     if (recordedBy != null) 'recordedBy': recordedBy,
     if (recordedByName != null) 'recordedByName': recordedByName,
@@ -92,5 +102,5 @@ class AttendanceRecordModel extends Equatable {
   };
 
   @override
-  List<Object?> get props => [id, eventId, eventName, date, total];
+  List<Object?> get props => [id, eventId, eventName, date, total, firstTimers, newConverts];
 }

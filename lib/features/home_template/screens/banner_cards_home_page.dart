@@ -5,6 +5,12 @@ import '../models/home_tile_model.dart';
 import '../repositories/home_template_repository.dart';
 import '../widgets/home_banner_tile_card.dart';
 import '../../../widgets/bottom_nav_bar.dart';
+import '../../../screens/global_search_screen.dart';
+import '../../../services/community_auth_service.dart';
+import '../../../screens/community/community_login_screen.dart';
+import '../../../screens/members/members_directory_screen.dart';
+import '../../../screens/full_player_screen.dart';
+import '../../../main.dart';
 
 /// The "Banner Cards" (T30-style) homepage layout.
 /// Renders:
@@ -72,52 +78,64 @@ class _BannerCardsAppBar extends StatelessWidget {
       backgroundColor: bg,
       surfaceTintColor: bg,
       automaticallyImplyLeading: false,
-      title: Row(
-        children: [
-          // Church logo / icon
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFD4A017),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.church, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 10),
-          StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('app_settings')
-                .doc('ui_config')
-                .snapshots(),
-            builder: (context, snap) {
-              final name = (snap.data?.data()
-                      as Map<String, dynamic>?)?['appBarTitle'] as String? ??
-                  'GSWMI';
-              return Text(
-                name,
-                style: TextStyle(
-                  color: fg,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              );
-            },
-          ),
-        ],
+      centerTitle: false,
+      titleSpacing: 16,
+      title: Image.asset(
+        'assets/images/logo.png',
+        height: 36,
+        fit: BoxFit.contain,
+        color: isDark ? Colors.white : null,
       ),
       actions: [
         IconButton(
           icon: Icon(Icons.bar_chart, color: fg),
-          onPressed: () {},
+          onPressed: () {
+            final sermon = MyApp.of(context).audioPlayerService.currentSermon;
+            if (sermon != null) {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => FullPlayerScreen(
+                  sermon: sermon,
+                  audioPlayerService: MyApp.of(context).audioPlayerService,
+                ),
+              ));
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No audio currently playing')),
+              );
+            }
+          },
+        ),
+        IconButton(
+          icon: Icon(Icons.chat_bubble_outline, color: fg),
+          onPressed: () async {
+            final authService = CommunityAuthService();
+            final currentUser = await authService.getCurrentUser();
+            if (context.mounted) {
+              if (currentUser != null) {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const MembersDirectoryScreen()));
+              } else {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => CommunityLoginScreen(
+                    onLoginSuccess: (user) {
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MembersDirectoryScreen()));
+                    },
+                  ),
+                ));
+              }
+            }
+          },
         ),
         IconButton(
           icon: Icon(Icons.search, color: fg),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalSearchScreen()));
+          },
         ),
         IconButton(
           icon: Icon(Icons.account_circle_outlined, color: fg),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pushNamed(context, '/settings');
+          },
         ),
         const SizedBox(width: 4),
       ],

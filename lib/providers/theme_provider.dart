@@ -12,7 +12,7 @@ class ThemeProvider with ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
 
   void _loadTheme() {
-    final isDark = _prefs.getBool(_themeKey) ?? false;
+    final isDark = _prefs.getBool(_themeKey) ?? true;
     _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
     notifyListeners();
   }

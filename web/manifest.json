@@ -1,6 +1,6 @@
 {
-    "name": "test_app",
-    "short_name": "test_app",
+    "name": "FWC",
+    "short_name": "FWC",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

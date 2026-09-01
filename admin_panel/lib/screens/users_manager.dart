@@ -34,7 +34,7 @@ class _UsersManagerState extends State<UsersManager> {
 
   Future<void> _generateCredentials(DocumentSnapshot memberDoc) async {
     final data = memberDoc.data() as Map<String, dynamic>;
-    final name = data['name'] ?? 'Unknown';
+    final name = (data['name'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}').toString().trim();
     final existingUsername = data['username'] as String?;
 
     if (existingUsername != null && existingUsername.isNotEmpty) {
@@ -48,11 +48,13 @@ class _UsersManagerState extends State<UsersManager> {
 
     setState(() => _isSaving = true);
 
-    final username = _generateUsername(name);
+    final username = _generateUsername(name).toLowerCase();
     final password = _generatePassword();
     final email = (data['email'] as String?)?.isNotEmpty == true
-        ? data['email'] as String
+        ? (data['email'] as String).trim()
         : '$username@impactconnect.app';
+
+    String? authUid;
 
     try {
       // Create Firebase Auth user using secondary app to avoid admin logout
@@ -64,24 +66,51 @@ class _UsersManagerState extends State<UsersManager> {
             name: 'CredentialGeneration', options: Firebase.app().options);
       }
 
-      final cred = await FirebaseAuth.instanceFor(app: secondary)
-          .createUserWithEmailAndPassword(email: email, password: password);
-      await FirebaseAuth.instanceFor(app: secondary).signOut();
+      try {
+        final cred = await FirebaseAuth.instanceFor(app: secondary)
+            .createUserWithEmailAndPassword(email: email, password: password);
+        authUid = cred.user?.uid;
+        await FirebaseAuth.instanceFor(app: secondary).signOut();
+      } catch (authError) {
+        print('Secondary Auth creation note (will queue admin task if needed): $authError');
+        // Queue admin task to ensure Auth user password is set even if account already existed
+        await FirebaseFirestore.instance.collection('admin_tasks').add({
+          'type': 'create_community_user',
+          'email': email,
+          'username': username,
+          'newPassword': password,
+          'displayName': name,
+          'createdAt': FieldValue.serverTimestamp(),
+          'status': 'pending',
+        });
+      }
 
-      // Update the CMS member doc with credentials
-      await FirebaseFirestore.instance
-          .collection('branches')
-          .doc('default-branch')
-          .collection('members')
-          .doc(memberDoc.id)
-          .update({
+      final updatePayload = <String, dynamic>{
         'username': username,
         'email': email,
         'role': 'member',
         'hasCredentials': true,
         'credentialGeneratedAt': FieldValue.serverTimestamp(),
-        '_authUid': cred.user!.uid,
-      });
+        if (authUid != null) '_authUid': authUid,
+      };
+
+      // 1. Update the CMS branch member doc
+      await FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('members')
+          .doc(memberDoc.id)
+          .set(updatePayload, SetOptions(merge: true));
+
+      // 2. Also update top-level members doc
+      try {
+        await FirebaseFirestore.instance
+            .collection('members')
+            .doc(memberDoc.id)
+            .set(updatePayload, SetOptions(merge: true));
+      } catch (e) {
+        print('Top-level member update note: $e');
+      }
 
       setState(() => _isSaving = false);
 
@@ -188,19 +217,22 @@ class _UsersManagerState extends State<UsersManager> {
 
   Future<void> _resetPassword(DocumentSnapshot memberDoc) async {
     final data = memberDoc.data() as Map<String, dynamic>;
-    final name = data['name'] ?? 'Unknown';
-    final email = data['email'] as String?;
+    final name = (data['name'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}').toString().trim();
+    final username = (data['username'] as String?)?.trim() ?? '';
+    final email = (data['email'] as String?)?.trim().isNotEmpty == true
+        ? (data['email'] as String).trim()
+        : '$username@impactconnect.app';
 
-    if (email == null || email.isEmpty) {
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No email found')));
+          .showSnackBar(const SnackBar(content: Text('No email found for password reset.')));
       return;
     }
 
     final newPassword = _generatePassword();
 
     try {
-      // Use admin task approach for password reset
+      // 1. Queue admin task for background Auth sync
       await FirebaseFirestore.instance.collection('admin_tasks').add({
         'type': 'password_reset',
         'email': email,
@@ -209,9 +241,31 @@ class _UsersManagerState extends State<UsersManager> {
         'status': 'pending',
       });
 
+      // 2. Update Firestore documents
+      final updateData = <String, dynamic>{
+        'email': email,
+        'hasCredentials': true,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('members')
+          .doc(memberDoc.id)
+          .set(updateData, SetOptions(merge: true));
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('members')
+            .doc(memberDoc.id)
+            .set(updateData, SetOptions(merge: true));
+      } catch (e) {
+        print('Top-level member update note: $e');
+      }
+
       if (mounted) {
         _showCredentialsDialog(
-            context, name, data['username'] ?? '', newPassword);
+            context, name, username, newPassword);
       }
     } catch (e) {
       if (mounted) {

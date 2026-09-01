@@ -360,7 +360,7 @@ class _BiblePassageBottomSheetState extends ConsumerState<BiblePassageBottomShee
                               );
                             },
                             icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                            label: const Text('Ask GSW'),
+                            label: const Text('Ask Pastor'),
                           ),
                           const SizedBox(width: 8),
                           FilledButton.icon(

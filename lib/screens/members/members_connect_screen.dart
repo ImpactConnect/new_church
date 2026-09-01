@@ -19,6 +19,7 @@ import '../community/community_login_screen.dart';
 import '../../services/community_auth_service.dart';
 import 'prayer_testimony_screen.dart';
 import '../ministers_corner_screen.dart';
+import '../event_screen.dart';
 
 class MembersConnectScreen extends StatelessWidget {
   const MembersConnectScreen({Key? key}) : super(key: key);
@@ -298,7 +299,10 @@ class _MembersConnectViewState extends State<_MembersConnectView>
                   icon: Icons.calendar_month_outlined,
                   label: 'Church Calendar',
                   color: Colors.teal,
-                  onTap: () {}),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const EventScreen()))),
               QuickActionButton(
                   icon: Icons.person_pin_rounded,
                   label: "Pastor's Desk",

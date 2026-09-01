@@ -35,7 +35,7 @@ class FirebaseSubGroupRepository implements SubGroupRepository {
     final id = group.id.isEmpty ? _uuid.v4() : group.id;
     final docRef = _groupsCol(group.branchId).doc(id);
     final data = group.toFirestore();
-    data['createdAt'] = FieldValue.serverTimestamp();
+    data['createdAt'] = DateTime.now().toIso8601String();
     await docRef.set(data);
   }
 
@@ -50,10 +50,45 @@ class FirebaseSubGroupRepository implements SubGroupRepository {
   }
 
   @override
-  Future<void> assignMembersToGroup(String branchId, String groupId, List<String> memberIds) async {
-    await _groupsCol(branchId).doc(groupId).update({
-      'memberIds': memberIds,
-    });
+  Future<void> assignMembersToGroup(
+    String branchId,
+    String groupId,
+    List<String> newMemberIds,
+  ) async {
+    final groupDocRef = _groupsCol(branchId).doc(groupId);
+    final groupSnap = await groupDocRef.get();
+    if (!groupSnap.exists) return;
+
+    final groupData = groupSnap.data() ?? {};
+    final groupName = groupData['name'] as String? ?? 'Sub-Group';
+    final List<String> oldMemberIds = List<String>.from(groupData['memberIds'] ?? []);
+
+    final batch = _db.batch();
+
+    // 1. Update sub-group document
+    batch.update(groupDocRef, {'memberIds': newMemberIds});
+
+    // 2. Identify added and removed member IDs
+    final addedIds = newMemberIds.where((id) => !oldMemberIds.contains(id)).toList();
+    final removedIds = oldMemberIds.where((id) => !newMemberIds.contains(id)).toList();
+
+    final membersCol = _db.collection('branches').doc(branchId).collection('members');
+
+    for (final id in addedIds) {
+      batch.update(membersCol.doc(id), {
+        'subGroupId': groupId,
+        'subGroupName': groupName,
+      });
+    }
+
+    for (final id in removedIds) {
+      batch.update(membersCol.doc(id), {
+        'subGroupId': FieldValue.delete(),
+        'subGroupName': FieldValue.delete(),
+      });
+    }
+
+    await batch.commit();
   }
 
   @override

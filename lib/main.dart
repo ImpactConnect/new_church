@@ -41,6 +41,11 @@ import 'screens/sermon_screen.dart';
 import 'services/audio_player_service.dart';
 import 'services/bible_service.dart';
 import 'services/note_service.dart';
+import 'screens/full_player_screen.dart';
+import 'screens/global_search_screen.dart';
+import 'services/community_auth_service.dart';
+import 'screens/community/community_login_screen.dart';
+import 'screens/members/members_directory_screen.dart';
 import 'services/fcm_service.dart'; // Replaced OneSignal
 import 'services/sermon_service.dart';
 import 'services/event_service.dart';
@@ -188,7 +193,7 @@ class MyApp extends StatelessWidget {
           data: this,
           child: MaterialApp(
             scaffoldMessengerKey: ToastUtils.messengerKey,
-            title: 'GSWMI',
+            title: 'FWC',
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
@@ -448,8 +453,8 @@ class _HomePageState extends State<HomePage> {
     },
     {
       'icon': Icons.auto_awesome,
-      'label': 'Pneuma AI',
-      'color': Color(0xFF6B2FC8),
+      'label': 'Church AI',
+      'color': const Color(0xFF6B2FC8),
       'route': (BuildContext context) => const PneumaAiHubScreen(),
     },
   ];
@@ -613,19 +618,83 @@ class _HomePageState extends State<HomePage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            toolbarHeight: MediaQuery.of(context).size.width * (178 / 1105),
-            collapsedHeight: MediaQuery.of(context).size.width * (178 / 1105),
-            expandedHeight: MediaQuery.of(context).size.width * (178 / 1105),
             pinned: true,
-            elevation: 4.0,
-            backgroundColor: const Color(0xFF0D1B2A),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Image.asset(
-                'assets/images/home_hero.jpg',
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-              ),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            surfaceTintColor: Theme.of(context).scaffoldBackgroundColor,
+            automaticallyImplyLeading: false,
+            centerTitle: false,
+            titleSpacing: 16,
+            title: Image.asset(
+              'assets/images/logo.png',
+              height: 36,
+              fit: BoxFit.contain,
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : null,
             ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.bar_chart,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                ),
+                onPressed: () {
+                  final sermon = MyApp.of(context).audioPlayerService.currentSermon;
+                  if (sermon != null) {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => FullPlayerScreen(
+                        sermon: sermon,
+                        audioPlayerService: MyApp.of(context).audioPlayerService,
+                      ),
+                    ));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No audio currently playing')),
+                    );
+                  }
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.chat_bubble_outline,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                ),
+                onPressed: () async {
+                  final authService = CommunityAuthService();
+                  final currentUser = await authService.getCurrentUser();
+                  if (context.mounted) {
+                    if (currentUser != null) {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const MembersDirectoryScreen()));
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => CommunityLoginScreen(
+                          onLoginSuccess: (user) {
+                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MembersDirectoryScreen()));
+                          },
+                        ),
+                      ));
+                    }
+                  }
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.search,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                ),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const GlobalSearchScreen()));
+                },
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.account_circle_outlined,
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/settings');
+                },
+              ),
+              const SizedBox(width: 4),
+            ],
           ),
           SliverToBoxAdapter(
             child: Column(

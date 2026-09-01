@@ -30,6 +30,7 @@ import 'package:cms/src/features/finance/screens/finance_dashboard_screen.dart';
 import 'package:cms/src/features/finance/screens/finance_notifications_screen.dart';
 import 'package:cms/src/features/finance/screens/secretary_financial_docs_screen.dart';
 import 'package:cms/src/features/assets/screens/asset_list_screen.dart';
+import 'package:cms/src/features/communication/screens/communication_desk_screen.dart';
 import 'package:cms/src/features/reports/screens/reports_screen.dart';
 import 'package:cms/src/features/shell/screens/app_shell.dart';
 
@@ -54,6 +55,7 @@ class AppRoutes {
   static const financeNotifications = '/finance-notifications';
   static const financialDocs = '/financial-docs';
   static const assets = '/assets';
+  static const communication = '/communication';
   static const reports = '/reports';
   static const approvalQueue = '/approval-queue';
   static const auditLog = '/audit-log';
@@ -84,7 +86,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Branch pastor should not access admin-only routes
       if (user != null && user.can(AppPermission.isBranchPastor)) {
-        final adminRoutes = [AppRoutes.branches, AppRoutes.roles, AppRoutes.auditLog, AppRoutes.departments, AppRoutes.announcements, AppRoutes.correspondence, AppRoutes.disbursements, AppRoutes.assets, AppRoutes.reports];
+        final adminRoutes = [AppRoutes.branches, AppRoutes.roles, AppRoutes.auditLog, AppRoutes.departments, AppRoutes.announcements, AppRoutes.correspondence, AppRoutes.communication, AppRoutes.disbursements, AppRoutes.assets, AppRoutes.reports];
         if (adminRoutes.contains(state.matchedLocation)) {
           return AppRoutes.dashboard;
         }
@@ -211,6 +213,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: AppRoutes.assets,
             builder: (context, state) => const AssetListScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.communication,
+            builder: (context, state) => const _PermissionGate(
+              required: AppPermission.sendCommunication,
+              child: CommunicationDeskScreen(),
+            ),
           ),
           GoRoute(
             path: AppRoutes.reports,

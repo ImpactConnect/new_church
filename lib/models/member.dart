@@ -31,6 +31,9 @@ class Member {
     this.residentAddress,
     this.memberStatus,
     this.username,
+    this.stateOfOrigin,
+    this.schoolName,
+    this.joinDate,
   });
 
   factory Member.fromFirestore(DocumentSnapshot doc) {
@@ -45,7 +48,8 @@ class Member {
       if (dateData is Timestamp) return dateData.toDate();
       if (dateData is String) return DateTime.tryParse(dateData);
       if (dateData is Map && dateData['_seconds'] != null) {
-        return DateTime.fromMillisecondsSinceEpoch(dateData['_seconds'] * 1000);
+        return DateTime.fromMillisecondsSinceEpoch(
+            (dateData['_seconds'] as int) * 1000);
       }
       return null;
     }
@@ -75,7 +79,8 @@ class Member {
       groups = List<String>.from(data['churchGroups']);
     } else if (data['departmentIds'] != null) {
       groups = List<String>.from(data['departmentIds']);
-    } else if (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty) {
+    } else if (data['churchGroup'] != null &&
+        data['churchGroup'].toString().isNotEmpty) {
       groups = [data['churchGroup'].toString()];
     }
 
@@ -86,7 +91,8 @@ class Member {
       occupation: data['profession'] ?? data['occupation'],
       maritalStatus: parseMaritalStatus(data['maritalStatus']),
       spouseName: data['spouseName'],
-      birthDate: parseDate(data['dob']) ?? parseDate(data['dateOfBirth']) ?? parseDate(data['birthDate']),
+      birthDate:
+          parseDate(data['dob']) ?? parseDate(data['dateOfBirth']) ?? parseDate(data['birthDate']),
       weddingDate: parseDate(data['weddingDate']),
       phoneNumber: data['phone'] ?? data['phoneNumber'],
       email: data['email'],
@@ -98,6 +104,11 @@ class Member {
       residentAddress: data['residentAddress'] ?? data['address'],
       memberStatus: data['memberStatus'],
       username: data['username'],
+      stateOfOrigin: data['stateOfOrigin'],
+      schoolName: data['schoolName'],
+      joinDate: parseDate(data['joinDate']) ??
+          parseDate(data['_cmsJoinDate']) ??
+          parseDate(data['createdAt']),
     );
   }
 
@@ -119,6 +130,12 @@ class Member {
   final String? residentAddress;
   final String? memberStatus;
   final String? username;
+  // New CMS fields
+  final String? stateOfOrigin;
+  final String? schoolName;
+  final DateTime? joinDate;
+
+  bool get isStudent => occupation?.toLowerCase() == 'student';
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -136,6 +153,8 @@ class Member {
       'churchGroups': churchGroups,
       'role': role,
       'gender': gender,
+      'stateOfOrigin': stateOfOrigin,
+      'schoolName': schoolName,
     };
   }
 }

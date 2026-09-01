@@ -102,7 +102,7 @@ class _AiChapterExegesisScreenState
           );
         },
         icon: const Icon(Icons.chat_bubble_outline),
-        label: const Text('Ask GSW'),
+        label: const Text('Ask Pastor'),
       ),
       body: FutureBuilder<ChapterExegesis>(
         future: _analysisFuture,

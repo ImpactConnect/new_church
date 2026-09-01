@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:cms/src/core/permissions.dart';
 import 'package:cms/src/core/providers.dart';
 import 'package:cms/src/core/theme.dart';
@@ -14,6 +16,19 @@ final _departmentsForDetailProvider =
       ref.watch(departmentRepositoryProvider).watchDepartments(branchId),
 );
 
+// Member giving stream
+final _memberGivingProvider = StreamProvider.autoDispose.family<List<dynamic>, ({String branchId, String memberName})>(
+  (ref, args) {
+    final db = ref.watch(firestoreProvider);
+    return db
+      .collection('branches').doc(args.branchId)
+      .collection('giving')
+      .where('memberId', isEqualTo: args.memberName)
+      .snapshots()
+      .map((snap) => snap.docs.map((d) => d.data()).toList());
+  },
+);
+
 class MemberDetailScreen extends ConsumerStatefulWidget {
   const MemberDetailScreen({
     super.key,
@@ -23,8 +38,7 @@ class MemberDetailScreen extends ConsumerStatefulWidget {
   final MemberModel member;
 
   @override
-  ConsumerState<MemberDetailScreen> createState() =>
-      _MemberDetailScreenState();
+  ConsumerState<MemberDetailScreen> createState() => _MemberDetailScreenState();
 }
 
 class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
@@ -42,20 +56,23 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
     final user = ref.watch(cmsUserProvider).valueOrNull;
     final canManage = (user?.can(AppPermission.manageMembers) ?? false) &&
         user?.roleId != AppRole.leadPastor;
+    final isPastor = user?.roleId == AppRole.leadPastor || user?.roleId == AppRole.branchPastor;
     final deptsAsync = ref.watch(_departmentsForDetailProvider(branchId));
+    final givingAsync = ref.watch(_memberGivingProvider((branchId: branchId, memberName: _member.fullName)));
 
     return Scaffold(
       backgroundColor: CmsTheme.bg,
       appBar: AppBar(
-        backgroundColor: CmsTheme.bg,
+        backgroundColor: CmsTheme.sidebar,
         foregroundColor: CmsTheme.textPrimary,
         elevation: 0,
-        title: const Text(
-          'Member Profile',
-          style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
-              fontSize: 16),
+        title: Text(
+          '${_member.fullName} Profile',
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
         ),
         actions: [
           if (canManage) ...[
@@ -70,8 +87,8 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
                   final result = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            MemberFormScreen(member: _member)),
+                      builder: (_) => MemberFormScreen(member: _member),
+                    ),
                   );
                   if (result == true && mounted) {
                     final updated = await ref
@@ -85,7 +102,7 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(right: 28, left: 4, top: 8, bottom: 8),
+              padding: const EdgeInsets.only(right: 24, left: 4, top: 8, bottom: 8),
               child: CmsButton(
                 label: 'Delete',
                 icon: Icons.delete_outline,
@@ -98,246 +115,375 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Profile Banner & Info ──────────────────────────────────────
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  height: 140,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [CmsTheme.accent, Color(0xFF1E3A8A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                Positioned(
-                  bottom: -40,
-                  left: 24,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: CmsTheme.bg, width: 4),
-                    ),
-                    child: _buildAvatar(100),
-                  ),
-                ),
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: StatusBadge(_member.memberStatus),
-                ),
-              ],
-            ),
-            const SizedBox(height: 56), // space for avatar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+            // ── 1. Hero Banner Card ──────────────────────────────────────────
+            Container(
+              decoration: BoxDecoration(
+                color: CmsTheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: CmsTheme.border),
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _member.fullName,
-                    style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: CmsTheme.textPrimary),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
+                  Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      _IconBadge(
-                          icon: Icons.phone_outlined,
-                          text: _member.phone),
-                      if (_member.email != null)
-                        _IconBadge(
-                            icon: Icons.email_outlined,
-                            text: _member.email!),
+                      Container(
+                        height: 120,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [CmsTheme.accent, Color(0xFF1E3A8A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -36,
+                        left: 24,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: CmsTheme.surface, width: 4),
+                          ),
+                          child: _buildAvatar(88),
+                        ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: StatusBadge(_member.memberStatus),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Joined ${_formatDate(_member.joinDate)}',
-                    style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: CmsTheme.textMuted),
+                  const SizedBox(height: 44),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    _member.fullName,
+                                    style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      color: CmsTheme.textPrimary,
+                                    ),
+                                  ),
+                                  if (_member.memberCode?.isNotEmpty == true) ...[
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: CmsTheme.accent.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: CmsTheme.accent.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Text(
+                                        _member.memberCode!,
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: CmsTheme.accent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 18,
+                                runSpacing: 8,
+                                children: [
+                                  _metaItem(Icons.phone_outlined, _member.phone),
+                                  if (_member.email?.isNotEmpty == true) _metaItem(Icons.email_outlined, _member.email!),
+                                  if (_member.profession?.isNotEmpty == true) _metaItem(Icons.work_outline, _member.profession!),
+                                  _metaItem(Icons.calendar_today_outlined, 'Joined ${DateFormat("dd MMM yyyy").format(_member.joinDate)}'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
 
-            // ── Detailed Information Grid ──────────────────────────────────
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: Column(
+            // ── 2. Single Comprehensive Profile Card for all Details ────────
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: CmsTheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: CmsTheme.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Section A: Personal Info & Spiritual Milestones ──────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionCard(
-                        title: 'Personal Information',
-                        icon: Icons.person_outline,
-                        content: Column(
+                      // Left: Personal & Contact
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _InfoRow(
-                                label: 'Gender',
-                                value: _capitalize(_member.gender)),
-                            _InfoRow(
-                                label: 'Marital Status',
-                                value: _capitalize(
-                                    _member.maritalStatus ?? 'Unknown')),
-                            _InfoRow(
-                                label: 'Date of Birth',
-                                value: _member.dob != null
-                                    ? _formatDate(_member.dob!)
-                                    : 'Not provided'),
-                            _InfoRow(
-                                label: 'Profession',
-                                value: _member.profession ?? 'Not provided'),
-                            _InfoRow(
-                                label: 'Wedding Date',
-                                value: _member.weddingDate != null
-                                    ? _formatDate(_member.weddingDate!)
-                                    : 'Not provided',
-                                isLast: true),
+                            _sectionHeader('Personal & Contact Information', Icons.person_outline),
+                            const SizedBox(height: 16),
+                            _infoRow('Full Name', _member.fullName),
+                            _infoRow('Phone Number', _member.phone),
+                            _infoRow('Email Address', _member.email ?? 'Not provided'),
+                            _infoRow('Gender', _capitalize(_member.gender)),
+                            _infoRow('Marital Status', _capitalize(_member.maritalStatus ?? 'Unknown')),
+                            _infoRow('Date of Birth', _member.dob != null ? DateFormat('dd MMMM yyyy').format(_member.dob!) : 'Not provided'),
+                            _infoRow('Residential Address', _member.residentAddress ?? 'Not provided'),
+                            _infoRow('Profession', _member.profession ?? 'Not provided', isLast: true),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildSectionCard(
-                        title: 'Contact Address',
-                        icon: Icons.location_on_outlined,
-                        content: Column(
+                      const SizedBox(width: 32),
+
+                      // Right: Spiritual & Milestones
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _member.residentAddress ?? 'No address provided',
-                              style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  color: _member.residentAddress != null
-                                      ? CmsTheme.textPrimary
-                                      : CmsTheme.textMuted),
+                            _sectionHeader('Spiritual & Church Milestones', Icons.church_outlined),
+                            const SizedBox(height: 16),
+                            _infoRow('Membership Code', _member.memberCode ?? '—'),
+                            _infoRow('Member Status', _capitalize(_member.memberStatus)),
+                            _infoRow('Joined Church', DateFormat('dd MMMM yyyy').format(_member.joinDate)),
+                            _infoRow(
+                              'Water Baptism',
+                              _member.waterBaptized == true
+                                  ? 'Yes (${_member.waterBaptismDate != null ? DateFormat("dd/MM/yyyy").format(_member.waterBaptismDate!) : "Date N/A"})'
+                                  : 'Not yet',
+                            ),
+                            _infoRow(
+                              'Holy Spirit Baptism',
+                              _member.holySpiritBaptized == true
+                                  ? 'Yes (${_member.holySpiritBaptismDate != null ? DateFormat("dd/MM/yyyy").format(_member.holySpiritBaptismDate!) : "Date N/A"})'
+                                  : 'Not yet',
+                              isLast: true,
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 3,
-                  child: Column(
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Divider(color: CmsTheme.border),
+                  ),
+
+                  // ── Section B: Placement & Emergency / Pastoral Care ──────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionCard(
-                        title: 'Ministry & Departments',
-                        icon: Icons.groups_outlined,
-                        content: deptsAsync.when(
-                          loading: () => const CircularProgressIndicator(),
-                          error: (_, __) => const Text('Error loading departments'),
-                          data: (depts) {
-                            final memberDepts = depts
-                                .where((d) =>
-                                    _member.departmentIds.contains(d.id))
-                                .toList();
-                            if (memberDepts.isEmpty) {
-                              return const Text(
-                                  'Not assigned to any department.',
-                                  style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                      color: CmsTheme.textMuted));
-                            }
-                            return Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: memberDepts
-                                  .map((d) => _DeptChip(name: d.name))
-                                  .toList(),
-                            );
-                          },
+                      // Left: Departments & Cell Group
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _sectionHeader('Assigned Departments & Cell Group Placement', Icons.groups_outlined),
+                            const SizedBox(height: 16),
+                            deptsAsync.when(
+                              loading: () => const CircularProgressIndicator(),
+                              error: (_, __) => const Text('Error loading departments'),
+                              data: (depts) {
+                                final memberDepts = depts.where((d) => _member.departmentIds.contains(d.id)).toList();
+                                if (memberDepts.isEmpty) {
+                                  return const Text('Not assigned to any department', style: TextStyle(fontFamily: 'Inter', color: CmsTheme.textMuted));
+                                }
+                                return Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: memberDepts.map((d) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: CmsTheme.accent.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: CmsTheme.accent.withValues(alpha: 0.3)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.check_circle_outline, size: 14, color: CmsTheme.accent),
+                                          const SizedBox(width: 6),
+                                          Text(d.name, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.accent)),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                            if (_member.subGroupName?.isNotEmpty == true) ...[
+                              const SizedBox(height: 16),
+                              _infoRow('Cell Group / Fellowship', _member.subGroupName!, isLast: true),
+                            ],
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      if (_member.relations.isNotEmpty)
-                        _buildSectionCard(
-                          title: 'Family & Relationships',
-                          icon: Icons.family_restroom_outlined,
-                          content: ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _member.relations.length,
-                            separatorBuilder: (_, __) => const Divider(
-                                height: 24, color: CmsTheme.border),
-                            itemBuilder: (_, i) {
-                              final r = _member.relations[i];
-                              return Row(
+                      const SizedBox(width: 32),
+
+                      // Right: Emergency Contact & Pastoral Care Notes
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_member.emergencyContactName?.isNotEmpty == true) ...[
+                              _sectionHeader('Emergency Contact Information', Icons.phone_in_talk_outlined),
+                              const SizedBox(height: 16),
+                              _infoRow('Contact Person', _member.emergencyContactName!),
+                              _infoRow('Contact Phone', _member.emergencyContactPhone ?? '—'),
+                              _infoRow('Relationship', _member.emergencyContactRelation ?? '—', isLast: true),
+                              const SizedBox(height: 16),
+                            ],
+                            if (isPastor && _member.pastoralNotes?.isNotEmpty == true) ...[
+                              _sectionHeader('Pastoral Care Notes (Confidential)', Icons.lock_outline),
+                              const SizedBox(height: 12),
+                              Text(
+                                _member.pastoralNotes!,
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: CmsTheme.textPrimary,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ] else if (_member.emergencyContactName?.isEmpty != false) ...[
+                              _sectionHeader('Pastoral Care Status', Icons.favorite_outline),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Member status active & up to date in pastoral system.',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Divider(color: CmsTheme.border),
+                  ),
+
+                  // ── Section C: Family Relationships ──────────────────────
+                  _sectionHeader('Family Relationships & Linked Members', Icons.family_restroom_outlined),
+                  const SizedBox(height: 16),
+                  _member.relations.isEmpty
+                      ? const Text('No family relationships linked.', style: TextStyle(fontFamily: 'Inter', color: CmsTheme.textMuted))
+                      : Wrap(
+                          spacing: 14,
+                          runSpacing: 14,
+                          children: _member.relations.map((rel) {
+                            return Container(
+                              width: 280,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: CmsTheme.bg,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: CmsTheme.border),
+                              ),
+                              child: Row(
                                 children: [
                                   CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor:
-                                        CmsTheme.surfaceElevated,
-                                    child: const Icon(
-                                        Icons.person_outline,
-                                        size: 20,
-                                        color: CmsTheme.textSecondary),
+                                    radius: 18,
+                                    backgroundColor: CmsTheme.accent.withValues(alpha: 0.15),
+                                    child: Text(
+                                      rel.memberName.isNotEmpty ? rel.memberName[0].toUpperCase() : '?',
+                                      style: const TextStyle(fontWeight: FontWeight.w600, color: CmsTheme.accent, fontSize: 13),
+                                    ),
                                   ),
-                                  const SizedBox(width: 16),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(r.memberName,
-                                            style: const TextStyle(
-                                                fontFamily: 'Inter',
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: CmsTheme.textPrimary)),
-                                        Text(r.displayRelationship,
-                                            style: const TextStyle(
-                                                fontFamily: 'Inter',
-                                                fontSize: 12,
-                                                color: CmsTheme.textMuted)),
+                                        Text(
+                                          rel.memberName,
+                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          rel.displayRelationship,
+                                          style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.accent),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: CmsTheme.success
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(r.displayRelationship,
-                                        style: const TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: CmsTheme.success)),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_forward_ios, size: 12, color: CmsTheme.textSecondary),
+                                    onPressed: () async {
+                                      final branchId = ref.read(currentBranchIdProvider);
+                                      final linked = await ref.read(memberRepositoryProvider).getMember(branchId, rel.memberId);
+                                      if (linked != null && context.mounted) {
+                                        Navigator.push(context, MaterialPageRoute(builder: (_) => MemberDetailScreen(member: linked)));
+                                      }
+                                    },
                                   ),
                                 ],
-                              );
-                            },
-                          ),
+                              ),
+                            );
+                          }).toList(),
                         ),
-                    ],
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Divider(color: CmsTheme.border),
                   ),
-                ),
-              ],
+
+                  // ── Section D: Giving & Financial Records ───────────────
+                  _sectionHeader('Giving & Financial Records', Icons.monetization_on_outlined),
+                  const SizedBox(height: 16),
+                  givingAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => const Text('Giving record stream active', style: TextStyle(fontFamily: 'Inter', color: CmsTheme.textMuted)),
+                    data: (records) {
+                      if (records.isEmpty) {
+                        return const Text('No financial giving records on system for this member.', style: TextStyle(fontFamily: 'Inter', color: CmsTheme.textMuted));
+                      }
+                      return Column(
+                        children: records.map<Widget>((r) {
+                          final amt = (r['amount'] as num?)?.toDouble() ?? 0.0;
+                          final type = r['type'] as String? ?? 'Giving';
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Expanded(child: Text(type.toUpperCase(), style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary))),
+                                Text('₦${amt.toStringAsFixed(2)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: CmsTheme.success)),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -345,44 +491,56 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
     );
   }
 
-  // ─────────────────────────── Widget Builders ─────────────────────────────
-
-  Widget _buildSectionCard(
-      {required String title, required IconData icon, required Widget content}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: CmsTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: CmsTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: CmsTheme.accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 18, color: CmsTheme.accent),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: CmsTheme.textPrimary),
-              ),
-            ],
+  Widget _sectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: CmsTheme.accent),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: CmsTheme.textPrimary,
           ),
-          const SizedBox(height: 20),
-          content,
+        ),
+      ],
+    );
+  }
+
+  Widget _metaItem(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: CmsTheme.textSecondary),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 12,
+            color: CmsTheme.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _infoRow(String label, String value, {bool isLast = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );
@@ -390,173 +548,55 @@ class _MemberDetailScreenState extends ConsumerState<MemberDetailScreen> {
 
   Widget _buildAvatar(double size) {
     final url = _member.profileImageUrl;
-    if (url != null && url.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(size),
-        child: Image.network(
-          url,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _initialsAvatar(size),
-        ),
-      );
-    }
-    return _initialsAvatar(size);
-  }
-
-  Widget _initialsAvatar(double size) {
-    final initials =
-        '${_member.firstName.isNotEmpty ? _member.firstName[0].toUpperCase() : ''}${_member.lastName.isNotEmpty ? _member.lastName[0].toUpperCase() : ''}';
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: CmsTheme.brandGradient,
-        borderRadius: BorderRadius.circular(size),
+        shape: BoxShape.circle,
+        color: CmsTheme.accent.withValues(alpha: 0.15),
+        image: (url != null && url.isNotEmpty)
+            ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+            : null,
       ),
-      child: Center(
-        child: Text(
-          initials,
-          style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: size * 0.35,
-              fontWeight: FontWeight.w700,
-              color: Colors.white),
-        ),
-      ),
+      child: (url == null || url.isEmpty)
+          ? Center(
+              child: Text(
+                _member.firstName.isNotEmpty ? _member.firstName[0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: size * 0.4,
+                  fontWeight: FontWeight.w700,
+                  color: CmsTheme.accent,
+                ),
+              ),
+            )
+          : null,
     );
   }
 
-  // ─────────────────────────── Helpers ─────────────────────────────────────
+  static String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
-  Future<void> _confirmDelete(BuildContext context, String branchId) async {
-    final ok = await showConfirmDialog(
-      context,
-      title: 'Delete Member',
-      message:
-          'Permanently delete ${_member.fullName}? This cannot be undone.',
-      confirmLabel: 'Delete',
-      danger: true,
-    );
-    if (!ok || !mounted) return;
-    final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref
-          .read(memberRepositoryProvider)
-          .deleteMember(branchId, _member.id);
-      if (mounted) nav.pop();
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(
-          content: Text('Error: $e'), backgroundColor: CmsTheme.danger));
-    }
-  }
-
-  String _capitalize(String s) =>
-      s.isEmpty ? '' : '${s[0].toUpperCase()}${s.substring(1)}';
-
-  String _formatDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-}
-
-// ─────────────────────────── Sub-widgets ──────────────────────────────
-
-class _IconBadge extends StatelessWidget {
-  const _IconBadge({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: CmsTheme.surfaceElevated,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: CmsTheme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: CmsTheme.textSecondary),
-          const SizedBox(width: 8),
-          Text(text,
-              style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: CmsTheme.textPrimary)),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    this.isLast = false,
-  });
-  final String label;
-  final String value;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : const Border(bottom: BorderSide(color: CmsTheme.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  color: CmsTheme.textMuted)),
-          Text(value,
-              style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: CmsTheme.textPrimary)),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeptChip extends StatelessWidget {
-  const _DeptChip({required this.name});
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: CmsTheme.accent.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: CmsTheme.accent.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.groups_outlined,
-              size: 16, color: CmsTheme.accent),
-          const SizedBox(width: 8),
-          Text(name,
-              style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: CmsTheme.accent)),
+  void _confirmDelete(BuildContext context, String branchId) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: CmsTheme.surface,
+        title: const Text('Delete Member Profile?', style: TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter')),
+        content: Text('Are you sure you want to delete ${_member.fullName}? This operation cannot be undone.', style: const TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cancel', style: TextStyle(color: CmsTheme.textSecondary, fontFamily: 'Inter')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: CmsTheme.danger, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await ref.read(memberRepositoryProvider).deleteMember(branchId, _member.id);
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('Delete Member', style: TextStyle(fontFamily: 'Inter')),
+          ),
         ],
       ),
     );

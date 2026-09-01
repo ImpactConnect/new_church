@@ -12,57 +12,115 @@ class CommunityAuthService {
   static const String _memberIdKey = 'community_member_id';
   static const String _roleKey = 'community_role';
 
-  Future<CommunityUser?> signIn(String username, String password) async {
+  Future<CommunityUser?> signIn(String rawUsername, String rawPassword) async {
+    final usernameInput = rawUsername.trim();
+    final passwordInput = rawPassword.trim();
+    final lowerUsername = usernameInput.toLowerCase();
+
+    if (usernameInput.isEmpty || passwordInput.isEmpty) {
+      return null;
+    }
+
     try {
-      // 1. Find user by username in CMS 'members' collection
-      final querySnapshot = await _firestore
-          .collection('branches')
-          .doc('default-branch')
-          .collection('members')
-          .where('username', isEqualTo: username)
-          .limit(1)
-          .get();
+      DocumentSnapshot? matchedDoc;
 
-      if (querySnapshot.docs.isEmpty) {
-        print('User not found: $username');
+      // ─── PHASE 1: UNAUTHENTICATED LOOKUP ─────────────────────────────────
+      // The top-level 'members' collection has `allow read: if true` in Firestore rules.
+      // We MUST search here BEFORE Firebase Auth — branch subcollection requires auth.
+
+      Future<DocumentSnapshot?> findInPublicMembers(String field, String value) async {
+        try {
+          final snap = await _firestore
+              .collection('members')
+              .where(field, isEqualTo: value)
+              .limit(1)
+              .get();
+          if (snap.docs.isNotEmpty) return snap.docs.first;
+        } catch (_) {}
         return null;
       }
 
-      final userDoc = querySnapshot.docs.first;
-      final userData = userDoc.data();
-      final email = userData['email'] as String?;
+      // Search top-level members by username (lowercased, then exact)
+      matchedDoc = await findInPublicMembers('username', lowerUsername);
+      matchedDoc ??= await findInPublicMembers('username', usernameInput);
 
+      // Fallback: user typed their email address instead of username
+      matchedDoc ??= await findInPublicMembers('email', lowerUsername);
+      matchedDoc ??= await findInPublicMembers('email', usernameInput);
+
+      if (matchedDoc == null) {
+        // User doesn't exist even in the public collection
+        return null;
+      }
+
+      final userData = matchedDoc.data() as Map<String, dynamic>;
+      String? email = (userData['email'] as String?)?.trim();
+
+      // If no email stored, infer the generated app email
       if (email == null || email.isEmpty) {
-        print('User has no email associated: $username');
-        return null;
+        final storedUsername = (userData['username'] as String?)?.trim() ?? lowerUsername;
+        email = '$storedUsername@impactconnect.app';
       }
 
-      // 2. Authenticate with FirebaseAuth
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // ─── PHASE 2: FIREBASE AUTH ───────────────────────────────────────────
+      try {
+        await _auth.signInWithEmailAndPassword(email: email, password: passwordInput);
+      } catch (authError) {
+        if (authError is FirebaseAuthException && authError.code == 'user-not-found') {
+          // Auth user was never created — try to provision it now
+          try {
+            await _auth.createUserWithEmailAndPassword(email: email, password: passwordInput);
+          } catch (_) {
+            return null;
+          }
+        } else {
+          // Wrong password or other auth error
+          return null;
+        }
+      }
 
-      String displayName = (userData['name'] as String?)?.trim() ?? '';
+      // ─── PHASE 3: ENRICH FROM BRANCH COLLECTION (now authenticated) ──────
+      // Now that Firebase Auth is established we can safely read branch subcollection
+      DocumentSnapshot resolvedDoc = matchedDoc;
+      try {
+        final branchSnap = await _firestore
+            .collection('branches')
+            .doc('default-branch')
+            .collection('members')
+            .doc(matchedDoc.id)
+            .get();
+        if (branchSnap.exists) {
+          // Prefer branch data if it exists (it's the canonical CMS source)
+          resolvedDoc = branchSnap;
+        }
+      } catch (_) {
+        // If still no access, stick with top-level data — it's fine
+      }
+
+      final finalData = resolvedDoc.data() as Map<String, dynamic>;
+
+      String displayName = (finalData['name'] as String?)?.trim() ?? '';
       if (displayName.isEmpty) {
-        final fn = (userData['firstName'] as String?)?.trim() ?? '';
-        final ln = (userData['lastName'] as String?)?.trim() ?? '';
+        final fn = (finalData['firstName'] as String?)?.trim() ?? '';
+        final ln = (finalData['lastName'] as String?)?.trim() ?? '';
         displayName = '$fn $ln'.trim();
       }
+      if (displayName.isEmpty) {
+        displayName = (finalData['username'] as String?) ?? 'Member';
+      }
 
-      // 3. Create CommunityUser object
       final CommunityUser user = CommunityUser(
-        id: userDoc.id,
-        username: userData['username'] ?? '',
+        id: resolvedDoc.id,
+        username: finalData['username'] ?? lowerUsername,
         displayName: displayName,
-        memberId: userDoc.id,
-        role: 'member', // Default role for standard members
+        memberId: resolvedDoc.id,
+        role: finalData['role'] ?? 'member',
         accountStatus: 'active',
       );
 
-      // Save user details to SharedPreferences
       await _saveUserToDevice(user);
-
       return user;
     } catch (e) {
-      print('Login error for user $username: $e');
       return null;
     }
   }
@@ -109,7 +167,6 @@ class CommunityAuthService {
 
   Future<void> generateMockUsers() async {
     try {
-      // List of mock users
       final List<Map<String, dynamic>> mockUsers = [
         {
           'username': 'mock_user_1',
@@ -117,7 +174,7 @@ class CommunityAuthService {
           'member_id': 'member_001',
           'role': 'member',
           'account_status': 'active',
-          'password': 'password123', // Add password for login
+          'password': 'password123',
           'last_login': null,
         },
         {
@@ -140,16 +197,12 @@ class CommunityAuthService {
         }
       ];
 
-      // Batch write to Firestore
       final WriteBatch batch = _firestore.batch();
-
       for (var userData in mockUsers) {
         final docRef =
             _firestore.collection('community_users').doc(userData['username']);
         batch.set(docRef, userData);
       }
-
-      // Commit the batch
       await batch.commit();
       print('Mock users generated successfully');
     } catch (e) {
@@ -157,29 +210,55 @@ class CommunityAuthService {
     }
   }
 
-  Future<void> sendPasswordResetEmail(String username) async {
+  Future<void> sendPasswordResetEmail(String rawUsername) async {
+    final usernameInput = rawUsername.trim();
+    final lowerUsername = usernameInput.toLowerCase();
+
     try {
-      final querySnapshot = await _firestore
-          .collection('branches')
-          .doc('default-branch')
+      DocumentSnapshot? doc;
+
+      // Stage 1: top-level 'members' (publicly readable — no auth needed)
+      var snap = await _firestore
           .collection('members')
-          .where('username', isEqualTo: username)
+          .where('username', isEqualTo: lowerUsername)
           .limit(1)
           .get();
+      if (snap.docs.isNotEmpty) doc = snap.docs.first;
 
-      if (querySnapshot.docs.isEmpty) {
+      // Stage 2: top-level by email
+      if (doc == null) {
+        snap = await _firestore
+            .collection('members')
+            .where('email', isEqualTo: lowerUsername)
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) doc = snap.docs.first;
+      }
+
+      // Stage 3: exact case match
+      if (doc == null) {
+        snap = await _firestore
+            .collection('members')
+            .where('username', isEqualTo: usernameInput)
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) doc = snap.docs.first;
+      }
+
+      if (doc == null) {
         throw Exception('User not found');
       }
 
-      final email = querySnapshot.docs.first.data()['email'] as String?;
-      
+      final userData = doc.data() as Map<String, dynamic>;
+      String? email = (userData['email'] as String?)?.trim();
+
       if (email == null || email.isEmpty) {
-        throw Exception('No email associated with this account');
+        final u = (userData['username'] as String?)?.trim() ?? lowerUsername;
+        email = '$u@impactconnect.app';
       }
 
       await _auth.sendPasswordResetEmail(email: email);
     } catch (e) {
-      print('Password reset error: $e');
       rethrow;
     }
   }

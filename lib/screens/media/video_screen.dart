@@ -8,8 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../widgets/in_app_youtube_player.dart';
 import '../../models/video_item.dart';
 import '../../models/video_category.dart';
 import 'video_album_screen.dart';
@@ -28,7 +28,6 @@ class VideoScreen extends StatefulWidget {
 class _VideoScreenState extends State<VideoScreen> {
   final VideoService _videoService = VideoService();
   final YouTubeApiService _ytApiService = YouTubeApiService();
-  YoutubePlayerController? _youtubeController;
 
   // ── Search / Filter ──────────────────────────────────────────────────────
   final TextEditingController _searchController = TextEditingController();
@@ -62,7 +61,6 @@ class _VideoScreenState extends State<VideoScreen> {
 
   @override
   void dispose() {
-    _youtubeController?.close();
     _searchController.dispose();
     super.dispose();
   }
@@ -93,40 +91,11 @@ class _VideoScreenState extends State<VideoScreen> {
       DeviceOrientation.landscapeRight,
     ]);
 
-    YoutubePlayerController? youtubeController;
-
-    // Branch on video type
-    if (video.isYouTube) {
-      final videoId = _extractYouTubeId(video.videoUrl);
-      if (videoId == null) {
-        _showError('Could not parse YouTube video ID');
-        SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-        return;
-      }
-      _youtubeController?.close();
-      youtubeController = YoutubePlayerController.fromVideoId(
-        videoId: videoId,
-        autoPlay: true,
-        params: const YoutubePlayerParams(
-          showControls: true,
-          showFullscreenButton: true,
-          enableCaption: true,
-          showVideoAnnotations: false,
-          enableJavaScript: true,
-          playsInline: false,
-          // Use an unrestricted origin so YouTube allows more embeds
-          origin: 'https://www.youtube.com',
-        ),
-      );
-      _youtubeController = youtubeController;
-    }
-
     if (!mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _VideoPlayerPage(
           video: video,
-          youtubeController: youtubeController,
           videoService: _videoService,
           onPlayRelated: (relatedVideo) {
             Navigator.pop(context); // Close current player
@@ -1040,11 +1009,9 @@ class _VideoPlayerPage extends StatefulWidget {
     required this.video,
     required this.videoService,
     required this.onPlayRelated,
-    this.youtubeController,
   });
 
   final VideoItem video;
-  final YoutubePlayerController? youtubeController;
   final VideoService videoService;
   final Function(VideoItem) onPlayRelated;
 
@@ -1054,32 +1021,22 @@ class _VideoPlayerPage extends StatefulWidget {
 
 class _VideoPlayerPageState extends State<_VideoPlayerPage> {
   bool _hasLiked = false;
-  bool _ytEmbedError = false;
 
   // For network (MP4) videos
   VideoPlayerController? _vpController;
   ChewieController? _chewieController;
 
-  // For Facebook videos
+  // For Facebook & YouTube videos
   WebViewController? _webController;
 
   @override
   void initState() {
     super.initState();
     _checkIfLiked();
-    _initNonYouTubePlayer();
-
-    // Listen for YouTube embedding errors (e.g. error 150/152 = embedding disabled)
-    if (widget.youtubeController != null) {
-      widget.youtubeController!.listen((state) {
-        if (state.error != null && mounted) {
-          setState(() => _ytEmbedError = true);
-        }
-      });
-    }
+    _initPlayer();
   }
 
-  void _initNonYouTubePlayer() {
+  void _initPlayer() {
     if (widget.video.isNetworkVideo) {
       _vpController = VideoPlayerController.networkUrl(
         Uri.parse(widget.video.videoUrl),
@@ -1103,6 +1060,7 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
         ..loadRequest(Uri.parse(embedUrl));
     }
   }
+
 
   @override
   void dispose() {
@@ -1142,45 +1100,16 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
 
   /// Builds the top player area based on video type.
   Widget _buildPlayer() {
-    if (widget.video.isYouTube && widget.youtubeController != null) {
-      // Show a friendly fallback if embedding is blocked (error 150/151/152)
-      if (_ytEmbedError) {
-        return AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Container(
-            color: Colors.black,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.play_circle_outline,
-                      color: Colors.white54, size: 64),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Embedding disabled by uploader.',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    icon: const Icon(Icons.open_in_new, color: Colors.white),
-                    label: const Text('Open in YouTube',
-                        style: TextStyle(color: Colors.white)),
-                    onPressed: () async {
-                      final uri = Uri.parse(widget.video.videoUrl);
-                      if (await canLaunchUrl(uri)) {
-                        launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-      return YoutubePlayer(controller: widget.youtubeController!);
+    if (widget.video.isYouTube) {
+      // Use InAppYoutubePlayer: youtube-nocookie.com origin + AbsorbPointer
+      // prevents Error 150/101 and blocks native YouTube UI redirects.
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: InAppYoutubePlayer(
+          videoUrl: widget.video.videoUrl,
+          autoPlay: true,
+        ),
+      );
     } else if (widget.video.isFacebook && _webController != null) {
       return AspectRatio(
         aspectRatio: 16 / 9,
@@ -1362,30 +1291,9 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
       ),
     );
 
-    // Wrap in YoutubePlayerScaffold only for YouTube videos
-    if (widget.video.isYouTube && widget.youtubeController != null) {
-      return YoutubePlayerScaffold(
-        controller: widget.youtubeController!,
-        builder: (context, player) {
-          // Replace the player with the scaffold-provided one
-          return pageBody;
-        },
-      );
-    }
     return pageBody;
   }
 
-  String? _extractYouTubeId(String url) {
-    if (url.isEmpty) return null;
-    final regex = RegExp(
-        r'(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})');
-    final match = regex.firstMatch(url);
-    return match?.group(1);
-  }
-
-  String _youtubeThumbnail(String videoId) {
-    return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
-  }
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {

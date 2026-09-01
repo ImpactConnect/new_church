@@ -600,7 +600,7 @@ class _ChapterScreenState extends ConsumerState<ChapterScreen> {
                   Expanded(
                     child: _ActionChip(
                       icon: Icons.chat_bubble_outline,
-                      label: 'Ask GSW',
+                      label: 'Ask Pastor',
                       isAi: true,
                       onTap: () {
                         Navigator.pop(context);

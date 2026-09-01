@@ -19,16 +19,26 @@ class MemberDetailsDialog extends StatelessWidget {
         .join()
         .toUpperCase();
 
+    // Determine gender display
+    final genderStr = member.gender?.toLowerCase();
+    final genderLabel = genderStr == 'male'
+        ? 'Male'
+        : genderStr == 'female'
+            ? 'Female'
+            : member.gender ?? '';
+    final genderIcon = genderStr == 'female' ? Icons.female : Icons.male;
+    final genderColor = genderStr == 'female' ? Colors.pink : Colors.blue;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420, maxHeight: 620),
+        constraints: const BoxConstraints(maxWidth: 440, maxHeight: 680),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ── Header with gradient ────────────────────────────────────
+            // ── Header with gradient ──────────────────────────────────────
             Container(
-              height: 160,
+              height: 170,
               decoration: BoxDecoration(
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
@@ -43,18 +53,6 @@ class MemberDetailsDialog extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  // Pattern overlay
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.08,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          borderRadius:
-                              BorderRadius.vertical(top: Radius.circular(20)),
-                        ),
-                      ),
-                    ),
-                  ),
                   // Close button
                   Positioned(
                     top: 8,
@@ -64,14 +62,14 @@ class MemberDetailsDialog extends StatelessWidget {
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ),
-                  // Avatar + Name
+                  // Avatar + Name + Profession
                   Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircleAvatar(
                           radius: 38,
-                          backgroundColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
                           backgroundImage: member.imageUrl != null
                               ? NetworkImage(member.imageUrl!)
                               : null,
@@ -83,7 +81,7 @@ class MemberDetailsDialog extends StatelessWidget {
                                       fontWeight: FontWeight.bold))
                               : null,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Text(member.name,
                             style: const TextStyle(
                                 color: Colors.white,
@@ -92,12 +90,41 @@ class MemberDetailsDialog extends StatelessWidget {
                         if (member.profession != null &&
                             member.profession!.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(member.profession!,
-                                style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 13)),
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(
+                              member.isStudent
+                                  ? '🎓 Student${member.schoolName != null && member.schoolName!.isNotEmpty ? ' · ${member.schoolName}' : ''}'
+                                  : member.profession!,
+                              style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 12),
+                            ),
                           ),
+                        // Member status badge
+                        if (member.memberStatus != null) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: member.memberStatus?.toLowerCase() ==
+                                      'active'
+                                  ? Colors.green.withValues(alpha: 0.25)
+                                  : Colors.orange.withValues(alpha: 0.25),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color:
+                                      Colors.white.withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                              (member.memberStatus ?? '').toUpperCase(),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -105,76 +132,88 @@ class MemberDetailsDialog extends StatelessWidget {
               ),
             ),
 
-            // ── Status badges ───────────────────────────────────────────
+            // ── Status badges ─────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
                 children: [
-                  if (member.gender != null)
-                    _badge(
-                      member.gender == 'male' ? Icons.male : Icons.female,
-                      member.gender == 'male' ? 'Male' : 'Female',
-                      member.gender == 'male'
-                          ? Colors.blue
-                          : Colors.pink,
-                    ),
-                  if (member.maritalStatus != null) ...[
-                    const SizedBox(width: 8),
+                  if (member.gender != null && member.gender!.isNotEmpty)
+                    _badge(genderIcon, genderLabel, genderColor),
+                  if (member.maritalStatus != null)
                     _badge(
                       Icons.favorite_outline,
                       member.maritalStatus!.toDisplayString(),
                       Colors.purple,
                     ),
-                  ],
-                  if (member.churchGroups.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    _badge(
-                      Icons.group_outlined,
-                      member.churchGroups.first,
-                      Colors.teal,
-                    ),
-                  ],
+                  if (member.churchGroups.isNotEmpty)
+                    for (final g in member.churchGroups)
+                      _badge(Icons.group_outlined, g, Colors.teal),
                 ],
               ),
             ),
 
             const Divider(height: 1),
 
-            // ── Details list ────────────────────────────────────────────
+            // ── Details list ──────────────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── Contact Info ───────────────────────────────────
+                    _sectionHeader('Contact Information'),
                     _infoTile(Icons.phone_outlined, 'Phone',
                         member.phoneNumber ?? 'Not provided'),
                     _infoTile(Icons.email_outlined, 'Email',
                         member.email ?? 'Not provided'),
-                    _infoTile(Icons.location_on_outlined, 'Address',
+                    _infoTile(Icons.location_on_outlined, 'Resident Address',
                         member.residentAddress ?? member.address ?? 'Not provided'),
+                    if (member.stateOfOrigin != null &&
+                        member.stateOfOrigin!.isNotEmpty)
+                      _infoTile(Icons.map_outlined, 'State of Origin',
+                          member.stateOfOrigin!),
+
+                    // ── Personal Info ──────────────────────────────────
+                    _sectionHeader('Personal Information'),
                     _infoTile(
-                        Icons.cake_outlined,
-                        'Birthday',
-                        member.birthDate != null
-                            ? _formatDate(member.birthDate!)
-                            : 'Not provided'),
+                      Icons.cake_outlined,
+                      'Date of Birth',
+                      member.birthDate != null
+                          ? _formatDate(member.birthDate!)
+                          : 'Not provided',
+                    ),
                     if (member.weddingDate != null)
-                      _infoTile(Icons.celebration_outlined, 'Wedding Anniversary',
-                          _formatDate(member.weddingDate!)),
+                      _infoTile(Icons.celebration_outlined,
+                          'Wedding Anniversary', _formatDate(member.weddingDate!)),
                     if (member.spouseName != null &&
                         member.spouseName!.isNotEmpty)
-                      _infoTile(Icons.people_outlined, 'Spouse',
-                          member.spouseName!),
+                      _infoTile(
+                          Icons.people_outlined, 'Spouse', member.spouseName!),
+
+                    // ── Ministry Info ──────────────────────────────────
+                    _sectionHeader('Ministry Information'),
                     if (member.churchGroups.isNotEmpty)
-                      _infoTile(Icons.groups_outlined, 'Groups',
+                      _infoTile(Icons.groups_outlined, 'Groups / Departments',
                           member.churchGroups.join(', ')),
+                    if (member.joinDate != null)
+                      _infoTile(Icons.calendar_today_outlined, 'Date Joined',
+                          _formatDate(member.joinDate!)),
+                    if (member.memberStatus != null)
+                      _infoTile(
+                        Icons.verified_outlined,
+                        'Membership Status',
+                        _capitalize(member.memberStatus!),
+                      ),
                   ],
                 ),
               ),
             ),
 
-            // ── Action buttons ──────────────────────────────────────────
+            // ── Action buttons ────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Row(
@@ -216,13 +255,28 @@ class MemberDetailsDialog extends StatelessWidget {
     );
   }
 
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
   Widget _badge(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -239,18 +293,18 @@ class MemberDetailsDialog extends StatelessWidget {
 
   Widget _infoTile(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: Colors.grey[600]),
+            child: Icon(icon, size: 17, color: Colors.grey[600]),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -259,13 +313,14 @@ class MemberDetailsDialog extends StatelessWidget {
               children: [
                 Text(label,
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Colors.grey[500],
-                        fontWeight: FontWeight.w500)),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.3)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500)),
+                        fontSize: 13.5, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -281,6 +336,9 @@ class MemberDetailsDialog extends StatelessWidget {
     ];
     return '${date.day} ${months[date.month]}, ${date.year}';
   }
+
+  String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   Future<void> _startChat(BuildContext context) async {
     final authService = CommunityAuthService();

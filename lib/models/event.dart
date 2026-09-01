@@ -18,23 +18,32 @@ class Event {
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
     final Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is Timestamp) return val.toDate();
+      if (val is DateTime) return val;
+      return DateTime.tryParse(val.toString()) ?? DateTime.now();
+    }
+
+    final sDate = parseDate(data['startDate'] ?? data['dateTime'] ?? data['date']);
+    final eDate = parseDate(data['endDate'] ?? data['dateTime'] ?? data['date']);
+
     return Event(
       id: doc.id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
-      venue: data['venue'] ?? '',
+      imageUrl: data['imageUrl'] ?? (data['mediaUrls'] is List && (data['mediaUrls'] as List).isNotEmpty ? data['mediaUrls'].first.toString() : ''),
+      startDate: sDate,
+      endDate: eDate,
+      venue: data['venue'] ?? data['location'] ?? 'Main Sanctuary',
       programmeTime: data['programmeTime'] ?? '',
       joinLink: data['joinLink'] ?? '',
+      status: data['status'] ?? 'approved',
+      eventType: data['eventType'] ?? 'special_event',
       recurrence: data['recurrence'] ?? 'none',
-      createdAt: data['createdAt'] != null
-          ? (data['createdAt'] as Timestamp).toDate()
-          : null,
-      updatedAt: data['updatedAt'] != null
-          ? (data['updatedAt'] as Timestamp).toDate()
-          : null,
+      createdAt: data['createdAt'] != null ? parseDate(data['createdAt']) : null,
+      updatedAt: data['updatedAt'] != null ? parseDate(data['updatedAt']) : null,
     );
   }
   final String id;
@@ -46,9 +55,13 @@ class Event {
   final String venue;
   final String programmeTime;
   final String joinLink;
+  final String status;
+  final String eventType;
   final String recurrence;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  bool get isApproved => status.toLowerCase() == 'approved';
 
   bool get isUpcoming => effectiveEndDate.isAfter(DateTime.now());
 

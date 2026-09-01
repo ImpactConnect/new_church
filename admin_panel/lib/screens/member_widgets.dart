@@ -6,7 +6,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/member.dart';
 
 // ── Credential helper ────────────────────────────────────────────────────────
 String _generateUsername(String firstName, String lastName) {
@@ -144,10 +143,13 @@ class _AddMemberFormState extends State<AddMemberForm> {
       await FirebaseAuth.instanceFor(app: secondary).signOut();
 
       final fullName = '${_fnCtrl.text.trim()} ${_lnCtrl.text.trim()}';
-      await FirebaseFirestore.instance.collection('members').doc(uid).set({
+      final memberData = <String, dynamic>{
         'name': fullName,
         'email': email,
-        'username': username,
+        'username': username.toLowerCase(),
+        'hasCredentials': true,
+        'role': 'member',
+        '_authUid': uid,
         'phoneNumber': _phoneCtrl.text.trim(),
         'address': _addressCtrl.text.trim(),
         'gender': _gender,
@@ -160,7 +162,22 @@ class _AddMemberFormState extends State<AddMemberForm> {
         'photoUrl': _photoUrlCtrl.text.trim().isNotEmpty ? _photoUrlCtrl.text.trim() : null,
         'birthDate': Timestamp.fromDate(_dob!),
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Write to top-level members collection
+      await FirebaseFirestore.instance.collection('members').doc(uid).set(memberData);
+
+      // Write to CMS branch members collection
+      try {
+        await FirebaseFirestore.instance
+            .collection('branches')
+            .doc('default-branch')
+            .collection('members')
+            .doc(uid)
+            .set(memberData);
+      } catch (e) {
+        print('CMS branch member save error: $e');
+      }
 
       for (final group in _selectedGroups) {
         try {
@@ -434,16 +451,32 @@ class _CsvUploadPanelState extends State<CsvUploadPanel> {
                 email: authEmail, password: password);
         await FirebaseAuth.instanceFor(app: secondary).signOut();
 
+        final csvMemberData = <String, dynamic>{
+          'name': name,
+          'email': authEmail,
+          'username': username.toLowerCase(),
+          'hasCredentials': true,
+          'role': 'member',
+          '_authUid': cred.user!.uid,
+          'phoneNumber': phone,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+
         await FirebaseFirestore.instance
             .collection('members')
             .doc(cred.user!.uid)
-            .set({
-          'name': name,
-          'email': authEmail,
-          'username': username,
-          'phoneNumber': phone,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+            .set(csvMemberData);
+
+        try {
+          await FirebaseFirestore.instance
+              .collection('branches')
+              .doc('default-branch')
+              .collection('members')
+              .doc(cred.user!.uid)
+              .set(csvMemberData);
+        } catch (e) {
+          print('CMS branch member CSV upload note: $e');
+        }
 
         log.writeln('✅ $name → user: $username | pw: $password');
         count++;
@@ -511,32 +544,174 @@ class _CsvUploadPanelState extends State<CsvUploadPanel> {
   }
 }
 
-// ── Password Reset for existing member ──────────────────────────────────────
+// ── Mobile App Community Credentials & Password Reset Panel ───────────────────
 class PasswordResetPanel extends StatefulWidget {
+  final DocumentSnapshot? memberDoc;
   final String? prefilledEmail;
   final String? prefilledName;
-  const PasswordResetPanel({super.key, this.prefilledEmail, this.prefilledName});
+  final VoidCallback? onCredentialsUpdated;
+
+  const PasswordResetPanel({
+    super.key,
+    this.memberDoc,
+    this.prefilledEmail,
+    this.prefilledName,
+    this.onCredentialsUpdated,
+  });
+
   @override
   State<PasswordResetPanel> createState() => _PasswordResetPanelState();
 }
 
 class _PasswordResetPanelState extends State<PasswordResetPanel> {
-  late final TextEditingController _emailCtrl;
-  String? _newPassword;
-  bool _resetting = false;
+  bool _isLoading = false;
+  String? _errorMsg;
+  String? _existingUsername;
+  String? _existingEmail;
+  late String _memberName;
 
   @override
   void initState() {
     super.initState();
-    _emailCtrl =
-        TextEditingController(text: widget.prefilledEmail ?? '');
+    _initData();
+  }
+
+  void _initData() {
+    final data = widget.memberDoc?.data() as Map<String, dynamic>? ?? {};
+
+    _memberName = widget.prefilledName ?? (data['name'] as String?)?.trim() ?? '';
+    if (_memberName.isEmpty) {
+      final fn = (data['firstName'] as String?)?.trim() ?? '';
+      final ln = (data['lastName'] as String?)?.trim() ?? '';
+      _memberName = '$fn $ln'.trim();
+    }
+    if (_memberName.isEmpty) _memberName = 'Member';
+
+    _existingUsername = (data['username'] as String?)?.trim();
+    if (_existingUsername != null && _existingUsername!.isEmpty) {
+      _existingUsername = null;
+    }
+
+    _existingEmail = (data['email'] as String?)?.trim() ?? widget.prefilledEmail?.trim();
+    if (_existingEmail != null && _existingEmail!.isEmpty) {
+      _existingEmail = null;
+    }
+  }
+
+  Future<void> _generateLoginDetails() async {
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
+    });
+
+    final parts = _memberName.split(RegExp(r'\s+'));
+    final fn = parts.isNotEmpty ? parts.first : '';
+    final ln = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+    final generatedUsername = _generateUsername(fn, ln);
+    final email = (_existingEmail != null && _existingEmail!.isNotEmpty)
+        ? _existingEmail!
+        : '$generatedUsername@impactconnect.app';
+    final generatedPassword = _generatePassword();
+
+    try {
+      // 1. Create account in Auth via secondary app
+      FirebaseApp? tempApp;
+      try {
+        final appName = 'TempMemberAuth_${DateTime.now().millisecondsSinceEpoch}';
+        tempApp = await Firebase.initializeApp(
+          name: appName,
+          options: Firebase.app().options,
+        );
+        final tempAuth = FirebaseAuth.instanceFor(app: tempApp);
+        final userCred = await tempAuth.createUserWithEmailAndPassword(
+          email: email,
+          password: generatedPassword,
+        );
+        if (userCred.user != null) {
+          await userCred.user!.updateDisplayName(_memberName);
+        }
+        await tempAuth.signOut();
+      } catch (e) {
+        print('Secondary Auth creation note: $e');
+      } finally {
+        await tempApp?.delete();
+      }
+
+      // 2. Queue admin task
+      await FirebaseFirestore.instance.collection('admin_tasks').add({
+        'type': 'create_community_user',
+        'email': email,
+        'username': generatedUsername,
+        'newPassword': generatedPassword,
+        'displayName': _memberName,
+        'requestedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Update member document in Firestore (both CMS branch & top-level)
+      if (widget.memberDoc != null) {
+        final updatePayload = <String, dynamic>{
+          'username': generatedUsername.toLowerCase(),
+          'email': email,
+          'hasCredentials': true,
+          'role': 'member',
+          'communityAccountCreated': true,
+          'hasCommunityAccount': true,
+        };
+
+        final docRef = widget.memberDoc!.reference;
+        await docRef.set(updatePayload, SetOptions(merge: true));
+
+        try {
+          await FirebaseFirestore.instance
+              .collection('members')
+              .doc(widget.memberDoc!.id)
+              .set(updatePayload, SetOptions(merge: true));
+        } catch (e) {
+          print('Top-level member update note: $e');
+        }
+      }
+
+      setState(() {
+        _existingUsername = generatedUsername;
+        _existingEmail = email;
+        _isLoading = false;
+      });
+
+      widget.onCredentialsUpdated?.call();
+
+      // Show generated credentials modal
+      if (mounted) {
+        _showGeneratedCredentialsDialog(
+          title: '✓ App Login Credentials Generated',
+          username: generatedUsername,
+          email: email,
+          password: generatedPassword,
+          subtitle: 'Credentials generated successfully! Copy and share these login details with $_memberName.',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMsg = 'Error generating login details: $e';
+      });
+    }
   }
 
   Future<void> _resetPassword() async {
-    final email = _emailCtrl.text.trim();
-    if (email.isEmpty) return;
-    setState(() => _resetting = true);
+    final email = _existingEmail ?? '';
+    if (email.isEmpty) {
+      setState(() => _errorMsg = 'Email is required to reset password.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
+    });
+
     final newPw = _generatePassword();
+
     try {
       await FirebaseFirestore.instance.collection('admin_tasks').add({
         'type': 'password_reset',
@@ -544,60 +719,273 @@ class _PasswordResetPanelState extends State<PasswordResetPanel> {
         'newPassword': newPw,
         'requestedAt': FieldValue.serverTimestamp(),
       });
+
       setState(() {
-        _newPassword = newPw;
-        _resetting = false;
+        _isLoading = false;
       });
-    } catch (e) {
-      setState(() => _resetting = false);
+
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        _showGeneratedCredentialsDialog(
+          title: '🔑 New Password Generated',
+          username: _existingUsername ?? '—',
+          email: email,
+          password: newPw,
+          subtitle: 'A new password has been set for $_memberName. Copy and share it with the member.',
+        );
       }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMsg = 'Error resetting password: $e';
+      });
     }
+  }
+
+  void _showGeneratedCredentialsDialog({
+    required String title,
+    required String username,
+    required String email,
+    required String password,
+    required String subtitle,
+  }) {
+    final allCredsText = 'Username: $username\nEmail: $email\nPassword: $password';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.indigo[50], borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.vpn_key_outlined, color: Colors.indigo, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(subtitle, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+              const SizedBox(height: 16),
+              credentialChip(context, 'Username', username),
+              credentialChip(context, 'Email', email),
+              credentialChip(context, 'Password', password),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: allCredsText));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✓ All credentials copied to clipboard!')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_all, size: 18),
+                  label: const Text('Copy All Details'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: BorderSide(color: Colors.indigo[300]!),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo[700],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final hasExistingAccount = _existingUsername != null && _existingUsername!.isNotEmpty;
+
+    return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.prefilledName != null)
-            Text('Resetting password for: ${widget.prefilledName}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _emailCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Member Email',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.email_outlined),
-            ),
+          // Section Title Header
+          Row(
+            children: [
+              Icon(
+                hasExistingAccount ? Icons.verified_user_rounded : Icons.app_registration_rounded,
+                color: hasExistingAccount ? Colors.green[700] : Colors.indigo[700],
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  hasExistingAccount ? 'Community Access' : 'App Access Status',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: hasExistingAccount ? Colors.green[50] : Colors.orange[50],
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: hasExistingAccount ? Colors.green[300]! : Colors.orange[300]!),
+                ),
+                child: Text(
+                  hasExistingAccount ? 'Active' : 'No Credentials',
+                  style: TextStyle(
+                    color: hasExistingAccount ? Colors.green[800] : Colors.orange[800],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 14),
-          if (_resetting)
-            const Center(child: CircularProgressIndicator())
-          else
-            ElevatedButton.icon(
-              onPressed: _resetPassword,
-              icon: const Icon(Icons.lock_reset),
-              label: const Text('Generate New Password'),
-              style: ElevatedButton.styleFrom(
+          const SizedBox(height: 16),
+
+          if (_errorMsg != null) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Text(_errorMsg!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+            ),
+          ],
+
+          // ── CASE 1: MEMBER HAS NO APP CREDENTIALS YET ──────────────────────────
+          if (!hasExistingAccount) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.indigo[50]!.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.indigo[100]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 18, color: Colors.indigo[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'No Mobile Login Generated',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.indigo[900]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$_memberName does not have mobile app community login details. Click below to generate login credentials.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[700], height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else
+              ElevatedButton.icon(
+                onPressed: _generateLoginDetails,
+                icon: const Icon(Icons.vpn_key_outlined, size: 18),
+                label: const Text('Generate Login Details'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  backgroundColor: Colors.indigo[700],
+                  foregroundColor: Colors.white,
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+          ]
+
+          // ── CASE 2: MEMBER ALREADY HAS APP CREDENTIALS ────────────────────────
+          else ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.account_circle_outlined, size: 16, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text('Username:', style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _existingUsername!,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_existingEmail != null && _existingEmail!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.email_outlined, size: 16, color: Colors.grey),
+                        const SizedBox(width: 6),
+                        Text('Login Email:', style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _existingEmail!,
+                            style: const TextStyle(fontSize: 12, color: Colors.black87),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else
+              ElevatedButton.icon(
+                onPressed: _resetPassword,
+                icon: const Icon(Icons.lock_reset, size: 20),
+                label: const Text('Reset Password'),
+                style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 46),
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white),
-            ),
-          if (_newPassword != null) ...[
-            const SizedBox(height: 14),
-            credentialChip(context, 'New Password', _newPassword!),
-            Text(
-              'Share this with the member securely. '
-              'A password reset task has been queued for the backend.',
-              style:
-                  TextStyle(color: Colors.grey[600], fontSize: 11),
-            ),
+                  backgroundColor: Colors.orange[800],
+                  foregroundColor: Colors.white,
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
           ],
         ],
       ),

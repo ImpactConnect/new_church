@@ -11,6 +11,8 @@ class LiveStream {
     this.endTime,
     this.thumbnailUrl,
     this.description,
+    this.isSynchronized = false,
+    this.scheduledVideoStart,
   });
 
   factory LiveStream.fromFirestore(DocumentSnapshot doc) {
@@ -30,18 +32,24 @@ class LiveStream {
           : null,
       thumbnailUrl: data['thumbnailUrl'],
       description: data['description'],
+      isSynchronized: data['isSynchronized'] ?? false,
+      scheduledVideoStart: data['scheduledVideoStart'] != null
+          ? (data['scheduledVideoStart'] as Timestamp).toDate()
+          : null,
     );
   }
 
   final String id;
   final String title;
   final String url;
-  final String platform; // 'youtube' | 'facebook' | 'vimeo' | 'hls'
+  final String platform; // 'youtube' | 'facebook' | 'vimeo' | 'hls' | 'firebase'
   final bool isLive;
   final DateTime startTime;
   final DateTime? endTime;
   final String? thumbnailUrl;
   final String? description;
+  final bool isSynchronized;
+  final DateTime? scheduledVideoStart;
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -53,6 +61,10 @@ class LiveStream {
       'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
       'thumbnailUrl': thumbnailUrl,
       'description': description,
+      'isSynchronized': isSynchronized,
+      'scheduledVideoStart': scheduledVideoStart != null
+          ? Timestamp.fromDate(scheduledVideoStart!)
+          : null,
     };
   }
 }

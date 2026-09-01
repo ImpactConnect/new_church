@@ -61,16 +61,24 @@ exports.dailyCelebrationNotifications = functions.pubsub.schedule('0 8 * * *')
     const currentDay = today.getDate();
 
     const membersSnapshot = await admin.firestore().collection('branches').doc('default-branch').collection('members').get();
-    
+    // Also read from flat top-level members (Admin Panel creates members here)
+    const flatMembersSnapshot = await admin.firestore().collection('members').get();
+
+    // Merge both snapshots, deduplicate by doc.id (branch data takes priority)
+    const allDocsMap = new Map();
+    flatMembersSnapshot.forEach(doc => allDocsMap.set(doc.id, doc));
+    membersSnapshot.forEach(doc => allDocsMap.set(doc.id, doc)); // branch overrides flat
+    const allDocs = Array.from(allDocsMap.values());
+
     let birthdayUsers = [];
     let anniversaryUsers = [];
     let celebrantsCache = [];
 
-    membersSnapshot.forEach(doc => {
+    allDocs.forEach(doc => {
       const data = doc.data();
       const name = (data.name || `${data.firstName || ''} ${data.lastName || ''}`).trim() || 'Member';
-      
-      // Check Birthdays (dob or birthDate)
+
+      // Check Birthdays — CMS uses 'dob', Admin Panel uses 'birthDate'
       const rawDob = data.dob || data.birthDate;
       if (rawDob) {
         try {
@@ -137,17 +145,31 @@ exports.processAdminTasks = functions.firestore
   .onCreate(async (snap, context) => {
     const data = snap.data();
 
-    if (data.type === 'password_reset') {
+    if (data.type === 'password_reset' || data.type === 'create_community_user') {
       try {
-        const userRecord = await admin.auth().getUserByEmail(data.email);
-        await admin.auth().updateUser(userRecord.uid, {
-          password: data.newPassword
-        });
+        let userRecord;
+        try {
+          userRecord = await admin.auth().getUserByEmail(data.email);
+          await admin.auth().updateUser(userRecord.uid, {
+            password: data.newPassword,
+            displayName: data.displayName || data.name || userRecord.displayName
+          });
+        } catch (authError) {
+          if (authError.code === 'auth/user-not-found') {
+            userRecord = await admin.auth().createUser({
+              email: data.email,
+              password: data.newPassword,
+              displayName: data.displayName || data.name || '',
+            });
+          } else {
+            throw authError;
+          }
+        }
         
-        console.log(`Successfully updated password for user: ${data.email}`);
+        console.log(`Successfully processed admin user task (${data.type}) for: ${data.email}`);
         return snap.ref.update({ status: 'completed', completedAt: admin.firestore.FieldValue.serverTimestamp() });
       } catch (error) {
-        console.error('Error updating user password:', error);
+        console.error('Error processing admin user task:', error);
         return snap.ref.update({ status: 'failed', error: error.toString() });
       }
     }
@@ -732,13 +754,13 @@ async function mapCmsMemberToFlat(cmsMemberId, cmsData, branchId) {
   const fullName = `${(cmsData.firstName || '').trim()} ${(cmsData.lastName || '').trim()}`.trim();
 
   const flatDoc = {
-    name: fullName,
+    name: fullName || cmsData.name || '',
     email: cmsData.email || null,
-    phoneNumber: cmsData.phone || null,
+    phoneNumber: cmsData.phone || cmsData.phoneNumber || null,
     gender: cmsData.gender || null,
     maritalStatus: cmsData.maritalStatus || null,
-    occupation: cmsData.profession || null,
-    address: cmsData.residentAddress || null,
+    occupation: cmsData.profession || cmsData.occupation || null,
+    address: cmsData.residentAddress || cmsData.address || null,
     memberStatus: cmsData.memberStatus || 'active',
     churchGroups: churchGroups,
     _cmsSync: true,
@@ -746,6 +768,13 @@ async function mapCmsMemberToFlat(cmsMemberId, cmsData, branchId) {
     _cmsMemberId: cmsMemberId,
     _lastSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
+
+  if (cmsData.username) flatDoc.username = cmsData.username;
+  if (cmsData.role) flatDoc.role = cmsData.role;
+  if (cmsData.hasCredentials !== undefined) flatDoc.hasCredentials = cmsData.hasCredentials;
+  if (cmsData._authUid) flatDoc._authUid = cmsData._authUid;
+  if (cmsData.communityAccountCreated !== undefined) flatDoc.communityAccountCreated = cmsData.communityAccountCreated;
+  if (cmsData.hasCommunityAccount !== undefined) flatDoc.hasCommunityAccount = cmsData.hasCommunityAccount;
 
   // Handle date fields: CMS stores ISO strings or Firestore Timestamps
   if (cmsData.dob) {
@@ -906,3 +935,460 @@ exports.provisionStaffUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── PRIORITY 1: CMS Financial Integrity Cloud Functions ──────────────────────
+// These are the server-side guardians that the client CANNOT bypass.
+// The UI does pre-checks for fast UX feedback, but these are the REAL authority.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * P1.1 — onBudgetStatusChange
+ * Fires when a budget request status changes to 'approved' or 'rejected'.
+ * - Computes changesSummary diff (original vs approved) SERVER-SIDE
+ * - Writes Finance notification document
+ */
+exports.onBudgetStatusChange = functions.firestore
+  .document('branches/{branchId}/budgets/{budgetId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const { branchId, budgetId } = context.params;
+
+    if (before.status === after.status) return null;
+    if (!['approved', 'rejected'].includes(after.status)) return null;
+
+    const db = admin.firestore();
+    const requestedBy = after.requestedBy || before.requestedBy;
+    if (!requestedBy) return null;
+
+    if (after.status === 'rejected') {
+      await db.collection('branches').doc(branchId).collection('financeNotifications').add({
+        recipientUid: requestedBy,
+        type: 'budget-rejected',
+        referenceId: budgetId,
+        message: `Your budget request for "${after.category || before.category}" was rejected.${after.rejectionReason ? ' Reason: ' + after.rejectionReason : ''}`,
+        changesSummary: [],
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return null;
+    }
+
+    // Compute changesSummary diff server-side
+    const changesSummary = [];
+    const origAmount = before.requestedAmount;
+    const approvedAmount = after.approvedAmount;
+    if (approvedAmount !== undefined && approvedAmount !== null && approvedAmount !== origAmount) {
+      changesSummary.push({ field: 'Amount', from: origAmount, to: approvedAmount });
+    }
+    if (after.approvedCategory && after.approvedCategory !== before.category) {
+      changesSummary.push({ field: 'Category', from: before.category, to: after.approvedCategory });
+    }
+    if (after.approvedDescription && after.approvedDescription !== before.requestedDescription) {
+      changesSummary.push({ field: 'Description', from: before.requestedDescription, to: after.approvedDescription });
+    }
+
+    // Write the authoritative changesSummary back to the document
+    await change.after.ref.update({ changesSummary });
+
+    const notifType = changesSummary.length > 0 ? 'budget-approved-with-changes' : 'budget-approved';
+    const finalAmount = approvedAmount ?? before.requestedAmount;
+    const message = changesSummary.length > 0
+      ? `Your budget for "${after.approvedCategory || after.category}" was approved with changes. Final: ₦${Number(finalAmount).toLocaleString()}.`
+      : `Your budget for "${after.category}" was approved. Amount: ₦${Number(finalAmount).toLocaleString()}.`;
+
+    await db.collection('branches').doc(branchId).collection('financeNotifications').add({
+      recipientUid: requestedBy,
+      type: notifType,
+      referenceId: budgetId,
+      message,
+      changesSummary,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`Budget ${budgetId} ${after.status}. Notification sent. Changes: ${changesSummary.length}`);
+    return null;
+  });
+
+
+/**
+ * P1.2 — onExpenditureRequestStatusChange
+ * Fires when expenditure request status changes to 'approved' or 'rejected'.
+ * - Computes changesSummary diff server-side
+ * - On approval: creates official /expenditures/{id} LEDGER RECORD (server-only)
+ * - Writes Finance notification
+ */
+exports.onExpenditureRequestStatusChange = functions.firestore
+  .document('branches/{branchId}/expenditureRequests/{requestId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const { branchId, requestId } = context.params;
+
+    if (before.status === after.status) return null;
+    if (!['approved', 'rejected'].includes(after.status)) return null;
+
+    const db = admin.firestore();
+    const requestedBy = after.requestedBy || before.requestedBy;
+    if (!requestedBy) return null;
+
+    if (after.status === 'rejected') {
+      await db.collection('branches').doc(branchId).collection('financeNotifications').add({
+        recipientUid: requestedBy,
+        type: 'expenditure-rejected',
+        referenceId: requestId,
+        message: `Your expenditure request "${after.description || before.description}" was rejected.${after.rejectionReason ? ' Reason: ' + after.rejectionReason : ''}`,
+        changesSummary: [],
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return null;
+    }
+
+    // Compute changesSummary diff
+    const changesSummary = [];
+    const origAmount = after.originalAmount ?? before.amount;
+    const origCategory = after.originalCategory ?? before.category;
+    const origDesc = after.originalDescription ?? before.description;
+
+    if (after.approvedAmount !== undefined && after.approvedAmount !== origAmount) {
+      changesSummary.push({ field: 'Amount', from: origAmount, to: after.approvedAmount });
+    }
+    if (after.approvedCategory && after.approvedCategory !== origCategory) {
+      changesSummary.push({ field: 'Category', from: origCategory, to: after.approvedCategory });
+    }
+    if (after.approvedDescription && after.approvedDescription !== origDesc) {
+      changesSummary.push({ field: 'Description', from: origDesc, to: after.approvedDescription });
+    }
+
+    await change.after.ref.update({ changesSummary });
+
+    // ── SERVER-SIDE ONLY: Create the official expenditure ledger record ──────
+    // Idempotency: check if already created for this request
+    const existingQuery = await db
+      .collection('branches').doc(branchId)
+      .collection('expenditures')
+      .where('sourceRequestId', '==', requestId)
+      .limit(1).get();
+
+    if (existingQuery.empty) {
+      await db.collection('branches').doc(branchId).collection('expenditures').add({
+        sourceRequestId: requestId,
+        approvedAmount: after.approvedAmount ?? after.amount,
+        category: after.approvedCategory ?? after.category,
+        description: after.approvedDescription ?? after.description,
+        approvedBy: after.approvedBy || 'system',
+        date: admin.firestore.FieldValue.serverTimestamp(),
+        totalDisbursed: 0,
+        status: 'not-disbursed',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`Created official expenditure ledger record for request ${requestId}`);
+    }
+
+    const notifType = changesSummary.length > 0 ? 'expenditure-approved-with-changes' : 'expenditure-approved';
+    const finalAmount = after.approvedAmount ?? after.amount;
+    const message = changesSummary.length > 0
+      ? `Your expenditure "${after.approvedDescription || after.description}" was approved with changes. Final: ₦${Number(finalAmount).toLocaleString()}.`
+      : `Your expenditure "${after.description}" was approved. Amount: ₦${Number(finalAmount).toLocaleString()}.`;
+
+    await db.collection('branches').doc(branchId).collection('financeNotifications').add({
+      recipientUid: requestedBy,
+      type: notifType,
+      referenceId: requestId,
+      message,
+      changesSummary,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`ExpenditureRequest ${requestId} ${after.status}. Changes: ${changesSummary.length}`);
+    return null;
+  });
+
+
+/**
+ * P1.3 — onDisbursementCreated (CRITICAL FINANCIAL GUARD)
+ * Fires on every new disbursement.
+ * - Validates against parent expenditure's approvedAmount (server-trusted value)
+ * - BLOCKS (deletes) the disbursement if it would exceed approvedAmount
+ * - Atomically increments totalDisbursed via FieldValue.increment (race-condition safe)
+ * - Updates expenditure status
+ */
+exports.onDisbursementCreated = functions.firestore
+  .document('branches/{branchId}/expenditures/{expenditureId}/disbursements/{disbursementId}')
+  .onCreate(async (snap, context) => {
+    const { branchId, expenditureId, disbursementId } = context.params;
+    const disbData = snap.data();
+    const newAmount = Number(disbData.amountDisbursed) || 0;
+
+    const db = admin.firestore();
+    const expenditureRef = db
+      .collection('branches').doc(branchId)
+      .collection('expenditures').doc(expenditureId);
+
+    try {
+      const expenditureSnap = await expenditureRef.get();
+      if (!expenditureSnap.exists) {
+        console.error(`Parent expenditure ${expenditureId} not found. Deleting disbursement.`);
+        await snap.ref.delete();
+        return null;
+      }
+
+      const expData = expenditureSnap.data();
+      const approvedAmount = Number(expData.approvedAmount) || 0;
+      const currentTotal = Number(expData.totalDisbursed) || 0;
+      const newTotal = currentTotal + newAmount;
+
+      // ── OVER-DISBURSEMENT GUARD ──────────────────────────────────────────
+      if (newTotal > approvedAmount + 0.01) { // 0.01 tolerance for float rounding
+        console.warn(`BLOCKED over-disbursement: ${newTotal} > ${approvedAmount} on expenditure ${expenditureId}`);
+        await snap.ref.delete();
+
+        if (disbData.disbursedBy) {
+          await db.collection('branches').doc(branchId).collection('financeNotifications').add({
+            recipientUid: disbData.disbursedBy,
+            type: 'disbursement-over-limit',
+            referenceId: expenditureId,
+            message: `Disbursement of ₦${Number(newAmount).toLocaleString()} was blocked. It would exceed the approved ₦${Number(approvedAmount).toLocaleString()} (current disbursed: ₦${Number(currentTotal).toLocaleString()}).`,
+            changesSummary: [],
+            read: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+        return null;
+      }
+
+      // ── ATOMIC INCREMENT ─────────────────────────────────────────────────
+      const newStatus = newTotal >= approvedAmount - 0.01
+        ? 'fully-disbursed'
+        : 'partially-disbursed';
+
+      await expenditureRef.update({
+        totalDisbursed: admin.firestore.FieldValue.increment(newAmount),
+        status: newStatus,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      console.log(`Disbursement OK: +₦${newAmount} → total ₦${newTotal}/₦${approvedAmount} [${newStatus}]`);
+    } catch (error) {
+      console.error(`Error processing disbursement ${disbursementId}:`, error);
+    }
+    return null;
+  });
+
+
+// ── P1.4: Generic Audit Log Writer helper ─────────────────────────────────────
+async function writeAuditLog(db, branchId, module, documentId, action, before, after) {
+  const doc = after || before || {};
+  const performedBy = doc.approvedBy || doc.requestedBy || doc.recordedBy ||
+    doc.disbursedBy || doc.documentedBy || doc.createdBy || 'system';
+  try {
+    await db.collection('branches').doc(branchId).collection('auditLogs').add({
+      module,
+      documentId,
+      action,
+      before: before || null,
+      after: after || null,
+      performedBy,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.error(`Audit log write failed for ${module}/${documentId}:`, e.message);
+  }
+}
+
+exports.auditBudgets = functions.firestore
+  .document('branches/{branchId}/budgets/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'budgets', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+exports.auditExpenditureRequests = functions.firestore
+  .document('branches/{branchId}/expenditureRequests/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'expenditureRequests', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+exports.auditExpenditures = functions.firestore
+  .document('branches/{branchId}/expenditures/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'expenditures', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+exports.auditDisbursements = functions.firestore
+  .document('branches/{branchId}/expenditures/{expenditureId}/disbursements/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'disbursements', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+exports.auditIncome = functions.firestore
+  .document('branches/{branchId}/income/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'income', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+exports.auditMembers = functions.firestore
+  .document('branches/{branchId}/members/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'members', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+exports.auditRoles = functions.firestore
+  .document('branches/{branchId}/roles/{docId}')
+  .onWrite(async (change, context) => {
+    const { branchId, docId } = context.params;
+    const action = !change.before.exists ? 'create' : !change.after.exists ? 'delete' : 'update';
+    await writeAuditLog(admin.firestore(), branchId, 'roles', docId, action,
+      change.before.exists ? change.before.data() : null,
+      change.after.exists ? change.after.data() : null);
+    return null;
+  });
+
+
+/**
+ * P3.5 — onAnnouncementApproved
+ * Fires when an announcement status becomes 'approved' AND smsTriggered == true.
+ * Auto-dispatches bulk SMS via Termii to all branch members.
+ * Termii API key is read from app_settings/sms_config (never hardcoded).
+ */
+exports.onAnnouncementApproved = functions.firestore
+  .document('branches/{branchId}/announcements/{announcementId}')
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const { branchId, announcementId } = context.params;
+
+    if (before.status === after.status) return null;
+    if (after.status !== 'approved') return null;
+    if (!after.smsTriggered) return null;
+    if (after.smsSentAt) return null; // Idempotency guard
+
+    const db = admin.firestore();
+
+    // Collect phone numbers from branch members
+    let phoneNumbers = [];
+    try {
+      const membersSnap = await db
+        .collection('branches').doc(branchId)
+        .collection('members').get();
+      membersSnap.forEach(doc => {
+        const data = doc.data();
+        const phone = data.phone || data.phoneNumber;
+        if (phone && typeof phone === 'string' && phone.replace(/\D/g, '').length >= 10) {
+          let normalized = phone.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+          if (normalized.startsWith('0')) normalized = '+234' + normalized.slice(1);
+          else if (!normalized.startsWith('+')) normalized = '+234' + normalized;
+          phoneNumbers.push(normalized);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to fetch members for SMS:', e.message);
+    }
+
+    if (phoneNumbers.length === 0) {
+      await change.after.ref.update({ smsStatus: 'no_recipients', smsSentAt: admin.firestore.FieldValue.serverTimestamp() });
+      return null;
+    }
+
+    // Read Termii config from Firestore (secure — not hardcoded)
+    let termiiApiKey = null;
+    let termiiSenderId = 'ChurchApp';
+    try {
+      const settingsDoc = await db.collection('app_settings').doc('sms_config').get();
+      if (settingsDoc.exists) {
+        termiiApiKey = settingsDoc.data().termiiApiKey;
+        termiiSenderId = settingsDoc.data().termiiSenderId || termiiSenderId;
+      }
+    } catch (e) {
+      console.warn('Could not read SMS config:', e.message);
+    }
+
+    if (!termiiApiKey) {
+      console.warn('No Termii API key in app_settings/sms_config. SMS skipped.');
+      await change.after.ref.update({ smsStatus: 'no_api_key', smsSentAt: admin.firestore.FieldValue.serverTimestamp() });
+      return null;
+    }
+
+    const smsBody = `${after.title}: ${after.approvedBody || after.body || ''}`.slice(0, 160);
+    const https = require('https');
+    let sentCount = 0;
+    let failedCount = 0;
+
+    // Chunk to 100 numbers per call
+    const chunkSize = 100;
+    for (let i = 0; i < phoneNumbers.length; i += chunkSize) {
+      const chunk = phoneNumbers.slice(i, i + chunkSize);
+      const payload = JSON.stringify({
+        to: chunk,
+        from: termiiSenderId,
+        sms: smsBody,
+        type: 'plain',
+        api_key: termiiApiKey,
+        channel: 'generic',
+      });
+      try {
+        await new Promise((resolve, reject) => {
+          const req = https.request({
+            hostname: 'api.ng.termii.com',
+            path: '/api/sms/send/bulk',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+          }, (res) => {
+            res.on('data', () => {});
+            res.on('end', resolve);
+          });
+          req.on('error', reject);
+          req.write(payload);
+          req.end();
+        });
+        sentCount += chunk.length;
+      } catch (e) {
+        console.error(`SMS chunk failed:`, e.message);
+        failedCount += chunk.length;
+      }
+    }
+
+    await change.after.ref.update({
+      smsStatus: failedCount === 0 ? 'sent' : sentCount > 0 ? 'partial' : 'failed',
+      smsSentCount: sentCount,
+      smsFailedCount: failedCount,
+      smsSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`Announcement SMS ${announcementId}: ${sentCount} sent, ${failedCount} failed.`);
+    return null;
+  });

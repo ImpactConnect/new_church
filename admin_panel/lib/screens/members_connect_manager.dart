@@ -321,7 +321,7 @@ class _MembersTabState extends State<_MembersTab> {
   }
 }
 
-// ─── ADMIN MEMBER DETAILS DIALOG ─────────────────────────────────────────────
+// ─── ADMIN MEMBER DETAILS DIALOG (REDESIGNED) ─────────────────────────────────
 class _AdminMemberDetailsDialog extends StatefulWidget {
   final DocumentSnapshot memberDoc;
   const _AdminMemberDetailsDialog({required this.memberDoc});
@@ -348,6 +348,10 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
   @override
   void initState() {
     super.initState();
+    _initControllers();
+  }
+
+  void _initControllers() {
     final data = widget.memberDoc.data() as Map<String, dynamic>? ?? {};
     String name = (data['name'] as String?)?.trim() ?? '';
     if (name.isEmpty) {
@@ -363,6 +367,8 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
       _selectedGroups = List<String>.from(data['departmentIds']);
     } else if (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty) {
       _selectedGroups = [data['churchGroup']];
+    } else {
+      _selectedGroups = [];
     }
     _genderCtrl = TextEditingController(text: data['gender'] ?? '');
     _maritalStatusCtrl = TextEditingController(text: data['maritalStatus'] ?? '');
@@ -430,7 +436,7 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
         _saving = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Details updated')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Details updated successfully')));
       }
     } catch (e) {
       setState(() => _saving = false);
@@ -444,34 +450,56 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Member'),
-        content: Text('Remove "${_nameCtrl.text}" from the database entirely?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+            SizedBox(width: 8),
+            Text('Delete Member'),
+          ],
+        ),
+        content: Text('Remove "${_nameCtrl.text}" from the database entirely? This action cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(ctx); // close alert
-              Navigator.pop(context); // close details dialog
+              Navigator.pop(ctx);
+              Navigator.pop(context);
               await FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').doc(widget.memberDoc.id).delete();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('Delete'),
+            child: const Text('Delete Permanently'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildChurchGroupDropdown() {
+  Widget _buildChurchGroupSection() {
     if (!_isEditing) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Church Groups', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            const SizedBox(height: 2),
-            Text(_selectedGroups.isNotEmpty ? _selectedGroups.join(', ') : '—', style: const TextStyle(fontSize: 14)),
+            Text('CHURCH GROUPS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[500])),
+            const SizedBox(height: 6),
+            if (_selectedGroups.isNotEmpty)
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: _selectedGroups.map((g) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[50],
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.indigo[100]!),
+                  ),
+                  child: Text(g, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.indigo)),
+                )).toList(),
+              )
+            else
+              Text('—', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
           ],
         ),
       );
@@ -490,16 +518,17 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Church Groups', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-              const SizedBox(height: 4),
+              Text('CHURCH GROUPS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+              const SizedBox(height: 6),
               Wrap(
-                spacing: 8,
+                spacing: 6,
                 runSpacing: 4,
                 children: groups.map((g) {
                   final isSelected = _selectedGroups.contains(g);
                   return FilterChip(
-                    label: Text(g),
+                    label: Text(g, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
                     selected: isSelected,
+                    selectedColor: Colors.indigo,
                     onSelected: (selected) {
                       setState(() {
                         if (selected) _selectedGroups.add(g);
@@ -516,16 +545,25 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  Widget _buildFieldCard(String label, TextEditingController controller, IconData icon) {
     if (!_isEditing) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Column(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-            const SizedBox(height: 2),
-            Text(controller.text.isNotEmpty ? controller.text : '—', style: const TextStyle(fontSize: 14)),
+            Icon(icon, size: 16, color: Colors.indigo[300]),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[500])),
+                  const SizedBox(height: 2),
+                  Text(controller.text.isNotEmpty ? controller.text : '—', style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -537,21 +575,31 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
         decoration: InputDecoration(
           labelText: label,
           isDense: true,
-          border: const OutlineInputBorder(),
+          prefixIcon: Icon(icon, size: 18),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );
   }
 
-  Widget _buildReadOnlyField(String label, String value) {
+  Widget _buildReadOnlyCard(String label, String value, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          const SizedBox(height: 2),
-          Text(value.isNotEmpty ? value : '—', style: const TextStyle(fontSize: 14)),
+          Icon(icon, size: 16, color: Colors.indigo[300]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[500])),
+                const SizedBox(height: 2),
+                Text(value.isNotEmpty ? value : '—', style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -560,180 +608,322 @@ class _AdminMemberDetailsDialogState extends State<_AdminMemberDetailsDialog> {
   @override
   Widget build(BuildContext context) {
     final data = widget.memberDoc.data() as Map<String, dynamic>? ?? {};
-    final email = data['email'] ?? '';
-    final username = data['username'] ?? '';
+    final email = (data['email'] as String?)?.trim() ?? '';
+    final username = (data['username'] as String?)?.trim() ?? '';
     final birthDateTs = data['birthDate'] as Timestamp?;
     final birthDateStr = birthDateTs != null 
         ? '${birthDateTs.toDate().day}/${birthDateTs.toDate().month}/${birthDateTs.toDate().year}' 
         : 'Unknown';
+    final hasAppCredentials = username.isNotEmpty;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
       child: Container(
-        width: 800,
-        height: 700,
-        padding: const EdgeInsets.all(0),
+        width: 960,
+        height: 740,
+        color: const Color(0xFFF8FAFC),
         child: Column(
           children: [
-            // Header
+            // ── Modern Gradient Header ─────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.indigo[50],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.indigo,
-                    child: Text(
-                      _nameCtrl.text.isNotEmpty ? _nameCtrl.text[0].toUpperCase() : '?',
-                      style: const TextStyle(color: Colors.white, fontSize: 20),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.indigo[400],
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8)],
+                    ),
+                    child: Center(
+                      child: Text(
+                        _nameCtrl.text.isNotEmpty ? _nameCtrl.text[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 18),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Member Details', style: TextStyle(fontSize: 12, color: Colors.indigo[300])),
-                        Text(_nameCtrl.text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo)),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'MEMBER PROFILE',
+                                style: TextStyle(color: Colors.indigoAccent, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                              ),
+                            ),
+                            if (hasAppCredentials) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '✓ App User',
+                                  style: TextStyle(color: Colors.lightGreenAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _nameCtrl.text,
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                       ],
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  
+                  // Header Actions
+                  if (!_isEditing) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _isEditing = true),
+                      icon: const Icon(Icons.edit_outlined, size: 16, color: Colors.white),
+                      label: const Text('Edit Profile', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton.icon(
+                      onPressed: _confirmDelete,
+                      icon: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                      label: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.redAccent.withOpacity(0.4)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ] else ...[
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _isEditing = false;
+                          _initControllers();
+                        });
+                      },
+                      child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: _saving ? null : _saveChanges,
+                      icon: _saving ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check, size: 16),
+                      label: const Text('Save Changes'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.indigoAccent, foregroundColor: Colors.white),
+                    ),
+                  ],
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ],
               ),
             ),
             
-            // Body
+            // ── Main Body Split ───────────────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left Column: Details
+                    // Left Column: Member Cards
                     Expanded(
-                      flex: 4,
+                      flex: 6,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Profile Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              if (!_isEditing)
-                                TextButton.icon(
-                                  onPressed: () => setState(() => _isEditing = true),
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('Edit'),
-                                )
-                              else
+                          // 1. Personal Info Card
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.grey[200]!),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Row(
                                   children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          _isEditing = false;
-                                          _nameCtrl.text = data['name'] ?? '';
-                                          _phoneCtrl.text = data['phoneNumber'] ?? '';
-                                          _addressCtrl.text = data['address'] ?? '';
-                                          _occupationCtrl.text = data['occupation'] ?? '';
-                                          if (data['churchGroups'] != null) {
-                                            _selectedGroups = List<String>.from(data['churchGroups']);
-                                          } else if (data['churchGroup'] != null && data['churchGroup'].toString().isNotEmpty) {
-                                            _selectedGroups = [data['churchGroup']];
-                                          } else {
-                                            _selectedGroups = [];
-                                          }
-                                          _genderCtrl.text = data['gender'] ?? '';
-                                          _maritalStatusCtrl.text = data['maritalStatus'] ?? '';
-                                          _spouseNameCtrl.text = data['spouseName'] ?? '';
-                                          _schoolNameCtrl.text = data['schoolName'] ?? '';
-                                          _stateOfOriginCtrl.text = data['stateOfOrigin'] ?? '';
-                                        });
-                                      },
-                                      child: const Text('Cancel'),
-                                    ),
+                                    Icon(Icons.person_outline, color: Colors.indigo[700], size: 18),
                                     const SizedBox(width: 8),
-                                    ElevatedButton(
-                                      onPressed: _saving ? null : _saveChanges,
-                                      child: _saving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
+                                    const Text('Personal Information', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildFieldCard('Full Name', _nameCtrl, Icons.badge_outlined),
+                                          _buildFieldCard('Phone Number', _phoneCtrl, Icons.phone_outlined),
+                                          _buildFieldCard('Gender', _genderCtrl, Icons.wc_outlined),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildReadOnlyCard('Date of Birth', birthDateStr, Icons.cake_outlined),
+                                          _buildFieldCard('State of Origin', _stateOfOriginCtrl, Icons.location_on_outlined),
+                                          _buildFieldCard('Resident Address', _addressCtrl, Icons.home_outlined),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
-                            ],
+                              ],
+                            ),
                           ),
-                          const Divider(),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 18),
 
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
+                          // 2. Church & Occupational Info Card
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.grey[200]!),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.work_outline, color: Colors.indigo[700], size: 18),
+                                    const SizedBox(width: 8),
+                                    const Text('Church & Occupation', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildTextField('Full Name', _nameCtrl),
-                                    _buildTextField('Phone Number', _phoneCtrl),
-                                    _buildTextField('Gender', _genderCtrl),
-                                    _buildReadOnlyField('Date of Birth', birthDateStr),
-                                    _buildTextField('State of Origin', _stateOfOriginCtrl),
-                                    _buildTextField('Address', _addressCtrl),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildFieldCard('Occupation', _occupationCtrl, Icons.business_center_outlined),
+                                          _buildFieldCard('School Name (If Student)', _schoolNameCtrl, Icons.school_outlined),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _buildChurchGroupSection(),
+                                        ],
+                                      ),
+                                    ),
                                   ],
-                                )
-                              ),
-                              const SizedBox(width: 24),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildTextField('Occupation', _occupationCtrl),
-                                    _buildTextField('School Name (If Student)', _schoolNameCtrl),
-                                    _buildChurchGroupDropdown(),
-                                    _buildTextField('Marital Status', _maritalStatusCtrl),
-                                    _buildTextField('Spouse Name', _spouseNameCtrl),
-                                  ],
-                                )
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           ),
-                          
-                          const SizedBox(height: 16),
-                          const Text('System Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          Text('Username: $username', style: const TextStyle(fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Text('Email: $email', style: const TextStyle(fontSize: 14)),
-                          const SizedBox(height: 24),
-                          
-                          OutlinedButton.icon(
-                            onPressed: _confirmDelete,
-                            icon: const Icon(Icons.delete_outline, color: Colors.red),
-                            label: const Text('Delete Member', style: TextStyle(color: Colors.red)),
-                            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
+                          const SizedBox(height: 18),
+
+                          // 3. System Identifiers & Family Info Card
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.grey[200]!),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.fingerprint, color: Colors.indigo[700], size: 18),
+                                    const SizedBox(width: 8),
+                                    const Text('System Details & Family', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildReadOnlyCard(
+                                            'App Username',
+                                            username.isNotEmpty ? '@$username' : '— Not Generated',
+                                            Icons.alternate_email,
+                                          ),
+                                          _buildReadOnlyCard('Email Address', email, Icons.email_outlined),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          _buildFieldCard('Marital Status', _maritalStatusCtrl, Icons.favorite_border),
+                                          _buildFieldCard('Spouse Name', _spouseNameCtrl, Icons.people_outline),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 20),
                     
-                    // Right Column: Password Reset
+                    // Right Column: Mobile App Credentials & Password Reset Panel
                     Expanded(
-                      flex: 2,
+                      flex: 4,
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
                           border: Border.all(color: Colors.grey[200]!),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4)],
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8)],
                         ),
                         child: PasswordResetPanel(
+                          memberDoc: widget.memberDoc,
                           prefilledEmail: email,
                           prefilledName: _nameCtrl.text,
+                          onCredentialsUpdated: () {
+                            if (mounted) setState(() {});
+                          },
                         ),
                       ),
                     ),

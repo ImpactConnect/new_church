@@ -22,6 +22,7 @@ class AppPermission {
   static const String viewFinancialReports = 'viewFinancialReports';
   static const String viewNonFinancialReports = 'viewNonFinancialReports';
   static const String sendNotifications = 'sendNotifications';
+  static const String sendCommunication = 'sendCommunication';
   // Branch Pastor specific
   static const String isBranchPastor = 'isBranchPastor';
   static const String sendIncomeReport = 'sendIncomeReport';
@@ -31,6 +32,10 @@ class AppPermission {
   static const String recordSubGroupAttendance = 'recordSubGroupAttendance';
   static const String recordSubGroupIncome = 'recordSubGroupIncome';
   static const String viewSubGroupReports = 'viewSubGroupReports';
+  // HOD & Cell Leader Portal specific
+  static const String isDepartmentHead = 'isDepartmentHead';
+  static const String isCellLeader = 'isCellLeader';
+  static const String recordDepartmentIncome = 'recordDepartmentIncome';
 
   static const List<String> all = [
     manageMembers,
@@ -42,6 +47,9 @@ class AppPermission {
     recordSubGroupAttendance,
     recordSubGroupIncome,
     viewSubGroupReports,
+    isDepartmentHead,
+    isCellLeader,
+    recordDepartmentIncome,
     createAnnouncement,
     approveAnnouncement,
     logCorrespondence,
@@ -56,6 +64,7 @@ class AppPermission {
     viewFinancialReports,
     viewNonFinancialReports,
     sendNotifications,
+    sendCommunication,
     isBranchPastor,
     sendIncomeReport,
     viewBranchReports,
@@ -70,6 +79,9 @@ class AppRole {
   static const String secretary = 'secretary';
   static const String financeDept = 'financeDept';
   static const String branchPastor = 'branchPastor';
+  static const String assetManager = 'assetManager';
+  static const String departmentHead = 'departmentHead';
+  static const String cellLeader = 'cellLeader';
 
   /// Default permission sets used to seed Firestore on first setup.
   static const Map<String, List<String>> defaultPermissions = {
@@ -95,6 +107,7 @@ class AppRole {
       AppPermission.viewFinancialReports,
       AppPermission.viewNonFinancialReports,
       AppPermission.sendNotifications,
+      AppPermission.sendCommunication,
     ],
 
     secretary: [
@@ -108,6 +121,13 @@ class AppRole {
       AppPermission.createAnnouncement,
       AppPermission.logCorrespondence,
       AppPermission.manageAssetPhysical,
+      AppPermission.viewNonFinancialReports,
+      AppPermission.sendCommunication,
+    ],
+
+    assetManager: [
+      AppPermission.manageAssetPhysical,
+      AppPermission.manageAssetFinancial,
       AppPermission.viewNonFinancialReports,
     ],
 

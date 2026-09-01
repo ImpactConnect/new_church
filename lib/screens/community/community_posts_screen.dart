@@ -13,6 +13,7 @@ import 'private_chat_screen.dart';
 import '../members/members_directory_screen.dart';
 import '../../models/member.dart';
 import '../../widgets/members/member_details_dialog.dart';
+import 'widgets/mobile_leader_income_dialog.dart';
 
 class CommunityPostsScreen extends StatefulWidget {
   const CommunityPostsScreen({Key? key, required this.currentUser})
@@ -518,199 +519,389 @@ class _CommunityPostsScreenState extends State<CommunityPostsScreen> with Single
         );
       },
     );
-  }
-
-  Widget _buildGroupsTab() {
+  }  Widget _buildGroupsTab() {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('branches').doc('default-branch').collection('members').doc(widget.currentUser.memberId).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('branches')
+          .doc('default-branch')
+          .collection('members')
+          .doc(widget.currentUser.memberId)
+          .snapshots(),
       builder: (context, memberSnap) {
         if (memberSnap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         final memberData = memberSnap.data?.data() as Map<String, dynamic>? ?? {};
+        final String? subGroupId = memberData['subGroupId'] as String?;
         final List<dynamic> mDeptIds = memberData['departmentIds'] ?? [];
-        final List<dynamic> mGroups = memberData['churchGroups'] ?? (memberData['churchGroup'] != null && memberData['churchGroup'].toString().isNotEmpty ? [memberData['churchGroup']] : []);
+        final List<dynamic> mGroups = memberData['churchGroups'] ??
+            (memberData['churchGroup'] != null && memberData['churchGroup'].toString().isNotEmpty
+                ? [memberData['churchGroup']]
+                : []);
 
         return StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('branches')
               .doc('default-branch')
-              .collection('departments')
+              .collection('sub_groups')
               .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          builder: (context, subGroupsSnap) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('branches')
+                  .doc('default-branch')
+                  .collection('departments')
+                  .snapshots(),
+              builder: (context, deptsSnap) {
+                if (subGroupsSnap.connectionState == ConnectionState.waiting ||
+                    deptsSnap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-            final docs = snapshot.data?.docs ?? [];
+                // Filter user's sub-groups
+                final subGroupDocs = subGroupsSnap.data?.docs ?? [];
+                final mySubGroups = subGroupDocs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final memberIds = List<String>.from(data['memberIds'] ?? []);
+                  return doc.id == subGroupId || memberIds.contains(widget.currentUser.memberId);
+                }).toList();
 
-            final groups = docs.where((doc) {
-              final groupData = doc.data() as Map<String, dynamic>;
-              final name = groupData['name'] as String? ?? '';
-              final memberIds = List<String>.from(groupData['memberIds'] ?? groupData['members'] ?? []);
-              
-              final isMember = memberIds.contains(widget.currentUser.memberId);
-              final isDeptId = mDeptIds.contains(doc.id);
-              final isInChurchGroup = mGroups.contains(name);
-              
-              return isMember || isDeptId || isInChurchGroup;
-            }).toList();
+                // Filter user's departments
+                final deptDocs = deptsSnap.data?.docs ?? [];
+                final myDepts = deptDocs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final name = data['name'] as String? ?? '';
+                  final memberIds = List<String>.from(data['memberIds'] ?? data['members'] ?? []);
+                  return memberIds.contains(widget.currentUser.memberId) ||
+                      mDeptIds.contains(doc.id) ||
+                      mGroups.contains(name);
+                }).toList();
 
-        if (groups.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.group_outlined, size: 64, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                const Text(
-                  'You do not belong to any groups yet.',
-                  style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Ask your administrator to assign you to a group.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: groups.length,
-          itemBuilder: (context, index) {
-            final groupDoc = groups[index];
-            final groupData = groupDoc.data() as Map<String, dynamic>;
-            final name = groupData['name'] ?? 'Unnamed Group';
-            final imageUrl = groupData['imageUrl'] ?? '';
-            
-            // Last message details
-            final lastMessage = groupData['lastMessage'] ?? '';
-            final lastMsgSender = groupData['lastMessageSenderName'] ?? '';
-            final lastMsgTime = groupData['lastMessageTime'] as Timestamp?;
-            
-            String lastMsgText = 'No messages yet';
-            if (lastMessage.isNotEmpty) {
-              lastMsgText = lastMsgSender.isNotEmpty ? '$lastMsgSender: $lastMessage' : lastMessage;
-            }
-
-            String timeStr = '';
-            if (lastMsgTime != null) {
-              final date = lastMsgTime.toDate();
-              final now = DateTime.now();
-              if (date.day == now.day && date.month == now.month && date.year == now.year) {
-                timeStr = DateFormat('h:mm a').format(date);
-              } else if (date.day == now.day - 1 && date.month == now.month && date.year == now.year) {
-                timeStr = 'Yesterday';
-              } else {
-                timeStr = DateFormat('d/M/yy').format(date);
-              }
-            }
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              elevation: 3,
-              shadowColor: Colors.black.withValues(alpha: 0.1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GroupChatScreen(
-                        groupId: groupDoc.id,
-                        groupName: name,
-                        currentUser: widget.currentUser,
+                if (mySubGroups.isEmpty && myDepts.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.groups_outlined, size: 64, color: Colors.grey[400]),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No Fellowships or Departments Assigned',
+                            style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Contact your branch administrator or pastor to be assigned to a House Fellowship or Ministry Department.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ],
                       ),
                     ),
                   );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
+                }
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                      // ── SECTION 1: MY HOUSE FELLOWSHIPS & CELL GROUPS ─────
+                      if (mySubGroups.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(Icons.home_work_outlined, size: 18, color: Theme.of(context).primaryColor),
+                            const SizedBox(width: 8),
+                            Text(
+                              'My House Fellowship & Sub-Groups',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                              ),
                             ),
                           ],
                         ),
-                        child: CircleAvatar(
-                          radius: 30,
-                          backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
-                          backgroundColor: Theme.of(context).primaryColor,
-                          child: imageUrl.isEmpty
-                              ? const Icon(Icons.group, color: Colors.white, size: 30)
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        const SizedBox(height: 10),
+                        ...mySubGroups.map((sgDoc) {
+                          final data = sgDoc.data() as Map<String, dynamic>;
+                          final name = data['name'] ?? 'House Fellowship';
+                          final type = data['type'] ?? 'houseFellowship';
+                          final officerName = data['officerName'] ?? 'Unassigned';
+                          final meetingDay = data['meetingDay'] ?? 'Sunday';
+                          final meetingTime = data['meetingTime'] ?? '17:00';
+                          final location = data['locationAddress'] ?? '';
+
+                          String typeLabel = 'House Fellowship';
+                          if (type == 'sundaySchool') typeLabel = 'Sunday School Class';
+                          if (type == 'bibleStudy') typeLabel = 'Bible Study Unit';
+
+                          final officerMemberId = data['officerMemberId'] as String? ?? '';
+                          final bool isLeader = (officerMemberId.isNotEmpty &&
+                                  (officerMemberId == widget.currentUser.memberId || officerMemberId == widget.currentUser.id)) ||
+                              widget.currentUser.role == 'hod' ||
+                              widget.currentUser.role == 'leader' ||
+                              widget.currentUser.role == 'admin';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: Theme.of(context).brightness == Brightness.dark
+                                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                                    : [const Color(0xFFEEF2FF), const Color(0xFFE0E7FF)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    name,
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF111B21)),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (timeStr.isNotEmpty) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    timeStr,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: lastMessage.isNotEmpty
-                                          ? (Theme.of(context).brightness == Brightness.dark
-                                              ? const Color(0xFF818CF8)
-                                              : Theme.of(context).primaryColor)
-                                          : const Color(0xFF8696A0),
-                                      fontWeight: FontWeight.w600,
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).primaryColor.withValues(alpha: 0.15),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(Icons.groups, color: Theme.of(context).primaryColor, size: 22),
                                     ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                          const SizedBox(height: 2),
+                                          Text(typeLabel, style: TextStyle(fontSize: 12, color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isLeader)
+                                      IconButton(
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => MobileLeaderIncomeDialog(
+                                              branchId: 'default-branch',
+                                              entityId: sgDoc.id,
+                                              entityName: name,
+                                              entityType: 'subGroup',
+                                              recordedByName: widget.currentUser.displayName.isNotEmpty ? widget.currentUser.displayName : widget.currentUser.username,
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.account_balance_wallet_outlined),
+                                        color: Theme.of(context).primaryColor,
+                                        tooltip: 'Log Financial Income / Pledges',
+                                      ),
+                                    IconButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => GroupChatScreen(
+                                              groupId: sgDoc.id,
+                                              groupName: name,
+                                              currentUser: widget.currentUser,
+                                              isSubGroup: true,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.chat_bubble_outline),
+                                      color: Theme.of(context).primaryColor,
+                                      tooltip: 'Open Fellowship Chat',
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 20),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 6),
+                                    Text('$meetingDay @ $meetingTime', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                    const SizedBox(width: 16),
+                                    const Icon(Icons.person_outline, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text('Leader: $officerName', style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ],
+                                ),
+                                if (location.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(location, style: const TextStyle(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ],
                             ),
-                            const SizedBox(height: 6),
+                          );
+                        }),
+                        const SizedBox(height: 12),
+                      ],
+
+                      // ── SECTION 2: MY MINISTRIES & DEPARTMENTS ────────────
+                      if (myDepts.isNotEmpty) ...[
+                        Row(
+                          children: [
+                            Icon(Icons.diversity_3_outlined, size: 18, color: Theme.of(context).primaryColor),
+                            const SizedBox(width: 8),
                             Text(
-                              lastMsgText,
+                              'My Ministries & Departments',
                               style: TextStyle(
-                                color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF667781),
-                                fontSize: 14,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 10),
+                        ...myDepts.map((groupDoc) {
+                          final groupData = groupDoc.data() as Map<String, dynamic>;
+                          final name = groupData['name'] ?? 'Department';
+                          final imageUrl = groupData['imageUrl'] ?? '';
+                          final lastMessage = groupData['lastMessage'] ?? '';
+                          final lastMsgSender = groupData['lastMessageSenderName'] ?? '';
+                          final lastMsgTime = groupData['lastMessageTime'] as Timestamp?;
+
+                          String lastMsgText = 'No messages yet';
+                          if (lastMessage.isNotEmpty) {
+                            lastMsgText = lastMsgSender.isNotEmpty ? '$lastMsgSender: $lastMessage' : lastMessage;
+                          }
+
+                          String timeStr = '';
+                          if (lastMsgTime != null) {
+                            final date = lastMsgTime.toDate();
+                            final now = DateTime.now();
+                            if (date.day == now.day && date.month == now.month && date.year == now.year) {
+                              timeStr = DateFormat('h:mm a').format(date);
+                            } else if (date.day == now.day - 1 && date.month == now.month && date.year == now.year) {
+                              timeStr = 'Yesterday';
+                            } else {
+                              timeStr = DateFormat('d/M/yy').format(date);
+                            }
+                          }
+
+                          final headMemberId = groupData['headMemberId'] as String? ?? '';
+                          final assistantMemberId = groupData['assistantMemberId'] as String? ?? '';
+                          final bool isDeptHod = (headMemberId.isNotEmpty &&
+                                  (headMemberId == widget.currentUser.memberId || headMemberId == widget.currentUser.id)) ||
+                              (assistantMemberId.isNotEmpty &&
+                                  (assistantMemberId == widget.currentUser.memberId || assistantMemberId == widget.currentUser.id)) ||
+                              widget.currentUser.role == 'hod' ||
+                              widget.currentUser.role == 'admin';
+
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => GroupChatScreen(
+                                      groupId: groupDoc.id,
+                                      groupName: name,
+                                      currentUser: widget.currentUser,
+                                      isSubGroup: false,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
+                                      backgroundColor: Theme.of(context).primaryColor,
+                                      child: imageUrl.isEmpty
+                                          ? const Icon(Icons.group, color: Colors.white, size: 24)
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  name,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (timeStr.isNotEmpty)
+                                                Text(timeStr, style: TextStyle(fontSize: 11, color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            lastMsgText,
+                                            style: const TextStyle(fontSize: 13, color: Colors.grey),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isDeptHod)
+                                      IconButton(
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (_) => MobileLeaderIncomeDialog(
+                                              branchId: 'default-branch',
+                                              entityId: groupDoc.id,
+                                              entityName: name,
+                                              entityType: 'department',
+                                              recordedByName: widget.currentUser.displayName.isNotEmpty ? widget.currentUser.displayName : widget.currentUser.username,
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.account_balance_wallet_outlined),
+                                        color: Theme.of(context).primaryColor,
+                                        tooltip: 'HOD Financial Log',
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     ],
                   ),
-                ),
-              ),
+                );
+              },
             );
+          },
+        );
       },
     );
-  },
-);
-  },
-);
-}
+  }
 
   Widget _buildPostCard(CommunityPost post, {bool isCompact = false}) {
     final DateTime postDate = post.createdAt.toDate();

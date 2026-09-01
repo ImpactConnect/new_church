@@ -547,12 +547,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AboutDialog(
-        applicationName: 'Impact Connect',
+        applicationName: 'FWC',
         applicationVersion: 'Version $_appVersion',
         applicationIcon: const Icon(Icons.church, size: 50, color: Colors.blue),
         children: const [
           Text(
-            'Impact Connect is your comprehensive church companion app, '
+            'FWC is your comprehensive church companion app, '
             'designed to enhance your spiritual journey with features like '
             'Bible study, sermons, events, and more.',
           ),

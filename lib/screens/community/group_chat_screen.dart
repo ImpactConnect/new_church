@@ -18,11 +18,13 @@ class GroupChatScreen extends StatefulWidget {
     required this.groupId,
     required this.groupName,
     required this.currentUser,
+    this.isSubGroup = false,
   }) : super(key: key);
 
   final String groupId;
   final String groupName;
   final CommunityUser currentUser;
+  final bool isSubGroup;
 
   @override
   State<GroupChatScreen> createState() => _GroupChatScreenState();
@@ -234,7 +236,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: StreamBuilder<DocumentSnapshot>(
-                stream: _firestore.collection('branches').doc('default-branch').collection('departments').doc(widget.groupId).snapshots(),
+                stream: _firestore.collection('branches').doc('default-branch').collection(widget.isSubGroup ? 'sub_groups' : 'departments').doc(widget.groupId).snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -428,7 +430,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: _firestore.collection('branches').doc('default-branch').collection('departments').doc(widget.groupId).snapshots(),
+      stream: _firestore.collection('branches').doc('default-branch').collection(widget.isSubGroup ? 'sub_groups' : 'departments').doc(widget.groupId).snapshots(),
       builder: (context, groupSnap) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         String groupName = widget.groupName;

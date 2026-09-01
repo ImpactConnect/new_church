@@ -1,7 +1,11 @@
+import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
 import 'package:data_table_2/data_table_2.dart';
 import 'package:cms/src/core/permissions.dart';
 import 'package:cms/src/core/providers.dart';
@@ -89,7 +93,8 @@ class _AttendanceReportScreenState
     final user = ref.watch(cmsUserProvider).valueOrNull;
     final recordsAsync = ref.watch(_detailedAttendanceProvider(branchId));
     final eventsAsync = ref.watch(_eventsListProvider(branchId));
-    final canRecord = user?.can(AppPermission.recordAttendance) ?? true;
+    final canRecord = (user?.can(AppPermission.recordAttendance) ?? true) &&
+        user?.roleId != AppRole.leadPastor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,11 +135,21 @@ class _AttendanceReportScreenState
                   ),
                 ),
               ),
+              if (recordsAsync.valueOrNull?.isNotEmpty == true) ...[
+                const SizedBox(width: 12),
+                CmsButton(
+                  label: 'Export CSV',
+                  icon: Icons.download_outlined,
+                  compact: true,
+                  onPressed: () => _exportCsv(_applyFilters(recordsAsync.valueOrNull!)),
+                ),
+              ],
               if (canRecord) ...[
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 CmsButton(
                   label: 'Record Attendance',
                   icon: Icons.add_chart,
+                  compact: true,
                   onPressed: () => _showRecordDialog(
                     context,
                     ref,
@@ -211,6 +226,53 @@ class _AttendanceReportScreenState
         ),
       ],
     );
+  }
+
+  void _exportCsv(List<AttendanceRecordModel> records) {
+    final rows = <List<dynamic>>[
+      [
+        'Date',
+        'Event / Service',
+        'Category',
+        'Day Type',
+        'Male',
+        'Female',
+        'Adults',
+        'Youth',
+        'Children',
+        'First Timers',
+        'New Converts',
+        'Total Headcount',
+        'Recorded By',
+      ],
+    ];
+
+    for (final r in records) {
+      rows.add([
+        DateFormat('yyyy-MM-dd').format(r.date),
+        r.eventName,
+        r.eventCategory,
+        r.dayType,
+        r.male,
+        r.female,
+        r.adult,
+        r.youth,
+        r.children,
+        r.firstTimers,
+        r.newConverts,
+        r.total,
+        r.recordedByName ?? r.recordedBy ?? '',
+      ]);
+    }
+
+    final csvData = const ListToCsvConverter().convert(rows);
+    final bytes = utf8.encode(csvData);
+    final blob = html.Blob([bytes], 'text/csv;charset=utf-8');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', 'attendance_report_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv')
+      ..click();
+    html.Url.revokeObjectUrl(url);
   }
 
   void _showRecordDialog(
@@ -646,6 +708,16 @@ class _RecordsTab extends StatelessWidget {
                       numeric: true,
                     ),
                     DataColumn2(
+                      label: _ColHeader('1st Timers'),
+                      size: ColumnSize.S,
+                      numeric: true,
+                    ),
+                    DataColumn2(
+                      label: _ColHeader('Converts'),
+                      size: ColumnSize.S,
+                      numeric: true,
+                    ),
+                    DataColumn2(
                       label: _ColHeader('Total'),
                       size: ColumnSize.S,
                       numeric: true,
@@ -736,6 +808,8 @@ class _RecordsTab extends StatelessWidget {
         DataCell(_numCell('${r.adult}', CmsTheme.textSecondary)),
         DataCell(_numCell('${r.youth}', CmsTheme.warning)),
         DataCell(_numCell('${r.children}', CmsTheme.success)),
+        DataCell(_numCell('${r.firstTimers}', CmsTheme.accent)),
+        DataCell(_numCell('${r.newConverts}', CmsTheme.success)),
         DataCell(
           Text('${r.total}',
               style: const TextStyle(
@@ -1819,6 +1893,8 @@ class _RecordAttendanceDialogState extends State<_RecordAttendanceDialog> {
   final _adultCtrl = TextEditingController(text: '0');
   final _youthCtrl = TextEditingController(text: '0');
   final _childrenCtrl = TextEditingController(text: '0');
+  final _firstTimersCtrl = TextEditingController(text: '0');
+  final _newConvertsCtrl = TextEditingController(text: '0');
 
   bool _saving = false;
 
@@ -1847,6 +1923,8 @@ class _RecordAttendanceDialogState extends State<_RecordAttendanceDialog> {
     _adultCtrl.dispose();
     _youthCtrl.dispose();
     _childrenCtrl.dispose();
+    _firstTimersCtrl.dispose();
+    _newConvertsCtrl.dispose();
     super.dispose();
   }
 
@@ -2100,6 +2178,42 @@ class _RecordAttendanceDialogState extends State<_RecordAttendanceDialog> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                const _SectionDivider('First Timers & Converts'),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _firstTimersCtrl,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                            color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                        decoration: const InputDecoration(
+                          labelText: 'First Timers',
+                          prefixIcon:
+                              Icon(Icons.person_add_alt_1_outlined, color: CmsTheme.accent),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _newConvertsCtrl,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                            color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                        decoration: const InputDecoration(
+                          labelText: 'New Converts',
+                          prefixIcon:
+                              Icon(Icons.favorite_outline, color: CmsTheme.success),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
                 // Live total
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -2176,6 +2290,8 @@ class _RecordAttendanceDialogState extends State<_RecordAttendanceDialog> {
               final a = int.tryParse(_adultCtrl.text.trim()) ?? 0;
               final y = int.tryParse(_youthCtrl.text.trim()) ?? 0;
               final c = int.tryParse(_childrenCtrl.text.trim()) ?? 0;
+              final ft = int.tryParse(_firstTimersCtrl.text.trim()) ?? 0;
+              final nc = int.tryParse(_newConvertsCtrl.text.trim()) ?? 0;
 
               final record = AttendanceRecordModel(
                 id: '',
@@ -2189,6 +2305,8 @@ class _RecordAttendanceDialogState extends State<_RecordAttendanceDialog> {
                 adult: a,
                 youth: y,
                 children: c,
+                firstTimers: ft,
+                newConverts: nc,
                 total: total,
                 recordedByName: widget.recorderName,
               );
