@@ -155,7 +155,7 @@ class _EventListScreenState extends ConsumerState<EventListScreen> with SingleTi
                 // 3. Yearly Calendar Events
                 final yearlyEvents = allEvents.where((e) {
                   return e.eventType == 'yearly_calendar' || e.year == now.year;
-                }).toList();
+                }).toList()..sort((a, b) => a.effectiveStartDate.compareTo(b.effectiveStartDate));
 
                 // 4. Special Programmes (Weddings, Revivals, Crusades, Conferences)
                 final specialProgrammes = allEvents.where((e) {
@@ -169,16 +169,282 @@ class _EventListScreenState extends ConsumerState<EventListScreen> with SingleTi
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildEventList(context, ref, branchId, weekEvents, canManage, canRecordAtt, isLeadPastor, 'No events scheduled for this week.'),
-                    _buildEventList(context, ref, branchId, monthEvents, canManage, canRecordAtt, isLeadPastor, 'No events scheduled for this month.'),
-                    _buildEventList(context, ref, branchId, yearlyEvents, canManage, canRecordAtt, isLeadPastor, 'No yearly calendar entries yet.'),
-                    _buildEventList(context, ref, branchId, specialProgrammes, canManage, canRecordAtt, isLeadPastor, 'No special programmes (Weddings/Revivals) created.'),
-                    _buildEventList(context, ref, branchId, pendingEvents, canManage, canRecordAtt, isLeadPastor, 'No pending event submissions for pastor review.'),
+                    _buildEventList(context, ref, branchId, weekEvents, canManage, canRecordAtt, isLeadPastor, user, 'No events scheduled for this week.'),
+                    _buildEventList(context, ref, branchId, monthEvents, canManage, canRecordAtt, isLeadPastor, user, 'No events scheduled for this month.'),
+                    _buildYearlyCalendarTable(context, ref, branchId, yearlyEvents, canManage, isLeadPastor, user),
+                    _buildEventList(context, ref, branchId, specialProgrammes, canManage, canRecordAtt, isLeadPastor, user, 'No special programmes (Weddings/Revivals) created.'),
+                    _buildEventList(context, ref, branchId, pendingEvents, canManage, canRecordAtt, isLeadPastor, user, 'No pending event submissions for pastor review.'),
                   ],
                 );
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Structured Monthly Table for Yearly Calendar ─────────────────────────
+  Widget _buildYearlyCalendarTable(
+    BuildContext context,
+    WidgetRef ref,
+    String branchId,
+    List<EventModel> events,
+    bool canManage,
+    bool isLeadPastor,
+    CmsUserModel? user,
+  ) {
+    if (events.isEmpty) {
+      return const CmsEmptyState(
+        icon: Icons.calendar_month_outlined,
+        title: 'No Yearly Calendar',
+        subtitle: 'No yearly calendar entries yet. Use "+ Yearly Calendar" to create the church year programme.',
+      );
+    }
+
+    // Group by month
+    final Map<int, List<EventModel>> byMonth = {};
+    for (final e in events) {
+      final m = e.effectiveStartDate.month;
+      byMonth.putIfAbsent(m, () => []).add(e);
+    }
+
+    const monthNames = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+
+    final now = DateTime.now();
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int m = 1; m <= 12; m++) ...[
+            if (byMonth.containsKey(m)) ...[
+              // Month Header Row
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 8, bottom: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: m == now.month
+                      ? LinearGradient(colors: [CmsTheme.accent, CmsTheme.accent.withValues(alpha: 0.7)])
+                      : null,
+                  color: m == now.month ? null : CmsTheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: m == now.month ? CmsTheme.accent : CmsTheme.border),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      m == now.month ? Icons.radio_button_checked : Icons.calendar_month_outlined,
+                      size: 16,
+                      color: m == now.month ? Colors.white : CmsTheme.accent,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      monthNames[m],
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: m == now.month ? Colors.white : CmsTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: m == now.month ? Colors.white.withValues(alpha: 0.2) : CmsTheme.accent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${byMonth[m]!.length} programme${byMonth[m]!.length > 1 ? 's' : ''}',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          color: m == now.month ? Colors.white : CmsTheme.accent,
+                        ),
+                      ),
+                    ),
+                    if (m == now.month) ...[
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Current Month',
+                            style: TextStyle(color: Colors.white, fontSize: 11, fontFamily: 'Inter')),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Table for this month's events
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: CmsTheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: CmsTheme.border),
+                ),
+                child: Table(
+                  columnWidths: const {
+                    0: FixedColumnWidth(90),
+                    1: FlexColumnWidth(3),
+                    2: FlexColumnWidth(2),
+                    3: FlexColumnWidth(1.5),
+                    4: FlexColumnWidth(1),
+                    5: FixedColumnWidth(140),
+                  },
+                  border: TableBorder(
+                    horizontalInside: BorderSide(color: CmsTheme.border, width: 0.5),
+                  ),
+                  children: [
+                    // Table header
+                    TableRow(
+                      decoration: BoxDecoration(color: CmsTheme.surfaceElevated),
+                      children: const [
+                        _TableHeader('Date'),
+                        _TableHeader('Programme Title'),
+                        _TableHeader('Venue'),
+                        _TableHeader('Type'),
+                        _TableHeader('Status'),
+                        _TableHeader('Actions'),
+                      ],
+                    ),
+                    // Event rows
+                    for (final ev in byMonth[m]!)
+                      TableRow(
+                        decoration: BoxDecoration(
+                          color: ev.isPending
+                              ? CmsTheme.warning.withValues(alpha: 0.04)
+                              : Colors.transparent,
+                        ),
+                        children: [
+                          // Date
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  DateFormat('MMM d').format(ev.effectiveStartDate),
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
+                                ),
+                                if (ev.effectiveEndDate.day != ev.effectiveStartDate.day)
+                                  Text(
+                                    '– ${DateFormat('MMM d').format(ev.effectiveEndDate)}',
+                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.textMuted),
+                                  ),
+                                Text(
+                                  DateFormat('h:mm a').format(ev.effectiveStartDate),
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.textMuted),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Title
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  ev.title,
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w500, color: CmsTheme.textPrimary),
+                                ),
+                                if (ev.description.isNotEmpty)
+                                  Text(
+                                    ev.description,
+                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.textMuted),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // Venue
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Text(ev.location, style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary)),
+                          ),
+                          // Type
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Text(_formatEventType(ev.eventType), style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.textMuted)),
+                          ),
+                          // Status
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: _StatusBadge(status: ev.status, reason: ev.rejectionReason),
+                          ),
+                          // Actions
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // View details
+                                IconButton(
+                                  tooltip: 'View Details',
+                                  icon: const Icon(Icons.visibility_outlined, size: 16, color: CmsTheme.textSecondary),
+                                  onPressed: () => _showEventDetailDialog(context, ref, branchId, ev, isLeadPastor),
+                                ),
+                                if (isLeadPastor && ev.isPending) ...[
+                                  IconButton(
+                                    tooltip: 'Approve',
+                                    icon: const Icon(Icons.check_circle_outline, size: 16, color: CmsTheme.success),
+                                    onPressed: () async {
+                                      await ref.read(eventRepositoryProvider).approveEvent(branchId, ev.id);
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Approved "${ev.title}"'), backgroundColor: CmsTheme.success),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Reject',
+                                    icon: const Icon(Icons.cancel_outlined, size: 16, color: CmsTheme.danger),
+                                    onPressed: () => _promptReject(context, ref, branchId, ev),
+                                  ),
+                                ],
+                                if (canManage) ...[
+                                  IconButton(
+                                    tooltip: 'Edit',
+                                    icon: const Icon(Icons.edit_outlined, size: 16, color: CmsTheme.accent),
+                                    onPressed: () => _showEventDialog(context, ref, branchId, ev, user),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Delete',
+                                    icon: const Icon(Icons.delete_outline, size: 16, color: CmsTheme.danger),
+                                    onPressed: () async {
+                                      final ok = await showConfirmDialog(
+                                        context,
+                                        title: 'Delete Event',
+                                        message: 'Delete "${ev.title}"?',
+                                        confirmLabel: 'Delete',
+                                        danger: true,
+                                      );
+                                      if (ok) await ref.read(eventRepositoryProvider).deleteEvent(branchId, ev.id);
+                                    },
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -192,6 +458,7 @@ class _EventListScreenState extends ConsumerState<EventListScreen> with SingleTi
     bool canManage,
     bool canRecordAtt,
     bool isLeadPastor,
+    CmsUserModel? user,
     String emptyMessage,
   ) {
     if (events.isEmpty) {
@@ -215,7 +482,8 @@ class _EventListScreenState extends ConsumerState<EventListScreen> with SingleTi
           context,
           MaterialPageRoute(builder: (_) => AttendanceScreen(event: events[i])),
         ),
-        onEdit: () => _showEventDialog(context, ref, branchId, events[i], null),
+        onEdit: () => _showEventDialog(context, ref, branchId, events[i], user),
+        onViewDetail: () => _showEventDetailDialog(context, ref, branchId, events[i], isLeadPastor),
         onDelete: () async {
           final ok = await showConfirmDialog(
             context,
@@ -245,6 +513,360 @@ class _EventListScreenState extends ConsumerState<EventListScreen> with SingleTi
       builder: (_) => _YearlyCalendarBatchDialog(branchId: branchId, ref: ref, user: user),
     );
   }
+
+  void _showEventDetailDialog(BuildContext context, WidgetRef ref, String branchId, EventModel event, bool isLeadPastor) {
+    showDialog(
+      context: context,
+      builder: (_) => _EventDetailDialog(event: event, branchId: branchId, ref: ref, isLeadPastor: isLeadPastor),
+    );
+  }
+
+  void _promptReject(BuildContext context, WidgetRef ref, String branchId, EventModel event) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: CmsTheme.surfaceElevated,
+        title: Text('Reject "${event.title}"', style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter')),
+        content: TextField(
+          controller: ctrl,
+          style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+          decoration: const InputDecoration(labelText: 'Reason for rejection'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: CmsTheme.textSecondary))),
+          CmsButton(
+            label: 'Reject',
+            compact: true,
+            variant: CmsButtonVariant.danger,
+            onPressed: () async {
+              final reason = ctrl.text.trim().isEmpty ? 'Not approved by Pastor' : ctrl.text.trim();
+              await ref.read(eventRepositoryProvider).rejectEvent(branchId, event.id, reason);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatEventType(String type) => switch (type) {
+    'yearly_calendar' => 'Yearly Calendar',
+    'wedding_programme' => 'Wedding Programme',
+    'revival_programme' => 'Revival Programme',
+    'conference' => 'Conference',
+    'anniversary' => 'Anniversary',
+    'sunday_service' => 'Sunday Service',
+    'midweek_service' => 'Midweek Service',
+    _ => 'Special Programme',
+  };
+}
+
+// ─────────────────────────── Table Header Cell ───────────────────────────────
+
+class _TableHeader extends StatelessWidget {
+  const _TableHeader(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: CmsTheme.textSecondary,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────── Event Detail Dialog ─────────────────────────────
+
+class _EventDetailDialog extends StatelessWidget {
+  const _EventDetailDialog({
+    required this.event,
+    required this.branchId,
+    required this.ref,
+    required this.isLeadPastor,
+  });
+
+  final EventModel event;
+  final String branchId;
+  final WidgetRef ref;
+  final bool isLeadPastor;
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = DateFormat('EEEE, MMMM d, yyyy');
+    final timeFmt = DateFormat('h:mm a');
+
+    String _formatType(String t) => switch (t) {
+      'yearly_calendar' => 'Church Year Calendar',
+      'wedding_programme' => 'Wedding Programme',
+      'revival_programme' => 'Revival Programme',
+      'conference' => 'Conference / Convention',
+      'anniversary' => 'Church Anniversary',
+      'sunday_service' => 'Sunday Service',
+      'midweek_service' => 'Midweek Service',
+      _ => 'Special Programme',
+    };
+
+    final isMultiDay = event.effectiveEndDate.day != event.effectiveStartDate.day ||
+        event.effectiveEndDate.month != event.effectiveStartDate.month;
+
+    return AlertDialog(
+      backgroundColor: CmsTheme.surfaceElevated,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: CmsTheme.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.event_note, color: CmsTheme.accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: const TextStyle(fontFamily: 'Inter', color: CmsTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                _StatusBadge(status: event.status, reason: event.rejectionReason),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Divider(color: CmsTheme.border),
+              const SizedBox(height: 8),
+
+              // Programme Type
+              _DetailRow(
+                icon: Icons.label_outline,
+                label: 'Programme Type',
+                value: _formatType(event.eventType),
+              ),
+              const SizedBox(height: 12),
+
+              // Dates
+              _DetailRow(
+                icon: Icons.calendar_today_outlined,
+                label: 'Start Date & Time',
+                value: '${fmt.format(event.effectiveStartDate)}\n${timeFmt.format(event.effectiveStartDate)}',
+              ),
+              const SizedBox(height: 12),
+
+              if (isMultiDay) ...[
+                _DetailRow(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'End Date & Time',
+                  value: '${fmt.format(event.effectiveEndDate)}\n${timeFmt.format(event.effectiveEndDate)}',
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Venue
+              _DetailRow(
+                icon: Icons.location_on_outlined,
+                label: 'Venue / Location',
+                value: event.location.isEmpty ? 'Main Auditorium' : event.location,
+              ),
+              const SizedBox(height: 12),
+
+              // Description
+              if (event.description.isNotEmpty) ...[
+                _DetailRow(
+                  icon: Icons.notes_outlined,
+                  label: 'Description & Details',
+                  value: event.description,
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Created by
+              if (event.createdByName != null) ...[
+                _DetailRow(
+                  icon: Icons.person_outline,
+                  label: 'Submitted By',
+                  value: '${event.createdByName} (${event.createdByRole ?? 'Secretary'})',
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Rejection reason
+              if (event.rejectionReason != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: CmsTheme.danger.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: CmsTheme.danger.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.cancel_outlined, color: CmsTheme.danger, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Rejection Reason',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.bold, color: CmsTheme.danger)),
+                            const SizedBox(height: 4),
+                            Text(event.rejectionReason!,
+                                style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.danger)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Flyer / media
+              if (event.mediaUrls.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _DetailRow(
+                  icon: Icons.image_outlined,
+                  label: 'Flyer / Banner URL',
+                  value: event.mediaUrls.first,
+                ),
+              ],
+
+              const SizedBox(height: 16),
+
+              // Pastor approval actions
+              if (isLeadPastor && event.isPending) ...[
+                const Divider(color: CmsTheme.border),
+                const SizedBox(height: 12),
+                const Text(
+                  'Lead Pastor Decision',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.bold, color: CmsTheme.textPrimary),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CmsButton(
+                        label: 'Approve Event',
+                        icon: Icons.check_circle_outline,
+                        compact: false,
+                        onPressed: () async {
+                          await ref.read(eventRepositoryProvider).approveEvent(branchId, event.id);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Approved "${event.title}"'), backgroundColor: CmsTheme.success),
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CmsButton(
+                        label: 'Reject Event',
+                        icon: Icons.cancel_outlined,
+                        compact: false,
+                        variant: CmsButtonVariant.danger,
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showRejectDialog(context);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close', style: TextStyle(color: CmsTheme.textSecondary)),
+        ),
+      ],
+    );
+  }
+
+  void _showRejectDialog(BuildContext context) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: CmsTheme.surfaceElevated,
+        title: Text('Reject "${event.title}"', style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter')),
+        content: TextField(
+          controller: ctrl,
+          style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+          decoration: const InputDecoration(labelText: 'Reason for rejection'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: CmsTheme.textSecondary))),
+          CmsButton(
+            label: 'Reject',
+            compact: true,
+            variant: CmsButtonVariant.danger,
+            onPressed: () async {
+              final reason = ctrl.text.trim().isEmpty ? 'Not approved by Pastor' : ctrl.text.trim();
+              await ref.read(eventRepositoryProvider).rejectEvent(branchId, event.id, reason);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: CmsTheme.accent),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, color: CmsTheme.textMuted)),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // ─────────────────────────── Event Card ──────────────────────────────────────
@@ -259,6 +881,7 @@ class _EventCard extends StatelessWidget {
     required this.isLeadPastor,
     required this.onTakeAttendance,
     required this.onEdit,
+    required this.onViewDetail,
     required this.onDelete,
   });
 
@@ -270,12 +893,14 @@ class _EventCard extends StatelessWidget {
   final bool isLeadPastor;
   final VoidCallback onTakeAttendance;
   final VoidCallback onEdit;
+  final VoidCallback onViewDetail;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final isWeekend = event.effectiveStartDate.weekday == DateTime.saturday || event.effectiveStartDate.weekday == DateTime.sunday;
-    final dateStr = DateFormat('MMM d, yyyy').format(event.effectiveStartDate);
+    final isMultiDay = event.effectiveEndDate.day != event.effectiveStartDate.day ||
+        event.effectiveEndDate.month != event.effectiveStartDate.month;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -291,8 +916,8 @@ class _EventCard extends StatelessWidget {
         children: [
           // Date box badge
           Container(
-            width: 58,
-            height: 58,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               color: (isWeekend ? CmsTheme.accent : CmsTheme.success).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
@@ -312,13 +937,13 @@ class _EventCard extends StatelessWidget {
                 ),
                 Text(
                   _monthName(event.effectiveStartDate.month),
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: CmsTheme.textSecondary,
-                  ),
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: CmsTheme.textSecondary),
                 ),
+                if (isMultiDay)
+                  Text(
+                    '– ${event.effectiveEndDate.day} ${_monthName(event.effectiveEndDate.month)}',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 9, color: CmsTheme.textMuted),
+                  ),
               ],
             ),
           ),
@@ -334,12 +959,7 @@ class _EventCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         event.title,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: CmsTheme.textPrimary,
-                        ),
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600, color: CmsTheme.textPrimary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -370,7 +990,10 @@ class _EventCard extends StatelessWidget {
                     const SizedBox(width: 16),
                     const Icon(Icons.access_time_outlined, size: 14, color: CmsTheme.textMuted),
                     const SizedBox(width: 4),
-                    Text(DateFormat('h:mm a').format(event.effectiveStartDate), style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary)),
+                    Text(
+                      '${DateFormat('h:mm a').format(event.effectiveStartDate)}${isMultiDay ? ' – ${DateFormat('MMM d, h:mm a').format(event.effectiveEndDate)}' : ''}',
+                      style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textSecondary),
+                    ),
                     if (event.createdByName != null) ...[
                       const SizedBox(width: 16),
                       const Icon(Icons.person_outline, size: 14, color: CmsTheme.textMuted),
@@ -382,6 +1005,16 @@ class _EventCard extends StatelessWidget {
               ],
             ),
           ),
+
+          // View detail button (always shown)
+          CmsButton(
+            label: 'View',
+            icon: Icons.visibility_outlined,
+            compact: true,
+            variant: CmsButtonVariant.secondary,
+            onPressed: onViewDetail,
+          ),
+          const SizedBox(width: 8),
 
           // Approval buttons for Pastor
           if (isLeadPastor && event.isPending) ...[
@@ -485,6 +1118,8 @@ class _EventCard extends StatelessWidget {
   };
 }
 
+// ─────────────────────────── Status Badge ────────────────────────────────────
+
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status, this.reason});
   final String status;
@@ -502,6 +1137,7 @@ class _StatusBadge extends StatelessWidget {
           border: Border.all(color: CmsTheme.success.withValues(alpha: 0.3)),
         ),
         child: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.check_circle_outline, size: 12, color: CmsTheme.success),
             SizedBox(width: 4),
@@ -518,6 +1154,7 @@ class _StatusBadge extends StatelessWidget {
           border: Border.all(color: CmsTheme.warning.withValues(alpha: 0.4)),
         ),
         child: const Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.hourglass_empty, size: 12, color: CmsTheme.warning),
             SizedBox(width: 4),
@@ -536,6 +1173,7 @@ class _StatusBadge extends StatelessWidget {
             border: Border.all(color: CmsTheme.danger.withValues(alpha: 0.4)),
           ),
           child: const Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.cancel_outlined, size: 12, color: CmsTheme.danger),
               SizedBox(width: 4),
@@ -570,8 +1208,10 @@ class _EventFormDialogState extends State<_EventFormDialog> {
 
   String _category = 'Sunday Service';
   String _eventType = 'special_event';
-  DateTime _startDate = DateTime.now();
-  DateTime _endDate = DateTime.now().add(const Duration(hours: 2));
+  late DateTime _startDate;
+  late TimeOfDay _startTime;
+  late DateTime _endDate;
+  late TimeOfDay _endTime;
   bool _saving = false;
 
   static const _eventTypes = [
@@ -595,8 +1235,13 @@ class _EventFormDialogState extends State<_EventFormDialog> {
     _mediaUrlCtrl = TextEditingController(text: e?.mediaUrls.isNotEmpty == true ? e!.mediaUrls.first : '');
     _category = e?.category ?? 'Sunday Service';
     _eventType = e?.eventType ?? 'special_event';
-    _startDate = e?.effectiveStartDate ?? DateTime.now();
-    _endDate = e?.effectiveEndDate ?? DateTime.now().add(const Duration(hours: 2));
+
+    final start = e?.effectiveStartDate ?? DateTime.now();
+    final end = e?.effectiveEndDate ?? DateTime.now().add(const Duration(hours: 2));
+    _startDate = start;
+    _startTime = TimeOfDay(hour: start.hour, minute: start.minute);
+    _endDate = end;
+    _endTime = TimeOfDay(hour: end.hour, minute: end.minute);
   }
 
   @override
@@ -608,9 +1253,38 @@ class _EventFormDialogState extends State<_EventFormDialog> {
     super.dispose();
   }
 
+  DateTime _combine(DateTime date, TimeOfDay time) =>
+      DateTime(date.year, date.month, date.day, time.hour, time.minute);
+
+  Future<void> _pickStartDate() async {
+    final picked = await showDatePicker(
+      context: context, initialDate: _startDate, firstDate: DateTime(2020), lastDate: DateTime(2035),
+    );
+    if (picked != null) setState(() => _startDate = picked);
+  }
+
+  Future<void> _pickStartTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _startTime);
+    if (picked != null) setState(() => _startTime = picked);
+  }
+
+  Future<void> _pickEndDate() async {
+    final picked = await showDatePicker(
+      context: context, initialDate: _endDate, firstDate: _startDate, lastDate: DateTime(2035),
+    );
+    if (picked != null) setState(() => _endDate = picked);
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showTimePicker(context: context, initialTime: _endTime);
+    if (picked != null) setState(() => _endTime = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isPastorOrAdmin = widget.user?.roleId == AppRole.leadPastor || widget.user?.roleId == 'admin';
+    final startDT = _combine(_startDate, _startTime);
+    final endDT = _combine(_endDate, _endTime);
 
     return AlertDialog(
       backgroundColor: CmsTheme.surfaceElevated,
@@ -626,7 +1300,7 @@ class _EventFormDialogState extends State<_EventFormDialog> {
         ],
       ),
       content: SizedBox(
-        width: 520,
+        width: 580,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -658,6 +1332,7 @@ class _EventFormDialogState extends State<_EventFormDialog> {
                     ),
                   ),
 
+                // Title
                 const Text('Event / Programme Title', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
                 const SizedBox(height: 6),
                 TextFormField(
@@ -706,22 +1381,15 @@ class _EventFormDialogState extends State<_EventFormDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Date & Time Picker
+                // ── Start Date & Time ────────────────────────────────────
+                const Text('Start Date & Time', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Expanded(
+                      flex: 2,
                       child: InkWell(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _startDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null) {
-                            setState(() => _startDate = DateTime(picked.year, picked.month, picked.day, _startDate.hour, _startDate.minute));
-                          }
-                        },
+                        onTap: _pickStartDate,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
@@ -729,23 +1397,83 @@ class _EventFormDialogState extends State<_EventFormDialog> {
                             children: [
                               const Icon(Icons.calendar_today, size: 15, color: CmsTheme.accent),
                               const SizedBox(width: 8),
-                              Text(DateFormat('MMM d, yyyy').format(_startDate), style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary)),
+                              Text(DateFormat('EEE, MMM d, yyyy').format(_startDate), style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary)),
                             ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: TextFormField(
-                        controller: _mediaUrlCtrl,
-                        style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
-                        decoration: const InputDecoration(labelText: 'Banner / Flyer URL (Optional)', prefixIcon: Icon(Icons.image_outlined, size: 16, color: CmsTheme.textMuted)),
+                      child: InkWell(
+                        onTap: _pickStartTime,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time, size: 15, color: CmsTheme.accent),
+                              const SizedBox(width: 8),
+                              Text(_startTime.format(context), style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // ── End Date & Time ──────────────────────────────────────
+                const Text('End Date & Time', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: InkWell(
+                        onTap: _pickEndDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 15, color: CmsTheme.success),
+                              const SizedBox(width: 8),
+                              Text(DateFormat('EEE, MMM d, yyyy').format(_endDate), style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickEndTime,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.access_time, size: 15, color: CmsTheme.success),
+                              const SizedBox(width: 8),
+                              Text(_endTime.format(context), style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textPrimary)),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
+
+                // Banner URL & Description
+                TextFormField(
+                  controller: _mediaUrlCtrl,
+                  style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                  decoration: const InputDecoration(labelText: 'Banner / Flyer URL (Optional)', prefixIcon: Icon(Icons.image_outlined, size: 16, color: CmsTheme.textMuted)),
+                ),
+                const SizedBox(height: 12),
 
                 const Text('Programme Description & Details', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
                 const SizedBox(height: 6),
@@ -774,14 +1502,13 @@ class _EventFormDialogState extends State<_EventFormDialog> {
             setState(() => _saving = true);
             try {
               final initialStatus = isPastorOrAdmin ? 'approved' : 'pending_approval';
-
               final ev = EventModel(
                 id: widget.event?.id ?? '',
                 title: _titleCtrl.text.trim(),
                 description: _descCtrl.text.trim(),
-                dateTime: _startDate,
-                startDate: _startDate,
-                endDate: _endDate,
+                dateTime: startDT,
+                startDate: startDT,
+                endDate: endDT,
                 location: _locCtrl.text.trim(),
                 category: _category,
                 eventType: _eventType,
@@ -831,38 +1558,80 @@ class _YearlyCalendarBatchDialog extends StatefulWidget {
 
 class _YearlyCalendarBatchDialogState extends State<_YearlyCalendarBatchDialog> {
   final _titleCtrl = TextEditingController();
-  final _monthCtrl = TextEditingController(text: 'January');
-  DateTime _eventDate = DateTime.now();
+  final _descCtrl = TextEditingController();
+  final _locCtrl = TextEditingController(text: 'Main Sanctuary');
+  DateTime _startDate = DateTime.now();
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  DateTime _endDate = DateTime.now();
+  TimeOfDay _endTime = const TimeOfDay(hour: 17, minute: 0);
   String _type = 'yearly_calendar';
   bool _saving = false;
+  int? _editingIndex;
 
   final List<EventModel> _draftEvents = [];
 
-  void _addToList() {
+  static const _types = [
+    DropdownMenuItem(value: 'yearly_calendar', child: Text('Church Year Calendar')),
+    DropdownMenuItem(value: 'revival_programme', child: Text('Revival Programme')),
+    DropdownMenuItem(value: 'conference', child: Text('Conference')),
+    DropdownMenuItem(value: 'anniversary', child: Text('Anniversary')),
+    DropdownMenuItem(value: 'special_event', child: Text('Special Event')),
+    DropdownMenuItem(value: 'wedding_programme', child: Text('Wedding Programme')),
+  ];
+
+  DateTime _combine(DateTime d, TimeOfDay t) => DateTime(d.year, d.month, d.day, t.hour, t.minute);
+
+  void _addOrUpdateToList() {
     if (_titleCtrl.text.trim().isEmpty) return;
+    final startDT = _combine(_startDate, _startTime);
+    final endDT = _combine(_endDate, _endTime);
     final ev = EventModel(
-      id: '',
+      id: _editingIndex != null ? _draftEvents[_editingIndex!].id : '',
       title: _titleCtrl.text.trim(),
-      description: 'Church Year Calendar Event',
-      dateTime: _eventDate,
-      startDate: _eventDate,
-      location: 'Main Sanctuary',
+      description: _descCtrl.text.trim().isEmpty ? 'Church Year Calendar Event' : _descCtrl.text.trim(),
+      dateTime: startDT,
+      startDate: startDT,
+      endDate: endDT,
+      location: _locCtrl.text.trim().isEmpty ? 'Main Sanctuary' : _locCtrl.text.trim(),
       category: 'Special Event',
       eventType: _type,
-      year: _eventDate.year,
+      year: _startDate.year,
       status: 'pending_approval',
       createdByName: widget.user?.displayName ?? 'Secretary',
     );
     setState(() {
-      _draftEvents.add(ev);
+      if (_editingIndex != null) {
+        _draftEvents[_editingIndex!] = ev;
+        _editingIndex = null;
+      } else {
+        _draftEvents.add(ev);
+      }
       _titleCtrl.clear();
+      _descCtrl.clear();
+      _locCtrl.text = 'Main Sanctuary';
+    });
+  }
+
+  void _editEntry(int index) {
+    final ev = _draftEvents[index];
+    setState(() {
+      _editingIndex = index;
+      _titleCtrl.text = ev.title;
+      _descCtrl.text = ev.description == 'Church Year Calendar Event' ? '' : ev.description;
+      _locCtrl.text = ev.location;
+      _type = ev.eventType;
+      _startDate = ev.effectiveStartDate;
+      _startTime = TimeOfDay(hour: ev.effectiveStartDate.hour, minute: ev.effectiveStartDate.minute);
+      _endDate = ev.effectiveEndDate;
+      _endTime = TimeOfDay(hour: ev.effectiveEndDate.hour, minute: ev.effectiveEndDate.minute);
     });
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
-    _monthCtrl.dispose();
+    _descCtrl.dispose();
+    _locCtrl.dispose();
     super.dispose();
   }
 
@@ -879,7 +1648,7 @@ class _YearlyCalendarBatchDialogState extends State<_YearlyCalendarBatchDialog> 
         ],
       ),
       content: SizedBox(
-        width: 540,
+        width: 620,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,66 +1657,245 @@ class _YearlyCalendarBatchDialogState extends State<_YearlyCalendarBatchDialog> 
               const Text('Add key annual programmes to the yearly calendar schedule:', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: CmsTheme.textSecondary)),
               const SizedBox(height: 14),
 
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: _titleCtrl,
-                      style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
-                      decoration: const InputDecoration(hintText: 'Event title (e.g. Easter Retreat)'),
+              // ── Entry Form ────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: CmsTheme.bg,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _editingIndex != null ? CmsTheme.accent : CmsTheme.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_editingIndex != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.edit_outlined, size: 14, color: CmsTheme.accent),
+                            const SizedBox(width: 6),
+                            Text('Editing entry #${_editingIndex! + 1}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.accent, fontWeight: FontWeight.w600)),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: () => setState(() { _editingIndex = null; _titleCtrl.clear(); _descCtrl.clear(); _locCtrl.text = 'Main Sanctuary'; }),
+                              child: const Text('Cancel Edit', style: TextStyle(color: CmsTheme.textMuted, fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Title & Type row
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            controller: _titleCtrl,
+                            style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                            decoration: const InputDecoration(hintText: 'Programme title (e.g. Easter Retreat)'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _type,
+                            dropdownColor: CmsTheme.surfaceElevated,
+                            style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter', fontSize: 12),
+                            decoration: const InputDecoration(),
+                            items: _types,
+                            onChanged: (v) => setState(() => _type = v!),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _eventDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2030),
-                        );
-                        if (picked != null) setState(() => _eventDate = picked);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
-                        child: Text(DateFormat('MMM d').format(_eventDate), style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textPrimary)),
+                    const SizedBox(height: 10),
+
+                    // Venue
+                    TextField(
+                      controller: _locCtrl,
+                      style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter'),
+                      decoration: const InputDecoration(
+                        hintText: 'Venue / Location',
+                        prefixIcon: Icon(Icons.location_on_outlined, size: 14, color: CmsTheme.textMuted),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: CmsTheme.accent, size: 28),
-                    onPressed: _addToList,
-                  ),
-                ],
+                    const SizedBox(height: 10),
+
+                    // Start Date & Time
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final p = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2020), lastDate: DateTime(2035));
+                              if (p != null) setState(() { _startDate = p; if (_endDate.isBefore(p)) _endDate = p; });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                              child: Row(children: [
+                                const Icon(Icons.calendar_today, size: 13, color: CmsTheme.accent),
+                                const SizedBox(width: 6),
+                                Text('Start: ${DateFormat('MMM d, yyyy').format(_startDate)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textPrimary)),
+                              ]),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () async {
+                            final p = await showTimePicker(context: context, initialTime: _startTime);
+                            if (p != null) setState(() => _startTime = p);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                            child: Row(children: [
+                              const Icon(Icons.access_time, size: 13, color: CmsTheme.accent),
+                              const SizedBox(width: 6),
+                              Text(_startTime.format(context), style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textPrimary)),
+                            ]),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // End Date & Time
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final p = await showDatePicker(context: context, initialDate: _endDate, firstDate: _startDate, lastDate: DateTime(2035));
+                              if (p != null) setState(() => _endDate = p);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                              child: Row(children: [
+                                const Icon(Icons.calendar_today, size: 13, color: CmsTheme.success),
+                                const SizedBox(width: 6),
+                                Text('End:  ${DateFormat('MMM d, yyyy').format(_endDate)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textPrimary)),
+                              ]),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () async {
+                            final p = await showTimePicker(context: context, initialTime: _endTime);
+                            if (p != null) setState(() => _endTime = p);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            decoration: BoxDecoration(color: CmsTheme.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
+                            child: Row(children: [
+                              const Icon(Icons.access_time, size: 13, color: CmsTheme.success),
+                              const SizedBox(width: 6),
+                              Text(_endTime.format(context), style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: CmsTheme.textPrimary)),
+                            ]),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Description
+                    TextField(
+                      controller: _descCtrl,
+                      maxLines: 2,
+                      style: const TextStyle(color: CmsTheme.textPrimary, fontFamily: 'Inter', fontSize: 12),
+                      decoration: const InputDecoration(hintText: 'Brief description (optional)'),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Add button
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: CmsButton(
+                        label: _editingIndex != null ? 'Update Entry' : '+ Add to Calendar',
+                        icon: _editingIndex != null ? Icons.check : Icons.add,
+                        compact: true,
+                        onPressed: _addOrUpdateToList,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+
               const SizedBox(height: 16),
 
               if (_draftEvents.isNotEmpty) ...[
                 const Text('Draft Calendar Entries:', style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w600, color: CmsTheme.textSecondary)),
                 const SizedBox(height: 8),
                 Container(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  decoration: BoxDecoration(color: CmsTheme.bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: CmsTheme.border)),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: _draftEvents.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1, color: CmsTheme.border),
-                    itemBuilder: (ctx, idx) {
-                      final item = _draftEvents[idx];
-                      return ListTile(
-                        dense: true,
-                        title: Text(item.title, style: const TextStyle(color: CmsTheme.textPrimary, fontSize: 13, fontFamily: 'Inter')),
-                        subtitle: Text(DateFormat('EEEE, MMM d, yyyy').format(item.effectiveStartDate), style: const TextStyle(color: CmsTheme.textMuted, fontSize: 11)),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: CmsTheme.danger),
-                          onPressed: () => setState(() => _draftEvents.removeAt(idx)),
-                        ),
-                      );
+                  constraints: const BoxConstraints(maxHeight: 260),
+                  decoration: BoxDecoration(
+                    color: CmsTheme.bg,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: CmsTheme.border),
+                  ),
+                  child: Table(
+                    columnWidths: const {
+                      0: FlexColumnWidth(2),
+                      1: FlexColumnWidth(2),
+                      2: FlexColumnWidth(1.5),
+                      3: FixedColumnWidth(80),
                     },
+                    border: TableBorder(horizontalInside: BorderSide(color: CmsTheme.border, width: 0.5)),
+                    children: [
+                      TableRow(
+                        decoration: BoxDecoration(color: CmsTheme.surfaceElevated),
+                        children: const [
+                          _TableHeader('Programme'),
+                          _TableHeader('Date Range'),
+                          _TableHeader('Venue'),
+                          _TableHeader('Actions'),
+                        ],
+                      ),
+                      for (int i = 0; i < _draftEvents.length; i++)
+                        TableRow(
+                          decoration: BoxDecoration(
+                            color: _editingIndex == i ? CmsTheme.accent.withValues(alpha: 0.05) : Colors.transparent,
+                          ),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              child: Text(_draftEvents[i].title, style: const TextStyle(color: CmsTheme.textPrimary, fontSize: 12, fontFamily: 'Inter')),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text(DateFormat('MMM d, yyyy').format(_draftEvents[i].effectiveStartDate), style: const TextStyle(color: CmsTheme.textPrimary, fontSize: 11, fontFamily: 'Inter')),
+                                if (_draftEvents[i].effectiveEndDate.day != _draftEvents[i].effectiveStartDate.day)
+                                  Text('– ${DateFormat('MMM d, yyyy').format(_draftEvents[i].effectiveEndDate)}', style: const TextStyle(color: CmsTheme.textMuted, fontSize: 11, fontFamily: 'Inter')),
+                                Text('${TimeOfDay(hour: _draftEvents[i].effectiveStartDate.hour, minute: _draftEvents[i].effectiveStartDate.minute).format(context)} – ${TimeOfDay(hour: _draftEvents[i].effectiveEndDate.hour, minute: _draftEvents[i].effectiveEndDate.minute).format(context)}', style: const TextStyle(color: CmsTheme.textMuted, fontSize: 10, fontFamily: 'Inter')),
+                              ]),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              child: Text(_draftEvents[i].location, style: const TextStyle(color: CmsTheme.textSecondary, fontSize: 11, fontFamily: 'Inter')),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(4),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, size: 14, color: CmsTheme.accent),
+                                  tooltip: 'Edit',
+                                  onPressed: () => _editEntry(i),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 14, color: CmsTheme.danger),
+                                  tooltip: 'Remove',
+                                  onPressed: () => setState(() => _draftEvents.removeAt(i)),
+                                ),
+                              ]),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
               ],

@@ -4,40 +4,63 @@ import '../utils/toast_utils.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final String _collection = 'events';
 
-  // Get all events (limited to 3 months past and all future)
+  // ─── Get all events for Mobile Event Page ──────────────────────────────────
+  // Only published events (edited & published by admin with isPublishedToApp == true
+  // or standalone admin events) appear on the member Events Screen.
   Future<Map<String, List<Event>>> getAllEvents() async {
     try {
-      print('Fetching all events...');
+      final Map<String, DocumentSnapshot> combinedDocs = {};
 
-      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
-
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('endDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(threeMonthsAgo))
-          .orderBy('endDate', descending: true)
-          .get();
+      try {
+        final rootSnap = await _firestore.collection('events').get();
+        for (final doc in rootSnap.docs) {
+          combinedDocs[doc.id] = doc;
+        }
+      } catch (e) {
+        print('Error fetching root events: $e');
+      }
 
       final now = DateTime.now();
+
       final List<Event> upcomingEvents = [];
       final List<Event> pastEvents = [];
 
-      for (var doc in querySnapshot.docs) {
-        final event = Event.fromFirestore(doc);
-        if (event.isApproved) {
-          if (event.isUpcoming) {
+      for (final doc in combinedDocs.values) {
+        try {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) continue;
+
+          final event = Event.fromFirestore(doc);
+
+          // 1. Must be approved
+          if (!event.isApproved) continue;
+
+          // 2. Only events explicitly edited & published by admin appear on the Event page.
+          // Raw un-edited yearly calendar items stay on ChurchCalendarScreen only.
+          final bool isPublishedToApp = data['isPublishedToApp'] == true;
+          final bool hasFlyer = data['imageUrl'] != null && data['imageUrl'].toString().isNotEmpty;
+          final bool isStandalone = data['eventType'] != 'yearly_calendar' && data['eventType'] != null;
+
+          final bool isPublishedForApp = isPublishedToApp || hasFlyer || isStandalone;
+          if (!isPublishedForApp) continue;
+
+          final isCurrentMonth = event.startDate.year == now.year && event.startDate.month == now.month;
+          final isFutureOrCurrent = event.isUpcoming || isCurrentMonth;
+
+          if (isFutureOrCurrent) {
             upcomingEvents.add(event);
           } else {
             pastEvents.add(event);
           }
+        } catch (e) {
+          print('Error parsing event doc ${doc.id}: $e');
         }
       }
 
-      // Sort upcoming events by start date (ascending)
+      // Sort upcoming events ascending by start date
       upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
-      // Sort past events by end date (descending)
+      // Sort past events descending by end date
       pastEvents.sort((a, b) => b.endDate.compareTo(a.endDate));
 
       return {
@@ -47,212 +70,130 @@ class EventService {
     } catch (e) {
       print('Error getting events: $e');
       if (e is FirebaseException && e.code == 'permission-denied') {
-        ToastUtils.showToast(
-            'Please update Firestore rules to allow read access');
+        ToastUtils.showToast('Permission denied reading events.');
       }
-      return {
-        'upcoming': [],
-        'past': [],
-      };
+      return {'upcoming': [], 'past': []};
     }
   }
 
-  // Get upcoming events stream
+  // ─── Upcoming events stream ────────────────────────────────────────────────
   Stream<List<Event>> getUpcomingEventsStream({int limit = 3}) {
-    final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
-    return _firestore
-        .collection(_collection)
-        .where('endDate',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(threeMonthsAgo))
-        .snapshots()
-        .map((snapshot) {
-      final events =
-          snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
-      final upcomingEvents = events.where((e) => e.isApproved && e.isUpcoming).toList();
-      upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
-      return upcomingEvents.take(limit).toList();
+    return _firestore.collection('events').snapshots().map((snapshot) {
+      final now = DateTime.now();
+      final events = <Event>[];
+
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          final e = Event.fromFirestore(doc);
+
+          final bool isPublishedToApp = data['isPublishedToApp'] == true;
+          final bool hasFlyer = data['imageUrl'] != null && data['imageUrl'].toString().isNotEmpty;
+          final bool isStandalone = data['eventType'] != 'yearly_calendar' && data['eventType'] != null;
+          final bool isPublishedForApp = isPublishedToApp || hasFlyer || isStandalone;
+
+          if (!isPublishedForApp) continue;
+
+          final isCurrentMonth = e.startDate.year == now.year && e.startDate.month == now.month;
+          if (e.isApproved && (e.isUpcoming || isCurrentMonth)) {
+            events.add(e);
+          }
+        } catch (_) {}
+      }
+      events.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+      return events.take(limit).toList();
     });
   }
 
-  // Search events locally to avoid case sensitivity issues
+  // ─── Search events (client-side) ──────────────────────────────────────────
   Future<Map<String, List<Event>>> searchEvents(String query) async {
     try {
-      final String lowerQuery = query.toLowerCase();
-      // Fetch events with time constraints to avoid pulling the whole DB
-      final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
-      final querySnapshot = await _firestore
-          .collection(_collection)
-          .where('endDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(threeMonthsAgo))
-          .get();
+      final lowerQuery = query.toLowerCase();
+      final rootSnap = await _firestore.collection('events').get();
+
+      final now = DateTime.now();
 
       final List<Event> upcomingEvents = [];
       final List<Event> pastEvents = [];
 
-      for (var doc in querySnapshot.docs) {
-        final event = Event.fromFirestore(doc);
-        if (event.title.toLowerCase().contains(lowerQuery) ||
-            event.description.toLowerCase().contains(lowerQuery) ||
-            event.venue.toLowerCase().contains(lowerQuery)) {
-          if (event.isUpcoming) {
+      for (final doc in rootSnap.docs) {
+        try {
+          final data = doc.data();
+          final event = Event.fromFirestore(doc);
+          if (!event.isApproved) continue;
+
+          final bool isPublishedToApp = data['isPublishedToApp'] == true;
+          final bool hasFlyer = data['imageUrl'] != null && data['imageUrl'].toString().isNotEmpty;
+          final bool isStandalone = data['eventType'] != 'yearly_calendar' && data['eventType'] != null;
+          final bool isPublishedForApp = isPublishedToApp || hasFlyer || isStandalone;
+          if (!isPublishedForApp) continue;
+
+          final matches =
+              event.title.toLowerCase().contains(lowerQuery) ||
+              event.description.toLowerCase().contains(lowerQuery) ||
+              event.venue.toLowerCase().contains(lowerQuery);
+
+          if (!matches) continue;
+
+          final isCurrentMonth = event.startDate.year == now.year && event.startDate.month == now.month;
+          final isFutureOrCurrent = event.isUpcoming || isCurrentMonth;
+
+          if (isFutureOrCurrent) {
             upcomingEvents.add(event);
           } else {
             pastEvents.add(event);
           }
-        }
+        } catch (_) {}
       }
 
-      // Sort upcoming events by start date (ascending)
       upcomingEvents.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
-      // Sort past events by end date (descending)
       pastEvents.sort((a, b) => b.endDate.compareTo(a.endDate));
 
-      return {
-        'upcoming': upcomingEvents,
-        'past': pastEvents,
-      };
+      return {'upcoming': upcomingEvents, 'past': pastEvents};
     } catch (e) {
       print('Error searching events: $e');
-      if (e is FirebaseException && e.code == 'permission-denied') {
-        ToastUtils.showToast(
-            'Please update Firestore rules to allow read access');
-      }
-      return {
-        'upcoming': [],
-        'past': [],
-      };
+      return {'upcoming': [], 'past': []};
     }
   }
 
-  // Get event by ID
+  // ─── Get event by ID ───────────────────────────────────────────────────────
   Future<Event?> getEventById(String eventId) async {
     try {
       final docSnapshot =
-          await _firestore.collection(_collection).doc(eventId).get();
-
-      if (!docSnapshot.exists) return null;
-      return Event.fromFirestore(docSnapshot);
+          await _firestore.collection('events').doc(eventId).get();
+      if (docSnapshot.exists) return Event.fromFirestore(docSnapshot);
+      return null;
     } catch (e) {
       print('Error getting event: $e');
-      if (e is FirebaseException && e.code == 'permission-denied') {
-        ToastUtils.showToast(
-            'Please update Firestore rules to allow read access');
-      }
       return null;
     }
   }
 
-  // Add sample events for testing
+  // ─── Add sample events for testing ────────────────────────────────────────
   Future<void> addSampleEvents() async {
     try {
-      print('Starting to add sample events...');
-
-      // First, check if we can access Firestore
-      try {
-        final testDoc = await _firestore.collection(_collection).add({
-          'test': true,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-        await testDoc.delete();
-        print('Successfully tested write access to Firestore');
-      } catch (e) {
-        print('Error writing to Firestore: $e');
-        if (e is FirebaseException &&
-            (e.code == 'permission-denied' ||
-                e.code == 'failed-precondition')) {
-          ToastUtils.showToast(
-              'Please update Firestore rules to allow write access');
-          return;
-        }
-        ToastUtils.showToast('Error connecting to database');
-        return;
-      }
-
       final batch = _firestore.batch();
-      print('Created write batch');
 
-      // Sample event 1
-      final event1 = {
+      batch.set(_firestore.collection('events').doc(), {
         'title': 'Sunday Service',
-        'description':
-            'Join us for our weekly Sunday service filled with worship and fellowship.',
-        'imageUrl': 'https://example.com/sunday-service.jpg',
-        'startDate':
-            Timestamp.fromDate(DateTime.now().add(const Duration(days: 2))),
-        'endDate': Timestamp.fromDate(
-            DateTime.now().add(const Duration(days: 2, hours: 2))),
+        'description': 'Join us for our weekly Sunday service filled with worship and fellowship.',
+        'imageUrl': '',
+        'startDate': Timestamp.fromDate(DateTime.now().add(const Duration(days: 2))),
+        'endDate': Timestamp.fromDate(DateTime.now().add(const Duration(days: 2, hours: 2))),
         'venue': 'Main Sanctuary',
         'programmeTime': '10:00 AM - 12:00 PM',
+        'status': 'approved',
+        'isPublishedToApp': true,
+        'eventType': 'sunday_service',
+        'year': DateTime.now().year,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      };
+      });
 
-      // Sample event 2
-      final event2 = {
-        'title': 'Youth Fellowship',
-        'description':
-            'Special youth gathering with games, worship, and Bible study.',
-        'imageUrl': 'https://example.com/youth-fellowship.jpg',
-        'startDate':
-            Timestamp.fromDate(DateTime.now().add(const Duration(days: 5))),
-        'endDate': Timestamp.fromDate(
-            DateTime.now().add(const Duration(days: 5, hours: 3))),
-        'venue': 'Youth Center',
-        'programmeTime': '6:00 PM - 9:00 PM',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      // Sample event 3
-      final event3 = {
-        'title': 'Prayer Meeting',
-        'description':
-            'Mid-week prayer meeting for spiritual growth and community support.',
-        'imageUrl': 'https://example.com/prayer-meeting.jpg',
-        'startDate':
-            Timestamp.fromDate(DateTime.now().add(const Duration(days: 7))),
-        'endDate': Timestamp.fromDate(
-            DateTime.now().add(const Duration(days: 7, hours: 1))),
-        'venue': 'Prayer Room',
-        'programmeTime': '7:00 PM - 8:00 PM',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-
-      print('Created sample event data');
-
-      // Add events to batch
-      try {
-        batch.set(_firestore.collection(_collection).doc(), event1);
-        batch.set(_firestore.collection(_collection).doc(), event2);
-        batch.set(_firestore.collection(_collection).doc(), event3);
-        print('Added events to batch');
-      } catch (e) {
-        print('Error adding events to batch: $e');
-        ToastUtils.showToast('Error preparing events');
-        return;
-      }
-
-      // Commit the batch
-      try {
-        await batch.commit();
-        print('Successfully committed batch');
-        ToastUtils.showToast('Sample events added successfully');
-      } catch (e) {
-        print('Error committing batch: $e');
-        if (e is FirebaseException &&
-            (e.code == 'permission-denied' ||
-                e.code == 'failed-precondition')) {
-          ToastUtils.showToast(
-              'Please update Firestore rules to allow write access');
-        } else {
-          ToastUtils.showToast('Error saving events');
-        }
-        return;
-      }
+      await batch.commit();
+      ToastUtils.showToast('Sample event added successfully');
     } catch (e) {
       print('Unexpected error adding sample events: $e');
-      ToastUtils.showToast('Failed to add sample events');
     }
   }
 }

@@ -11,6 +11,8 @@ class Event {
     required this.venue,
     required this.programmeTime,
     this.joinLink = '',
+    this.status = 'approved',
+    this.eventType = 'special_event',
     this.recurrence = 'none',
     this.createdAt,
     this.updatedAt,

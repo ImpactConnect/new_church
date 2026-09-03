@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
 class EventModel extends Equatable {
@@ -103,25 +104,27 @@ class EventModel extends Equatable {
     );
   }
 
-  Map<String, dynamic> toFirestore() => {
-    'title': title,
-    'description': description,
-    'dateTime': dateTime.toIso8601String(),
-    'location': location,
-    'venue': location,
-    'category': category,
-    'headcount': headcount,
-    if (departmentId != null) 'departmentId': departmentId,
-    'status': status,
-    'eventType': eventType,
-    'year': year,
-    if (startDate != null) 'startDate': startDate!.toIso8601String(),
-    if (endDate != null) 'endDate': endDate!.toIso8601String(),
-    if (createdByRole != null) 'createdByRole': createdByRole,
-    if (createdByName != null) 'createdByName': createdByName,
-    if (rejectionReason != null) 'rejectionReason': rejectionReason,
-    'mediaUrls': mediaUrls,
-  };
+  Map<String, dynamic> toFirestore() {
+    return {
+      'title': title,
+      'description': description,
+      'dateTime': Timestamp.fromDate(dateTime),
+      'location': location,
+      'venue': location,
+      'category': category,
+      'headcount': headcount,
+      if (departmentId != null) 'departmentId': departmentId,
+      'status': status,
+      'eventType': eventType,
+      'year': year,
+      if (startDate != null) 'startDate': Timestamp.fromDate(startDate!),
+      if (endDate != null) 'endDate': Timestamp.fromDate(endDate!),
+      if (createdByRole != null) 'createdByRole': createdByRole,
+      if (createdByName != null) 'createdByName': createdByName,
+      if (rejectionReason != null) 'rejectionReason': rejectionReason,
+      'mediaUrls': mediaUrls,
+    };
+  }
 
   EventModel copyWith({
     String? title,

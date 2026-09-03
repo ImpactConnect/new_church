@@ -58,9 +58,12 @@ class FirebaseEventRepository implements EventRepository {
         'location': event.location,
         'category': event.category,
         'eventType': event.eventType,
+        'year': event.year,
         'status': event.status,
         'startDate': Timestamp.fromDate(event.effectiveStartDate),
         'endDate': Timestamp.fromDate(event.effectiveEndDate),
+        'programmeTime': '',
+        'mediaUrls': event.mediaUrls,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -86,9 +89,12 @@ class FirebaseEventRepository implements EventRepository {
         'location': ev.location,
         'category': ev.category,
         'eventType': ev.eventType,
+        'year': ev.year,
         'status': 'approved',
         'startDate': Timestamp.fromDate(ev.effectiveStartDate),
         'endDate': Timestamp.fromDate(ev.effectiveEndDate),
+        'programmeTime': '',
+        'mediaUrls': ev.mediaUrls,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     }
